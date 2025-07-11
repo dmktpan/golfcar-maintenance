@@ -1,0 +1,2808 @@
+
+:root {
+  --primary-color: #0D47A1; /* Dark Navy Blue */
+  --primary-dark: #002171;
+  --secondary-color: #42A5F5; /* Lighter Blue */
+  --accent-color: #E3F2FD; /* Very Light Blue */
+  --background-color: #F5F7FA;
+  --surface-color: #FFFFFF;
+  --text-color: #263238;
+  --text-light: #FFFFFF;
+  --border-color: #CFD8DC;
+  --success-color: #2E7D32; /* Darker Green */
+  --warning-color: #FFC107;
+  --danger-color: #D32F2F; /* Darker Red */
+  
+  /* Admin Dashboard Colors */
+  --admin-bg: #1A2533;
+  --admin-card-bg: #2C3E50;
+  --admin-accent-color: #F3B71B;
+  --admin-text-color: #ECF0F1;
+  --welcome-bg-color: #DFF0D8;
+  --welcome-text-color: #3C763D;
+  --welcome-border-color: #D6E9C6;
+  
+  /* Bulk Upload Colors */
+  --info-bg: #E8F4FD;
+  --info-border: #B3D9FF;
+  --course-tag-bg: #F0F8FF;
+  --course-tag-border: #87CEEB;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Sarabun', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.card {
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.header {
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-wrap: wrap;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.header-title svg {
+  width: 32px;
+  height: 32px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+.header-nav a {
+    color: var(--text-light);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.header-nav a:hover {
+    opacity: 1;
+}
+.header-nav svg {
+    position: relative;
+    top: -1px;
+}
+
+
+button, .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: var(--text-light);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+}
+
+.btn-secondary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: var(--text-light);
+}
+.btn-success:hover {
+    filter: brightness(1.1);
+}
+
+.btn-danger {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+}
+
+.btn-danger:hover {
+    filter: brightness(1.1);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+  background-color: var(--accent-color);
+}
+
+.btn-accent {
+    background-color: var(--admin-accent-color);
+    color: var(--admin-bg);
+    font-weight: 700;
+}
+.btn-accent:hover {
+    filter: brightness(1.1);
+}
+
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  padding: 2rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'Sarabun', sans-serif;
+  transition: border-color 0.2s;
+  background-color: #fff;
+}
+
+input:disabled, select:disabled, textarea:disabled {
+    background-color: #E0E0E0;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.job-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.job-card {
+  border-left: 5px solid var(--primary-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.job-card.status-pending { border-color: var(--warning-color); }
+.job-card.status-approved { border-color: var(--success-color); }
+.job-card.status-rejected { border-color: var(--danger-color); }
+
+
+.job-card-header {
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.job-card-body p {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+.job-card-body p strong {
+    font-weight: 500;
+}
+.job-card-body ul {
+    list-style-position: inside;
+    padding-left: 0;
+}
+
+.job-card-footer {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    color: var(--text-light);
+}
+
+.status-badge.pending { background-color: var(--warning-color); color: #000; }
+.status-badge.approved { background-color: var(--success-color); }
+.status-badge.rejected { background-color: var(--danger-color); }
+
+.parts-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.parts-table th, .parts-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.parts-table th {
+    font-weight: 700;
+    background-color: var(--accent-color);
+}
+
+.error-message {
+    color: var(--danger-color);
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+/* --- Create Job Screen Specific --- */
+.info-box {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+.info-box h4 {
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+.info-box p {
+    margin: 0.25rem 0;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+.sub-task-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.display-box {
+    background-color: var(--accent-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    min-height: 50px;
+}
+.part-selection-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+.part-selection-item input {
+    width: 80px;
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* --- Admin Dashboard --- */
+.welcome-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--welcome-border-color);
+    border-radius: 8px;
+    background-color: var(--welcome-bg-color);
+    color: var(--welcome-text-color);
+}
+.dismiss-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+}
+.dismiss-btn:hover {
+    opacity: 1;
+}
+
+.admin-dashboard {
+    background-color: var(--admin-bg);
+    color: var(--admin-text-color);
+    padding: 2rem;
+    border-radius: 12px;
+}
+.admin-dashboard-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+}
+.admin-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+.admin-card {
+    background-color: var(--admin-card-bg);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+.admin-card-icon {
+    color: var(--admin-accent-color);
+    margin-bottom: 1rem;
+}
+.admin-card-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+}
+.admin-card-description {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    flex-grow: 1;
+    margin-bottom: 1.5rem;
+}
+
+
+@media (max-width: 992px) {
+    .header-nav span {
+        display: none;
+    }
+    .header-nav {
+        gap: 0.8rem;
+    }
+    .header-nav a {
+        padding: 0.5rem;
+    }
+}
+
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .user-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .header-nav {
+      width: 100%;
+      justify-content: space-around;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.2);
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .form-actions {
+    justify-content: stretch;
+  }
+  .form-actions button {
+    flex-grow: 1;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px; /* ป้องกันการซูมอัตโนมัติบน iOS */
+    padding: 0.6rem;
+  }
+  
+  .sub-task-selection {
+    grid-template-columns: 1fr;
+  }
+  
+  .nav-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .nav-buttons button {
+    width: 100%;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .job-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .golf-course-management .tab-navigation {
+    flex-direction: column;
+  }
+  
+  .golf-course-management .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .golf-course-management .header-controls {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .assigned-job-info {
+    padding: 1rem;
+  }
+  
+  .parts-log-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .parts-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+    .header-nav a {
+        flex-direction: column;
+        gap: 0.1rem;
+        font-size: 0.75rem;
+    }
+     .admin-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-title {
+        font-size: 1.2rem;
+    }
+    
+    .header-title svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    button, .button {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-content {
+        width: 98%;
+        padding: 1rem;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .parts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .part-item {
+        padding: 0.75rem;
+    }
+    
+    .selected-part-item {
+        width: 100%;
+    }
+    
+    .task-button {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    .admin-card {
+        padding: 1rem;
+    }
+    
+    .parts-log-table {
+        font-size: 0.8rem;
+    }
+    
+    .parts-log-table th,
+    .parts-log-table td {
+        padding: 0.5rem 0.4rem;
+    }
+}
+
+/* Parts Log Filters */
+.parts-log-filters {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-row:last-child {
+    margin-bottom: 0;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.filter-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sort-controls label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.sort-controls select {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+/* Results Summary */
+.results-summary {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #e3f2fd;
+    border-left: 4px solid var(--primary-color);
+    border-radius: 4px;
+}
+
+.results-summary p {
+    margin: 0;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Parts Log Table */
+.parts-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.parts-log-table th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.parts-log-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.parts-log-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.parts-log-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.no-data {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 2rem !important;
+}
+
+/* Job Type Badges */
+.job-type-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.job-type-badge.pm {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.job-type-badge.bm {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.job-type-badge.recondition {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .sort-controls {
+        justify-content: center;
+    }
+    
+    .parts-log-table {
+        font-size: 0.8rem;
+    }
+    
+    .parts-log-table th,
+    .parts-log-table td {
+        padding: 0.5rem 0.25rem;
+    }
+}
+/* Serial History Styles */
+.serial-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.serial-history-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.serial-history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.inactive-serial {
+  opacity: 0.7;
+  border-left: 4px solid var(--danger-color);
+}
+
+.serial-history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem;
+  background-color: var(--accent-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.serial-vehicle-number {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  margin-top: 0.25rem;
+}
+
+.history-date {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+.action-type-badge {
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.action-registration {
+  background-color: var(--primary-color);
+}
+
+.action-transfer {
+  background-color: var(--secondary-color);
+}
+
+.action-maintenance {
+  background-color: var(--success-color);
+}
+
+.action-decommission {
+  background-color: var(--danger-color);
+}
+
+.serial-history-card-body {
+  padding: 1rem;
+}
+
+.serial-history-details p {
+  margin-bottom: 0.5rem;
+}
+
+.serial-status {
+  margin-top: 0.5rem;
+}
+
+.active-status {
+  color: var(--success-color);
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.inactive-status {
+  color: var(--danger-color);
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.serial-history-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #f9f9f9;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.serial-history-note {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+.filter-section {
+    margin-bottom: 1.5rem;
+    background-color: var(--accent-color);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.search-box {
+    margin-bottom: 1rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+}
+
+.filter-group label {
+    margin-bottom: 0.3rem;
+    font-weight: 500;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.history-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-left: 4px solid var(--primary-color);
+}
+
+.history-card-header {
+    padding: 1rem;
+    background-color: var(--accent-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-date {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.history-card-body {
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.history-details {
+    flex: 1;
+    min-width: 300px;
+}
+
+.history-parts {
+    flex: 1;
+    min-width: 250px;
+}
+
+.history-card-footer {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.no-data {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* MultiAssignScreen Styles */
+.assignment-item {
+    background-color: var(--accent-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.assignment-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.success-message {
+    background-color: var(--welcome-bg-color);
+    color: var(--welcome-text-color);
+    border: 1px solid var(--welcome-border-color);
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Admin Management Styles */
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.permission-item {
+  background-color: var(--accent-color);
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.permission-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.permission-header input[type="checkbox"] {
+  margin-right: 0.75rem;
+}
+
+.permission-name {
+  font-weight: 600;
+}
+
+.permission-description {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-left: 1.75rem;
+}
+
+.user-role-select {
+  min-width: 150px;
+}
+
+/* Golf Course Management Styles */
+.golf-course-management {
+  margin-top: 1.5rem;
+}
+
+.golf-course-management h3 {
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.transfer-select {
+  margin-left: 0.5rem;
+  padding: 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  font-size: 0.85rem;
+}
+
+.btn-sm {
+  margin-right: 0.5rem;
+}
+
+/* Golf Course Management Screen Styles - Updated to match theme */
+.golf-course-management {
+  padding: 1.5rem;
+  background-color: var(--background-color);
+  min-height: 100vh;
+}
+
+.golf-course-management .header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.golf-course-management .back-button {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.golf-course-management .back-button:hover {
+  background-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.golf-course-management h1 {
+  color: var(--primary-color);
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Tab Navigation - Enhanced */
+.golf-course-management .tab-navigation {
+  display: flex;
+  margin-bottom: 2rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.golf-course-management .tab-button {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--text-color);
+  position: relative;
+}
+
+.golf-course-management .tab-button:hover {
+  background-color: var(--accent-color);
+  color: var(--primary-color);
+}
+
+.golf-course-management .tab-button.active {
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(13, 71, 161, 0.3);
+}
+
+/* Section Headers */
+.golf-course-management .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid var(--primary-color);
+}
+
+.golf-course-management .section-header h2 {
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.golf-course-management .header-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Buttons - Consistent with theme */
+.golf-course-management .add-button {
+  background-color: var(--success-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.golf-course-management .add-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.3);
+}
+
+.golf-course-management .template-button {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.golf-course-management .template-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.golf-course-management .file-upload-button {
+  background-color: var(--admin-accent-color);
+  color: var(--admin-bg);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.golf-course-management .file-upload-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Form Sections */
+.golf-course-management .form-section {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.golf-course-management .form-section h3 {
+  color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.golf-course-management .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.golf-course-management .form-row input,
+.golf-course-management .form-row select {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'Sarabun', sans-serif;
+  transition: all 0.2s;
+  background-color: var(--surface-color);
+}
+
+.golf-course-management .form-row input:focus,
+.golf-course-management .form-row select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.golf-course-management .save-button {
+  background-color: var(--success-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.golf-course-management .save-button:hover {
+  filter: brightness(1.1);
+}
+
+.golf-course-management .cancel-button {
+  background-color: var(--border-color);
+  color: var(--text-color);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.golf-course-management .cancel-button:hover {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+}
+
+.golf-course-management .edit-button {
+  background-color: var(--secondary-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin-right: 0.5rem;
+}
+
+.golf-course-management .edit-button:hover {
+  filter: brightness(1.1);
+}
+
+.golf-course-management .delete-button {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.golf-course-management .delete-button:hover {
+  filter: brightness(1.1);
+}
+
+/* Tables */
+.golf-course-management .table-container {
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.golf-course-management .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.golf-course-management .data-table th {
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.golf-course-management .data-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.golf-course-management .data-table tbody tr:hover {
+  background-color: var(--accent-color);
+}
+
+.golf-course-management .data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.golf-course-management .data-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.golf-course-management .data-table input[type="text"],
+.golf-course-management .data-table select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+/* Filter Section */
+.golf-course-management .filter-section {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.golf-course-management .filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.golf-course-management .filter-controls label {
+  font-weight: 500;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.golf-course-management .filter-controls select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.golf-course-management .bulk-actions {
+  background-color: var(--accent-color);
+  border: 1px solid var(--primary-color);
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.golf-course-management .transfer-button {
+  background-color: var(--admin-accent-color);
+  color: var(--admin-bg);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.golf-course-management .transfer-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Modals */
+.golf-course-management .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.golf-course-management .modal-content {
+  background: var(--surface-color);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+}
+
+.golf-course-management .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.golf-course-management .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.golf-course-management .close-button {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.golf-course-management .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.golf-course-management .bulk-upload-modal,
+.golf-course-management .transfer-modal {
+  max-width: 900px;
+}
+
+.golf-course-management .error-section {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.golf-course-management .error-section h4 {
+  color: var(--danger-color);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.golf-course-management .error-item {
+  color: var(--danger-color);
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.golf-course-management .preview-section {
+  margin: 1rem 0;
+}
+
+.golf-course-management .preview-section h4 {
+  color: var(--success-color);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.golf-course-management .preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.golf-course-management .preview-table th {
+  background-color: var(--accent-color);
+  color: var(--text-color);
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.golf-course-management .preview-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.golf-course-management .preview-table tbody tr:hover {
+  background-color: var(--accent-color);
+}
+
+.golf-course-management .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid var(--border-color);
+}
+
+.golf-course-management .transfer-content {
+  padding: 1.5rem;
+}
+
+.golf-course-management .transfer-content p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+.golf-course-management .transfer-content select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: var(--surface-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .golf-course-management {
+    padding: 1rem;
+  }
+  
+  .golf-course-management .header-section {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .golf-course-management .header-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .golf-course-management .tab-navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .golf-course-management .tab-button {
+    width: 100%;
+  }
+  
+  .golf-course-management .section-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .golf-course-management .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .golf-course-management .filter-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .golf-course-management .bulk-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .golf-course-management .data-table {
+    font-size: 0.8rem;
+  }
+  
+  .golf-course-management .data-table th,
+  .golf-course-management .data-table td {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .golf-course-management .modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .golf-course-management h1 {
+    font-size: 1.5rem;
+  }
+  
+  .golf-course-management .header-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .golf-course-management .header-controls > * {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tab-button:hover {
+  background-color: #f5f5f5;
+}
+
+.tab-button.active {
+  border-bottom: 3px solid #4f46e5;
+  font-weight: bold;
+  color: #4f46e5;
+}
+
+.tab-button:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.golf-course-section,
+.vehicles-section {
+  margin-bottom: 30px;
+}
+/* Dashboard Styles */
+.dashboard-container {
+  width: 100%;
+}
+
+.dashboard-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-label {
+  font-weight: 500;
+  margin-right: 1rem;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background-color: var(--accent-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.filter-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* JobCard Styles */
+.job-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.job-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.job-card-content {
+  flex: 1;
+}
+
+.job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.job-header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.vehicle-number {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+
+.job-date {
+  font-size: 0.8rem;
+  color: var(--text-color);
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.job-assigned-by {
+  font-size: 0.85rem;
+  color: var(--primary-color);
+  font-weight: 500;
+  background-color: rgba(52, 152, 219, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+  display: inline-block;
+}
+
+.job-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.job-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.info-value {
+  font-size: 0.95rem;
+}
+
+.job-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.job-detail-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color);
+  opacity: 0.7;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+}
+
+.parts-list {
+  list-style-position: inside;
+  padding-left: 0.5rem;
+}
+
+.parts-list li {
+  margin-bottom: 0.25rem;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .job-info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .filter-buttons {
+    width: 100%;
+  }
+  
+  .filter-btn {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .job-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Maintenance Categories Styling */
+.maintenance-categories {
+    margin-top: 1rem;
+}
+
+.category-section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+
+.category-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+}
+
+.task-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.task-button {
+    padding: 0.75rem 1rem;
+    border: 2px solid #007bff;
+    background-color: white;
+    color: #007bff;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
+.task-button:hover {
+    background-color: #e3f2fd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.task-button.selected {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+.task-button.selected:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive design for task buttons */
+@media (max-width: 768px) {
+    .task-buttons {
+        flex-direction: column;
+    }
+    
+    .task-button {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
+/* Parts Section Styling */
+.parts-section {
+    margin-top: 1rem;
+}
+
+.btn-add-parts {
+    background-color: #1e3a8a;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.btn-add-parts:hover {
+    background-color: #1e40af;
+}
+
+.selected-parts-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.selected-part-item {
+    display: flex;
+    align-items: center;
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.remove-part-btn {
+    background: none;
+    border: none;
+    color: #f44336;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-part-btn:hover {
+    background-color: #ffebee;
+    border-radius: 50%;
+}
+
+/* Modal Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.modal-close:hover {
+    background-color: #e0e0e0;
+}
+
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.parts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.part-item {
+    padding: 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.part-item:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.part-item.selected {
+    border-color: #007bff;
+    background-color: #007bff;
+    color: white;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-button {
+        flex: none;
+        min-width: 50%;
+    }
+    
+    .parts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Bulk Upload Styles */
+.file-upload-btn {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.bulk-upload-modal {
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.error-section {
+  background: #fee;
+  border: 1px solid #fcc;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+}
+
+.error-item {
+  color: #c33;
+  margin: 0.25rem 0;
+}
+
+.preview-section {
+  margin: 1rem 0;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.preview-table th {
+  background: #f5f5f5;
+}
+
+/* Bulk Actions Styles */
+.bulk-actions {
+  background: #f8f9fa;
+  padding: 1rem;
+  margin: 1rem 0;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.bulk-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.selected-count {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.selected-row {
+  background-color: #e3f2fd;
+}
+
+/* Bulk Upload Info Section */
+.info-section {
+  background-color: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.info-section h4 {
+  margin: 0 0 0.75rem 0;
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.course-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.course-tag {
+  background-color: var(--course-tag-bg);
+  border: 1px solid var(--course-tag-border);
+  border-radius: 20px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  display: inline-block;
+}
+
+.template-button {
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.template-button:hover {
+  background-color: #1B5E20;
+  transform: translateY(-1px);
+}
+
+.file-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px dashed var(--border-color);
+  border-radius: 6px;
+  background-color: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input:hover {
+  border-color: var(--primary-color);
+  background-color: var(--accent-color);
+}
+
+/* Summary Section Styles */
+.summary-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--border-color);
+}
+
+.summary-section h3 {
+  color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-section h3::before {
+  content: "📋";
+  font-size: 1.1rem;
+}
+
+.summary-box {
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.summary-item {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.summary-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.summary-item strong {
+  color: var(--primary-color);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.subtasks-list,
+.parts-list {
+  margin: 0.5rem 0 0 1rem;
+  padding-left: 0;
+}
+
+.subtasks-list li,
+.parts-list li {
+  margin-bottom: 0.25rem;
+  color: var(--text-color);
+  list-style-type: disc;
+}
+
+.parts-summary {
+  margin-top: 0.5rem;
+}
+
+.parts-summary > div {
+  margin-bottom: 0.75rem;
+}
+
+.parts-summary > div:last-child {
+  margin-bottom: 0;
+}
+
+.parts-summary em {
+  color: var(--primary-color);
+  font-weight: 500;
+  font-style: normal;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.parts-notes {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-top: 0.25rem;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+/* Responsive Summary */
+@media (max-width: 768px) {
+  .summary-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+  
+  .summary-box {
+    padding: 1rem;
+  }
+  
+  .summary-item {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Tab Navigation Styles */
+.tab-navigation {
+  display: flex;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Sarabun', sans-serif;
+}
+
+.tab-button:hover {
+  background-color: #e9ecef;
+}
+
+.tab-button.active {
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-icon {
+  font-size: 1.1rem;
+}
+
+/* History Section Styles */
+.history-header {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.history-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.history-subtitle {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.history-list .job-card {
+  border-left: 4px solid var(--success-color);
+}
+
+.empty-subtitle {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.parts-notes-display {
+  background-color: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+/* Responsive Tab Navigation */
+@media (max-width: 768px) {
+  .tab-navigation {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    justify-content: flex-start;
+    padding: 1rem;
+  }
+  
+  .history-header {
+    padding: 0.75rem;
+  }
+  
+  .history-header h3 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Assigned Job Form Styles */
+.assigned-job-info {
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--primary-color);
+}
+
+.assigned-job-info h3 {
+  margin: 0 0 1rem 0;
+  color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.assigned-job-info h3::before {
+  content: "📋";
+  font-size: 1.1rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.info-value {
+  font-weight: 500;
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.job-form {
+  background-color: white;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.job-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.job-form .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.subtask-input {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.subtask-input input {
+  flex: 1;
+}
+
+.subtask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.subtask-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.subtask-item span {
+  flex: 1;
+  color: var(--text-color);
+}
+
+.btn-remove {
+  background-color: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+  filter: brightness(1.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Responsive Assigned Job Form */
+@media (max-width: 768px) {
+  .assigned-job-info {
+    padding: 1rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .subtask-input {
+    flex-direction: column;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .form-actions button {
+    width: 100%;
+  }
+}
