@@ -1,19 +1,14 @@
+// lib/db/connect.ts
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// การตรวจสอบ MONGODB_URI นอกฟังก์ชัน connectDB ยังคงมีความสำคัญ
-// เพื่อให้แน่ใจว่าแอปจะ terminate ตั้งแต่เนิ่นๆ หากไม่มี URI
 if (!MONGODB_URI) {
   throw new Error(
     'Please define the MONGODB_URI environment variable inside .env'
   );
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents creating new connections every time hot reload occurs.
- */
 let cached = global.mongoose;
 
 if (!cached) {
@@ -26,18 +21,19 @@ async function connectDB() {
   }
 
   if (!cached.promise) {
-    // เพิ่มการตรวจสอบ MONGODB_URI ที่นี่อีกครั้ง เพื่อให้ TypeScript รู้ว่ามันเป็น string แน่นอน
-    // (แม้ว่าจริงๆแล้ว มันก็ควรจะเป็น string อยู่แล้วจากการตรวจสอบด้านบน)
-    if (typeof MONGODB_URI !== 'string' || MONGODB_URI.length === 0) {
-      throw new Error('MONGODB_URI is invalid or not defined at connection time.');
-    }
-
     const opts = {
       bufferCommands: false,
     };
 
-    // ตอนนี้ TypeScript จะรู้ว่า MONGODB_URI เป็น string แล้ว
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    // วิธีแก้ไขที่ 1: ใช้ Type Assertion (ง่ายที่สุด)
+    // cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongoose) => {
+    //   return mongoose;
+    // });
+
+    // วิธีแก้ไขที่ 2 (แนะนำ): ตรวจสอบซ้ำอีกครั้งเพื่อให้ TypeScript แน่ใจ
+    // การตรวจสอบนี้จริง ๆ แล้วควรจะเพียงพอแล้วใน TypeScript เวอร์ชันใหม่ ๆ
+    // แต่ถ้ายังฟ้อง Type Error อยู่ ให้ใช้ Type Assertion ใน Option 1
+    cached.promise = mongoose.connect(MONGODB_URI as string, opts).then((mongoose) => {
       return mongoose;
     });
   }

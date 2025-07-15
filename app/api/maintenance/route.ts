@@ -1,9 +1,10 @@
+// app/api/maintenance/route.ts
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/db/connect'; // ใช้ alias @/ ถ้า config ไว้ หรือปรับ path
-import MaintenanceItem from '@/models/MaintenanceItem'; // ใช้ alias @/ ถ้า config ไว้ หรือปรับ path
+import connectDB from '@/lib/db/connect'; // ใช้ alias @/ หรือปรับ path ตามจริง
+import MaintenanceItem from '@/models/MaintenanceItem'; // ใช้ alias @/ หรือปรับ path ตามจริง
 
 export async function POST(request: Request) {
-  await connectDB(); // เชื่อมต่อ Database
+  await connectDB();
 
   try {
     const body = await request.json();
@@ -18,15 +19,15 @@ export async function POST(request: Request) {
 
     await newItem.save();
     return NextResponse.json({ message: 'Maintenance item added successfully', item: newItem }, { status: 201 });
-  } catch (error: unknown) { // ระบุ type เป็น unknown (จริงๆ TypeScript จะทำให้อยู่แล้ว)
-     console.error('Error adding maintenance item:', error);
-     let errorMessage = 'An unknown error occurred.';
-     if (error instanceof Error) { // ตรวจสอบว่า error เป็น instance ของ Error
-       errorMessage = error.message;
-     }
-     return NextResponse.json({ message: 'Failed to add maintenance item', error: errorMessage }, { status: 500 });
-   }
- }
+  } catch (error: unknown) { // ระบุ type เป็น unknown
+    console.error('Error adding maintenance item:', error);
+    let errorMessage = 'An unknown error occurred.';
+    if (error instanceof Error) { // ตรวจสอบว่า error เป็น instance ของ Error
+      errorMessage = error.message;
+    }
+    return NextResponse.json({ message: 'Failed to add maintenance item', error: errorMessage }, { status: 500 });
+  }
+}
 
 export async function GET() {
   await connectDB();
