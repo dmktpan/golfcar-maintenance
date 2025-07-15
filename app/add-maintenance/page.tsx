@@ -33,10 +33,14 @@ const AddMaintenancePage: React.FC = () => {
       } else {
         setMessage(`Error: ${data.message || 'Something went wrong'}`);
       }
-    } catch (error) {
-      setMessage(`Fetch error: ${error.message}`);
-    }
-  };
+    } catch (error: unknown) { // ระบุ type เป็น unknown ให้ชัดเจน (จริงๆ TypeScript จะทำให้อยู่แล้ว)
+     if (error instanceof Error) { // ตรวจสอบว่า error เป็น instance ของ Error
+       setMessage(`Fetch error: ${error.message}`);
+     } else {
+       setMessage(`An unexpected error occurred.`); // กรณีที่ไม่ใช่ Error object
+     }
+   }
+ };
 
   return (
     <div>
