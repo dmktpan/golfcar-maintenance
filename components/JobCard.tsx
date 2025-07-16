@@ -97,6 +97,18 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
                     <button className="btn-primary" onClick={() => onFillJobForm(job)}>
                         <span className="btn-icon">📝</span> กรอกรายละเอียดงาน
                     </button>
+                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
+                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
+                    </button>
+                </div>
+            )}
+            
+            {/* ปุ่มเสร็จสิ้นงานสำหรับงานที่อยู่ในสถานะ in_progress */}
+            {user.role === 'staff' && job.status === 'in_progress' && job.assigned_to === user.id && (
+                <div className="job-card-footer">
+                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
+                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
+                    </button>
                 </div>
             )}
             
@@ -117,6 +129,13 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
                     </button>
                     <button className="btn-danger" onClick={() => onUpdateStatus(job.id, 'rejected')}>
                         <span className="btn-icon">✕</span> ไม่อนุมัติ
+                    </button>
+                </div>
+            )}
+            {user.role === 'staff' && (job.status === 'assigned' || job.status === 'in_progress') && job.assigned_to === user.id && (
+                <div className="job-card-footer">
+                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
+                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
                     </button>
                 </div>
             )}

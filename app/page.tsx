@@ -17,9 +17,10 @@ import MultiAssignScreen from '@/components/MultiAssignScreen';
 import SerialHistoryScreen from '@/components/SerialHistoryScreen';
 import AdminManagementScreen from '@/components/AdminManagementScreen';
 import GolfCourseManagementScreen from '@/components/GolfCourseManagementScreen';
-import AssignedJobFormScreen from '@/components/AssignedJobFormScreen';
+import AssignedJobFormScreen from '@/components/AssignedJobFormScreen'; // แก้ไขจาก Backup เป็นไฟล์หลัก
+import ViewAssignedJobsScreen from '@/components/ViewAssignedJobsScreen';
 
-export type View = 'dashboard' | 'create_job' | 'parts_management' | 'admin_dashboard' | 'history' | 'profile' | 'manage_users' | 'multi_assign' | 'serial_history' | 'admin_management' | 'golf_course_management' | 'assigned_job_form';
+export type View = 'dashboard' | 'create_job' | 'parts_management' | 'admin_dashboard' | 'history' | 'profile' | 'manage_users' | 'multi_assign' | 'serial_history' | 'admin_management' | 'golf_course_management' | 'assigned_job_form' | 'view_assigned_jobs';
 
 // เพิ่มอินเตอร์เฟซสำหรับสิทธิ์ของผู้ใช้
 export interface UserPermission {
@@ -307,6 +308,7 @@ export default function HomePage() {
         userName: 'Admin Test',
         vehicle_id: 1,
         vehicle_number: '1',
+        golf_course_id: 1, // เพิ่ม golf_course_id
         type: 'PM',
         system: 'brake',
         status: 'pending',
@@ -465,9 +467,13 @@ export default function HomePage() {
             setView={handleSetView}
           />
         )}
+        
+        {view === 'view_assigned_jobs' && (
+          <ViewAssignedJobsScreen 
+            currentUser={user}
+          />
+        )}
       </main>
     </div>
   );
 }
-
-// ลบฟังก์ชัน addPartsUsageLog ที่อยู่ด้านล่างนี้ออกทั้งหมด (บรรทัด 479-525)

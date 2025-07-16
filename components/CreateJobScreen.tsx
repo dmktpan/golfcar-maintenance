@@ -165,6 +165,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 userName: user.name,
                 vehicle_id: selectedVehicle.id,
                 vehicle_number: selectedVehicle.vehicle_number,
+                golf_course_id: selectedVehicle.golf_course_id, // เพิ่ม golf_course_id จาก selectedVehicle
                 type: jobType,
                 status: 'pending',
                 created_at: new Date().toISOString(),
@@ -426,7 +427,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
                 <div className="form-actions">
                     <button type="submit" className="btn-success">ส่งงาน</button>
-                    <button type="button" className="btn-secondary" onClick={() => setView('admin_dashboard')}>ยกเลิก</button>
+                    <button type="button" className="btn-secondary" onClick={() => setView('dashboard')}>ยกเลิก</button>
                 </div>
             </form>
             

@@ -81,6 +81,13 @@ const AdminDashboard = ({ setView }: AdminDashboardProps) => {
                     buttonText="มอบหมายงาน"
                     onClick={() => setView('multi_assign')}
                 />
+                <AdminDashboardCard
+                    icon={<ClipboardIcon />}
+                    title="ดูงานที่ถูกมอบหมาย"
+                    description="ดูและจัดการงานที่ถูกมอบหมายให้พนักงาน"
+                    buttonText="ดูงานที่มอบหมาย"
+                    onClick={() => setView('view_assigned_jobs')}
+                />
             </div>
         </div>
     );

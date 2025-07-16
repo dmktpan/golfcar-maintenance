@@ -33,7 +33,7 @@ export interface Part {
 }
 
 export type JobType = 'PM' | 'BM' | 'Recondition';
-export type JobStatus = 'pending' | 'approved' | 'rejected' | 'assigned';
+export type JobStatus = 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed';
 
 export interface Job {
   id: number;
@@ -41,6 +41,7 @@ export interface Job {
   userName: string;
   vehicle_id: number;
   vehicle_number: string;
+  golf_course_id: number; // เพิ่ม field นี้
   type: JobType;
   status: JobStatus;
   created_at: string;
@@ -51,9 +52,9 @@ export interface Job {
   partsNotes: string;
   remarks: string;
   imageUrl?: string;
-  assigned_by?: number; // ID ของหัวหน้างานที่มอบหมาย (optional สำหรับงานที่พนักงานสร้างเอง)
-  assigned_by_name?: string; // ชื่อหัวหน้างานที่มอบหมาย
-  assigned_to?: number; // ID ของพนักงานที่ได้รับมอบหมาย
+  assigned_by?: number;
+  assigned_by_name?: string;
+  assigned_to?: number;
 }
 
 // --- MOCK DATA (Simulating Database) ---
@@ -132,14 +133,20 @@ export const MOCK_SYSTEMS: Record<string, Record<string, string[]>> = {
 
 export const MOCK_JOBS: Job[] = [
     // งานที่พนักงานสร้างเอง (ไม่มี assigned_by)
-    { id: 1, user_id: 1, userName: 'tape1408', vehicle_id: 101, vehicle_number: 'A01', type: 'BM', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), parts: [{ part_id: 1, quantity_used: 1 }], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด' },
+    { id: 1, user_id: 1, userName: 'tape1408', vehicle_id: 101, vehicle_number: 'A01', golf_course_id: 1, type: 'BM', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), parts: [{ part_id: 1, quantity_used: 1 }], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด' },
     
     // งานที่หัวหน้างานมอบหมาย
-    { id: 2, user_id: 1, userName: 'tape1408', vehicle_id: 102, vehicle_number: 'A02', type: 'PM', status: 'assigned', created_at: new Date(Date.now() - 3600000).toISOString(), parts: [], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: '', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    { id: 2, user_id: 1, userName: 'tape1408', vehicle_id: 102, vehicle_number: 'A02', golf_course_id: 1, type: 'PM', status: 'assigned', created_at: new Date(Date.now() - 3600000).toISOString(), parts: [], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: '', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    
+    // งานที่กำลังดำเนินการ
+    { id: 5, user_id: 5, userName: 'สมหญิง ช่างซ่อม', vehicle_id: 104, vehicle_number: 'A03', golf_course_id: 1, type: 'BM', status: 'in_progress', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: '', remarks: 'พวงมาลัยหนัก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 5 },
+    
+    // งานที่เสร็จสิ้นแล้ว
+    { id: 6, user_id: 1, userName: 'tape1408', vehicle_id: 105, vehicle_number: 'A04', golf_course_id: 1, type: 'PM', status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString(), parts: [{ part_id: 5, quantity_used: 1 }], system: 'motor', subTasks: ['ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 1 ลิตร', remarks: 'เช็คประจำ', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
     
     // งานที่เสร็จแล้ว (ประวัติ)
-    { id: 3, user_id: 1, userName: 'tape1408', vehicle_id: 103, vehicle_number: 'B05', type: 'BM', status: 'approved', created_at: new Date(Date.now() - 172800000).toISOString(), parts: [{ part_id: 2, quantity_used: 2 }], system: 'brake', subTasks: ['ติดตั้งผ้าเบรก'], partsNotes: 'เปลี่ยนยางล้อ 2 เส้น', remarks: 'ยางล้อหน้าแตก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
+    { id: 3, user_id: 1, userName: 'tape1408', vehicle_id: 103, vehicle_number: 'B05', golf_course_id: 1, type: 'BM', status: 'approved', created_at: new Date(Date.now() - 172800000).toISOString(), parts: [{ part_id: 2, quantity_used: 2 }], system: 'brake', subTasks: ['ติดตั้งผ้าเบรก'], partsNotes: 'เปลี่ยนยางล้อ 2 เส้น', remarks: 'ยางล้อหน้าแตก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
     
     // งานที่พนักงานคนอื่นทำ
-    { id: 4, user_id: 4, userName: 'สมชาย พนักงาน', vehicle_id: 201, vehicle_number: 'C01', type: 'PM', status: 'pending', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: '', remarks: 'เช็คประจำเดือน', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
+    { id: 4, user_id: 4, userName: 'สมชาย พนักงาน', vehicle_id: 201, vehicle_number: 'C01', golf_course_id: 2, type: 'PM', status: 'pending', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: '', remarks: 'เช็คประจำเดือน', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
 ];
