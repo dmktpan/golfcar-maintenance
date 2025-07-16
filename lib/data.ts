@@ -63,13 +63,12 @@ export interface Job {
   assigned_to?: number;
 }
 
-// เพิ่ม interface สำหรับการเลือกอะไหล่พร้อมจำนวน
+// เพิ่ม interface สำหรับการเลือกอะไหล่พร้อมจำนวน (เอาราคาออก)
 export interface SelectedPart {
   id: number;
   name: string;
   quantity: number;
   unit: string;
-  price: number;
 }
 
 // เพิ่ม View type ที่ส่วนท้ายของไฟล์

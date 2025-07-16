@@ -45,58 +45,113 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
     return systemLabels[system] || system;
   };
 
+  const getSystemIcon = (system: string) => {
+    const systemIcons: Record<string, string> = {
+      'brake': '🛑',
+      'steering': '🎯',
+      'motor': '⚙️',
+      'electric': '⚡'
+    };
+    return systemIcons[system] || '🔧';
+  };
+
+  const getJobTypeIcon = (type: string) => {
+    const typeIcons: Record<string, string> = {
+      'PM': '🔄',
+      'BM': '🚨',
+      'Recondition': '🔨'
+    };
+    return typeIcons[type] || '🔧';
+  };
+
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h2>รายละเอียดงาน #{job.id}</h2>
-          <button className={styles.modalCloseBtn} onClick={onClose}>
+    <div className={styles['modal-overlay']} onClick={onClose}>
+      <div className={styles['modal-content']} onClick={(e) => e.stopPropagation()}>
+        <div className={styles['modal-header']}>
+          <div className={styles['header-left']}>
+            <div className={styles['job-icon']}>📋</div>
+            <div>
+              <h2>รายละเอียดงาน #{job.id}</h2>
+              <p className={styles['vehicle-info']}>🚗 รถเบอร์ {job.vehicle_number}</p>
+            </div>
+          </div>
+          <button className={styles['modal-close-btn']} onClick={onClose}>
             ✕
           </button>
         </div>
 
-        <div className={styles.modalBody}>
+        <div className={styles['modal-body']}>
           {/* ข้อมูลพื้นฐาน */}
-          <div className={styles.jobInfoSection}>
-            <h3>ข้อมูลทั่วไป</h3>
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <label>ประเภทงาน:</label>
-                <span className={styles.jobTypeBadge}>{getJobTypeLabel(job.type)}</span>
+          <div className={styles['job-info-section']}>
+            <h3>
+              <span className={styles['section-icon']}>ℹ️</span>
+              ข้อมูลทั่วไป
+            </h3>
+            <div className={styles['info-grid']}>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>{getJobTypeIcon(job.type)}</span>
+                  ประเภทงาน:
+                </label>
+                <span className={styles['job-type-badge']}>{getJobTypeLabel(job.type)}</span>
               </div>
-              <div className={styles.infoItem}>
-                <label>สถานะ:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>📊</span>
+                  สถานะ:
+                </label>
                 <StatusBadge status={job.status} />
               </div>
-              <div className={styles.infoItem}>
-                <label>หมายเลขรถ:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>🚗</span>
+                  หมายเลขรถ:
+                </label>
                 <span>{job.vehicle_number}</span>
               </div>
-              <div className={styles.infoItem}>
-                <label>สนามกอล์ฟ:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>🏌️</span>
+                  สนามกอล์ฟ:
+                </label>
                 <span>{getGolfCourseName(job.golf_course_id)}</span>
               </div>
-              <div className={styles.infoItem}>
-                <label>ระบบที่ซ่อม:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>{getSystemIcon(job.system)}</span>
+                  ระบบที่ซ่อม:
+                </label>
                 <span>{getSystemLabel(job.system)}</span>
               </div>
-              <div className={styles.infoItem}>
-                <label>ผู้รับผิดชอบ:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>👤</span>
+                  ผู้รับผิดชอบ:
+                </label>
                 <span>{job.userName}</span>
               </div>
               {job.assigned_by && (
-                <div className={styles.infoItem}>
-                  <label>ผู้มอบหมาย:</label>
+                <div className={styles['info-item']}>
+                  <label>
+                    <span className={styles['label-icon']}>👨‍💼</span>
+                    ผู้มอบหมาย:
+                  </label>
                   <span>{job.assigned_by_name || getAssignedByName(job.assigned_by)}</span>
                 </div>
               )}
-              <div className={styles.infoItem}>
-                <label>วันที่สร้าง:</label>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>📅</span>
+                  วันที่สร้าง:
+                </label>
                 <span>{formatDate(job.created_at)}</span>
               </div>
               {job.updated_at && (
-                <div className={styles.infoItem}>
-                  <label>วันที่อัปเดต:</label>
+                <div className={styles['info-item']}>
+                  <label>
+                    <span className={styles['label-icon']}>🔄</span>
+                    วันที่อัปเดต:
+                  </label>
                   <span>{formatDate(job.updated_at)}</span>
                 </div>
               )}
@@ -105,11 +160,15 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
 
           {/* งานย่อย */}
           {job.subTasks && job.subTasks.length > 0 && (
-            <div className={styles.jobInfoSection}>
-              <h3>งานย่อยที่ต้องทำ</h3>
-              <ul className={styles.subtasksList}>
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>📝</span>
+                งานย่อยที่ต้องทำ
+              </h3>
+              <ul className={styles['subtasks-list']}>
                 {job.subTasks.map((task, index) => (
-                  <li key={index} className={styles.subtaskItem}>
+                  <li key={index} className={styles['subtask-item']}>
+                    <span className={styles['task-number']}>{index + 1}</span>
                     {task}
                   </li>
                 ))}
@@ -119,21 +178,34 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
 
           {/* อะไหล่ที่ใช้ */}
           {job.parts && job.parts.length > 0 && (
-            <div className={styles.jobInfoSection}>
-              <h3>อะไหล่ที่ใช้</h3>
-              <div className={styles.partsTable}>
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>🔧</span>
+                อะไหล่ที่ใช้
+              </h3>
+              <div className={styles['parts-table']}>
                 <table>
                   <thead>
                     <tr>
-                      <th>ชื่ออะไหล่</th>
-                      <th>จำนวน</th>
+                      <th>
+                        <span className={styles['table-icon']}>🔩</span>
+                        ชื่ออะไหล่
+                      </th>
+                      <th>
+                        <span className={styles['table-icon']}>📊</span>
+                        จำนวน
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {job.parts.map((part, index) => (
                       <tr key={index}>
                         <td>{getPartName(part.part_id)}</td>
-                        <td>{part.quantity_used}</td>
+                        <td>
+                          <span className={styles['quantity-badge']}>
+                            {part.quantity_used}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -144,31 +216,49 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
 
           {/* หมายเหตุอะไหล่ */}
           {job.partsNotes && (
-            <div className={styles.jobInfoSection}>
-              <h3>หมายเหตุอะไหล่</h3>
-              <p className={styles.notesText}>{job.partsNotes}</p>
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>📝</span>
+                หมายเหตุอะไหล่
+              </h3>
+              <div className={styles['notes-container']}>
+                <div className={styles['notes-icon']}>💬</div>
+                <p className={styles['notes-text']}>{job.partsNotes}</p>
+              </div>
             </div>
           )}
 
           {/* หมายเหตุ */}
           {job.remarks && (
-            <div className={styles.jobInfoSection}>
-              <h3>หมายเหตุ</h3>
-              <p className={styles.notesText}>{job.remarks}</p>
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>📋</span>
+                หมายเหตุ
+              </h3>
+              <div className={styles['notes-container']}>
+                <div className={styles['notes-icon']}>💭</div>
+                <p className={styles['notes-text']}>{job.remarks}</p>
+              </div>
             </div>
           )}
 
           {/* รูปภาพ */}
           {job.imageUrl && (
-            <div className={styles.jobInfoSection}>
-              <h3>รูปภาพ</h3>
-              <img src={job.imageUrl} alt="รูปภาพงาน" className={styles.jobImage} />
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>📷</span>
+                รูปภาพ
+              </h3>
+              <div className={styles['image-container']}>
+                <img src={job.imageUrl} alt="รูปภาพงาน" className={styles['job-image']} />
+              </div>
             </div>
           )}
         </div>
 
-        <div className={styles.modalFooter}>
-          <button className={styles.btnSecondary} onClick={onClose}>
+        <div className={styles['modal-footer']}>
+          <button className={styles['btn-secondary']} onClick={onClose}>
+            <span className={styles['btn-icon']}>✕</span>
             ปิด
           </button>
         </div>

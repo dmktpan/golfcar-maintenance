@@ -76,6 +76,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
+    const [newSubTask, setNewSubTask] = useState(''); // เพิ่ม state สำหรับงานย่อยใหม่
     
     // กรองรถเฉพาะที่อยู่ในสนามเดียวกับพนักงานที่ล็อกอิน
     const userGolfCourse = golfCourses.find(gc => gc.id === user.golf_course_id);
@@ -103,18 +104,79 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     }, [system]);
     
     useEffect(() => {
-        // รีเซ็ตข้อมูลเมื่อเปลี่ยนประเภทการบำรุงรักษา
+        // รีเซ็ตข้อมูลเมื่อเปลี่ยนประเภการบำรุงรักษา
         if (jobType !== 'PM') {
             setSystem('');
             setSubTasks([]);
         }
     }, [jobType]);
 
+    // เพิ่มฟังก์ชันสำหรับจัดการงานย่อยใหม่
+    const handleAddSubTask = () => {
+        if (newSubTask.trim() && !subTasks.includes(newSubTask.trim())) {
+            setSubTasks(prev => [...prev, newSubTask.trim()]);
+            setNewSubTask('');
+        }
+    };
+
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
     }
     
-    const handlePartSelection = (part: { id: number; name: string; unit: string; price: number }) => {
+    // รายการอะไหล่ตามระบบ (เอาราคาออกแล้ว)
+    const PARTS_BY_SYSTEM = {
+        'brake': [
+            { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น' },
+            { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด' },
+            { id: 3, name: 'เฟืองปาร์คเบรค', unit: 'ชิ้น' },
+            { id: 4, name: 'สปริงคันเร่ง', unit: 'ชิ้น' },
+            { id: 5, name: 'สายเบรกสั้น', unit: 'เส้น' },
+            { id: 6, name: 'สายเบรกยาว', unit: 'เส้น' },
+            { id: 7, name: 'ผ้าเบรก EZGO', unit: 'ชุด' },
+            { id: 8, name: 'ผ้าเบรก EZGO สั้น', unit: 'ชุด' },
+            { id: 9, name: 'ผ้าเบรก EZGO ยาว', unit: 'ชุด' },
+            { id: 10, name: 'ซีลล้อหลัง', unit: 'ชิ้น' },
+            { id: 11, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
+            { id: 12, name: 'น๊อตยึดแป้นเบรก', unit: 'ชิ้น' }
+        ],
+        'steering': [
+            { id: 13, name: 'ยอยด์', unit: 'ชิ้น' },
+            { id: 14, name: 'ระปุกพวงมาลัย', unit: 'ชิ้น' },
+            { id: 15, name: 'เอ็นแร็ค', unit: 'ชิ้น' },
+            { id: 16, name: 'ลูกหมาก', unit: 'ชิ้น' },
+            { id: 17, name: 'ลูกหมากใต้โช๊ค', unit: 'ชิ้น' },
+            { id: 18, name: 'ลูกปืน 6005', unit: 'ชิ้น' },
+            { id: 19, name: 'ลูกปืน 6204', unit: 'ชิ้น' },
+            { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น' },
+            { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น' },
+            { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น' },
+            { id: 23, name: 'ปีกนก L+R', unit: 'คู่' }
+        ],
+        'motor': [
+            { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น' },
+            { id: 25, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
+            { id: 26, name: 'แม่เหล็กมอเตอร์', unit: 'ชิ้น' },
+            { id: 27, name: 'เซ็นเซอร์มอเตอร์', unit: 'ชิ้น' }
+        ],
+        'electric': [
+            { id: 28, name: 'แบตเตอรี่ 12V', unit: 'ก้อน' },
+            { id: 29, name: 'ชุดควบคุมมอเตอร์', unit: 'ชุด' },
+            { id: 30, name: 'สายไฟหลัก', unit: 'เมตร' }
+        ],
+        'others': [
+            { id: 31, name: 'บอดี้หน้า', unit: 'ชิ้น' },
+            { id: 32, name: 'บอดี้หลัง', unit: 'ชิ้น' },
+            { id: 33, name: 'โครงหลังคาหน้า', unit: 'ชิ้น' },
+            { id: 34, name: 'โครงหลังคาหลัง', unit: 'ชิ้น' },
+            { id: 35, name: 'หลังคา', unit: 'ชิ้น' },
+            { id: 36, name: 'เบาะนั่ง', unit: 'ชิ้น' },
+            { id: 37, name: 'พนักพิง', unit: 'ชิ้น' },
+            { id: 38, name: 'ยาง', unit: 'เส้น' },
+            { id: 39, name: 'แคดดี้เพลต', unit: 'ชิ้น' }
+        ]
+    };
+
+    const handlePartSelection = (part: { id: number; name: string; unit: string }) => {
         setSelectedParts(prev => {
             const existingPart = prev.find(p => p.id === part.id);
             if (existingPart) {
@@ -153,7 +215,8 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             return;
         }
         
-        if (subTasks.length === 0) {
+        // แก้ไข: เฉพาะ PM เท่านั้นที่ต้องมีงานย่อย สำหรับ BM และ Recondition ไม่บังคับ
+        if (jobType === 'PM' && subTasks.length === 0) {
             alert('กรุณาเพิ่มงานย่อยอย่างน้อย 1 รายการ');
             return;
         }
@@ -287,7 +350,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="job-type">ประเภทการบำรุงรักษา *</label>
+                    <label htmlFor="job-type">ประเภการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)}>
                         <option value="PM">Preventive Maintenance (PM)</option>
                         <option value="BM">Breakdown Maintenance (BM)</option>
@@ -338,6 +401,73 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         <label>งานย่อยที่เลือก:</label>
                         <div className="display-box">
                             {subTasks.length > 0 ? subTasks.join(', ') : 'ยังไม่ได้เลือกงานย่อย'}
+                        </div>
+                    </div>
+                )}
+
+                {/* เพิ่มส่วนสำหรับ BM และ Recondition */}
+                {(jobType === 'BM' || jobType === 'Recondition') && (
+                    <div className="form-group">
+                        <label htmlFor="job-details">รายละเอียดงาน (ไม่บังคับ)</label>
+                        <textarea 
+                            id="job-details" 
+                            value={remarks} 
+                            onChange={e => setRemarks(e.target.value)}
+                            placeholder="กรุณาระบุรายละเอียดของงานที่ต้องการซ่อม..."
+                        />
+                    </div>
+                )}
+
+                {(jobType === 'BM' || jobType === 'Recondition') && (
+                    <div className="form-group">
+                        <label>งานย่อยเพิ่มเติม (ไม่บังคับ)</label>
+                        <div className="add-subtask-section">
+                            <div className="add-subtask-input">
+                                <input
+                                    type="text"
+                                    value={newSubTask}
+                                    onChange={(e) => setNewSubTask(e.target.value)}
+                                    placeholder="ระบุงานย่อยที่ต้องการเพิ่ม..."
+                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubTask())}
+                                />
+                                <button 
+                                    type="button" 
+                                    className="btn-add-subtask"
+                                    onClick={handleAddSubTask}
+                                    disabled={!newSubTask.trim()}
+                                >
+                                    เพิ่ม
+                                </button>
+                            </div>
+                            {subTasks.length > 0 && (
+                                <div className="added-subtasks">
+                                    <h4>งานย่อยที่เพิ่ม:</h4>
+                                    <ul>
+                                        {subTasks.map((task: string, index: number) => (
+                                            <li key={index}>
+                                                {task}
+                                                <button 
+                                                    type="button" 
+                                                    className="remove-subtask-btn"
+                                                    onClick={() => setSubTasks(prev => prev.filter((_, i) => i !== index))}
+                                                >
+                                                    ×
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* แสดงงานย่อยที่เลือกสำหรับ BM และ Recondition */}
+                {(jobType === 'BM' || jobType === 'Recondition') && subTasks.length > 0 && (
+                    <div className="form-group">
+                        <label>งานย่อยที่เลือก:</label>
+                        <div className="display-box">
+                            {subTasks.join(', ')}
                         </div>
                     </div>
                 )}
@@ -419,7 +549,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     <h3>สรุปข้อมูลงาน</h3>
                     <div className="summary-box">
                         <div className="summary-item">
-                            <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
+                            <strong>ประเภการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
                         </div>
                         {jobType === 'PM' && system && (
                             <div className="summary-item">
@@ -447,13 +577,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                                 {selectedParts.map((part) => (
                                                     <li key={part.id}>
                                                         {part.name} - จำนวน {part.quantity} {part.unit}
-                                                        <span className="part-cost"> (฿{(part.price * part.quantity).toLocaleString()})</span>
                                                     </li>
                                                 ))}
                                             </ul>
-                                            <div className="total-cost">
-                                                <strong>รวมค่าอะไหล่: ฿{selectedParts.reduce((total, part) => total + (part.price * part.quantity), 0).toLocaleString()}</strong>
-                                            </div>
                                         </div>
                                     )}
                                     {partsNotes.trim() && (
@@ -520,7 +646,6 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                             <div className="part-name">{part.name}</div>
                                             <div className="part-details">
                                                 <span className="part-unit">{part.unit}</span>
-                                                <span className="part-price">฿{part.price}</span>
                                             </div>
                                             {selectedPart && (
                                                 <div className="selected-quantity">
