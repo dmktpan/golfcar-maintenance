@@ -24,6 +24,8 @@ export interface Vehicle {
   serial_number: string;
   vehicle_number: string;
   golf_course_id: number;
+  golf_course_name: string; // เพิ่มชื่อสนาม
+  model: string; // เพิ่มรุ่นรถ
   status?: 'active' | 'inactive' | 'parked' | 'spare'; // เพิ่มสถานะใหม่
 }
 
@@ -124,18 +126,18 @@ export const MOCK_USERS: User[] = [
 
 // เพิ่มรถกอล์ฟมากขึ้น
 export const MOCK_VEHICLES: Vehicle[] = [
-  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, status: 'active' },
-  { id: 102, serial_number: 'GC-SN-002', vehicle_number: 'A02', golf_course_id: 1, status: 'active' },
-  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, status: 'inactive' },
-  { id: 104, serial_number: 'WL-2023-001', vehicle_number: 'A03', golf_course_id: 1, status: 'active' },
-  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, status: 'parked' },
-  { id: 106, serial_number: 'WL-2023-003', vehicle_number: 'B01', golf_course_id: 1, status: 'active' },
-  { id: 107, serial_number: 'WL-2023-004', vehicle_number: 'B02', golf_course_id: 1, status: 'spare' },
-  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, status: 'active' },
-  { id: 201, serial_number: 'GV-20230101', vehicle_number: 'C01', golf_course_id: 2, status: 'active' },
-  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, status: 'inactive' },
-  { id: 203, serial_number: 'GV-2023-003', vehicle_number: 'C03', golf_course_id: 2, status: 'active' },
-  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, status: 'spare' },
+  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active' },
+  { id: 102, serial_number: 'GC-SN-002', vehicle_number: 'A02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO RXV', status: 'active' },
+  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha Drive2', status: 'inactive' },
+  { id: 104, serial_number: 'WL-2023-001', vehicle_number: 'A03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active' },
+  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO TXT', status: 'parked' },
+  { id: 106, serial_number: 'WL-2023-003', vehicle_number: 'B01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha G29', status: 'active' },
+  { id: 107, serial_number: 'WL-2023-004', vehicle_number: 'B02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car DS', status: 'spare' },
+  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO Freedom', status: 'active' },
+  { id: 201, serial_number: 'GV-20230101', vehicle_number: 'C01', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car Precedent', status: 'active' },
+  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Yamaha Drive2', status: 'inactive' },
+  { id: 203, serial_number: 'GV-2023-003', vehicle_number: 'C03', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'E-Z-GO RXV', status: 'active' },
+  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car DS', status: 'spare' },
 ];
 
 // เพิ่มอะไหล่มากขึ้น
@@ -230,7 +232,7 @@ export interface SerialHistoryEntry {
   serial_number: string;
   vehicle_id: number;
   vehicle_number: string;
-  action_type: 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection';
+  action_type: 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection' | 'status_change' | 'data_edit' | 'data_delete' | 'bulk_transfer' | 'bulk_upload';
   action_date: string;
   details: string;
   performed_by: string;
@@ -242,7 +244,12 @@ export interface SerialHistoryEntry {
   job_type?: 'PM' | 'BM' | 'Recondition';
   system?: string;
   parts_used?: string[];
-  status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned'; // เพิ่ม 'assigned'
+  status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned';
+  // เพิ่มฟิลด์สำหรับบันทึกการเปลี่ยนแปลง
+  previous_data?: any;
+  new_data?: any;
+  change_type?: 'create' | 'update' | 'delete' | 'transfer' | 'status_change';
+  affected_fields?: string[];
 }
 
 // ข้อมูล mock สำหรับ Serial History Log ที่เชื่อมโยงกับข้อมูลจริง
@@ -476,6 +483,64 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
     golf_course_id: 1,
     golf_course_name: 'วอเตอร์แลนด์',
     is_active: false
+  },
+  
+  // การเปลี่ยนสถานะรถ
+  {
+    id: 15,
+    serial_number: 'KT-20220601',
+    vehicle_id: 101,
+    vehicle_number: 'A01',
+    action_type: 'status_change',
+    action_date: '2024-12-05T14:30:00.000Z',
+    details: 'เปลี่ยนสถานะรถจาก "ใช้งาน" เป็น "ฝากจอด"',
+    performed_by: 'สมศรี หัวหน้า',
+    performed_by_id: 2,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true,
+    change_type: 'status_change',
+    affected_fields: ['status'],
+    previous_data: { status: 'active' },
+    new_data: { status: 'parked' }
+  },
+  
+  // การแก้ไขข้อมูลรถ
+  {
+    id: 16,
+    serial_number: 'GC-SN-002',
+    vehicle_id: 102,
+    vehicle_number: 'A02',
+    action_type: 'data_edit',
+    action_date: '2024-12-05T15:45:00.000Z',
+    details: 'แก้ไขข้อมูลรถ - หมายเลขรถ: A02 → A02-NEW',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true,
+    change_type: 'update',
+    affected_fields: ['vehicle_number'],
+    previous_data: { vehicle_number: 'A02' },
+    new_data: { vehicle_number: 'A02-NEW' }
+  },
+  
+  // การอัปโหลดหลายคัน
+  {
+    id: 17,
+    serial_number: 'BULK-001',
+    vehicle_id: 301,
+    vehicle_number: 'D01',
+    action_type: 'bulk_upload',
+    action_date: '2024-12-05T16:00:00.000Z',
+    details: 'อัปโหลดข้อมูลรถแบบหลายคันพร้อมกัน - หมายเลขซีเรียล: BULK-001, หมายเลขรถ: D01 (รวม 5 คัน)',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
+    is_active: true,
+    change_type: 'create',
+    affected_fields: ['serial_number', 'vehicle_number', 'golf_course_id', 'status']
   }
 ];
 
@@ -496,6 +561,144 @@ export interface PartsUsageLog {
 }
 
 // เพิ่มข้อมูล mock สำหรับ Parts Usage Log
+// ฟังก์ชันสำหรับเพิ่มประวัติการเปลี่ยนแปลง
+export const addSerialHistoryEntry = (entry: Omit<SerialHistoryEntry, 'id'>): SerialHistoryEntry => {
+  const newEntry: SerialHistoryEntry = {
+    ...entry,
+    id: MOCK_SERIAL_HISTORY.length + 1
+  };
+  MOCK_SERIAL_HISTORY.push(newEntry);
+  return newEntry;
+};
+
+// ฟังก์ชันสำหรับบันทึกการเปลี่ยนแปลงรถ
+export const logVehicleChange = (
+  action: 'create' | 'update' | 'delete' | 'transfer' | 'status_change',
+  vehicle: Vehicle,
+  performedBy: string,
+  previousData?: Partial<Vehicle>,
+  newData?: Partial<Vehicle>,
+  affectedFields?: string[]
+): SerialHistoryEntry => {
+  const actionTypeMap = {
+    create: 'registration' as const,
+    update: 'data_edit' as const,
+    delete: 'data_delete' as const,
+    transfer: 'transfer' as const,
+    status_change: 'status_change' as const
+  };
+
+  const entry = addSerialHistoryEntry({
+    serial_number: vehicle.serial_number,
+    vehicle_id: vehicle.id,
+    vehicle_number: vehicle.vehicle_number,
+    action_type: actionTypeMap[action],
+    action_date: new Date().toISOString(),
+    details: getActionDetails(action, vehicle, previousData, newData),
+    performed_by: performedBy,
+    performed_by_id: 3, // ในการใช้งานจริงควรใช้ ID ผู้ใช้ปัจจุบัน
+    golf_course_id: vehicle.golf_course_id,
+    golf_course_name: vehicle.golf_course_name,
+    is_active: vehicle.status === 'active',
+    status: vehicle.status === 'active' ? 'completed' : 'pending',
+    previous_data: previousData,
+    new_data: newData,
+    change_type: action,
+    affected_fields: affectedFields
+  });
+
+  return entry;
+};
+
+// ฟังก์ชันสำหรับบันทึกการโอนย้ายหลายคัน
+export const logBulkTransfer = (
+  vehicles: Vehicle[],
+  targetGolfCourseId: number,
+  targetGolfCourseName: string,
+  performedBy: string
+): SerialHistoryEntry[] => {
+  return vehicles.map(vehicle => {
+    const previousData = { 
+      golf_course_id: vehicle.golf_course_id, 
+      golf_course_name: vehicle.golf_course_name 
+    };
+    const newData = { 
+      golf_course_id: targetGolfCourseId, 
+      golf_course_name: targetGolfCourseName 
+    };
+
+    return addSerialHistoryEntry({
+      serial_number: vehicle.serial_number,
+      vehicle_id: vehicle.id,
+      vehicle_number: vehicle.vehicle_number,
+      action_type: 'bulk_transfer',
+      action_date: new Date().toISOString(),
+      details: `โอนย้ายรถจาก ${vehicle.golf_course_name} ไปยัง ${targetGolfCourseName}`,
+      performed_by: performedBy,
+      performed_by_id: 3,
+      golf_course_id: targetGolfCourseId,
+      golf_course_name: targetGolfCourseName,
+      is_active: vehicle.status === 'active',
+      status: vehicle.status === 'active' ? 'completed' : 'pending',
+      previous_data: previousData,
+      new_data: newData,
+      change_type: 'transfer',
+      affected_fields: ['golf_course_id', 'golf_course_name']
+    });
+  });
+};
+
+// ฟังก์ชันสำหรับบันทึกการอัปโหลดหลายคัน
+export const logBulkUpload = (
+  vehicles: Vehicle[],
+  performedBy: string
+): SerialHistoryEntry[] => {
+  return vehicles.map(vehicle => 
+    addSerialHistoryEntry({
+      serial_number: vehicle.serial_number,
+      vehicle_id: vehicle.id,
+      vehicle_number: vehicle.vehicle_number,
+      action_type: 'bulk_upload',
+      action_date: new Date().toISOString(),
+      details: `เพิ่มรถใหม่ผ่านการอัปโหลดไฟล์ - ${vehicle.vehicle_number} (${vehicle.model})`,
+      performed_by: performedBy,
+      performed_by_id: 3,
+      golf_course_id: vehicle.golf_course_id,
+      golf_course_name: vehicle.golf_course_name,
+      is_active: vehicle.status === 'active',
+      status: 'completed',
+      new_data: vehicle,
+      change_type: 'create',
+      affected_fields: Object.keys(vehicle)
+    })
+  );
+};
+
+// ฟังก์ชันช่วยสำหรับสร้างรายละเอียดการกระทำ
+const getActionDetails = (
+  action: string,
+  vehicle: Vehicle,
+  previousData?: Partial<Vehicle>,
+  newData?: Partial<Vehicle>
+): string => {
+  switch (action) {
+    case 'create':
+      return `ลงทะเบียนรถใหม่ - ${vehicle.vehicle_number} (${vehicle.model})`;
+    case 'update':
+      return `แก้ไขข้อมูลรถ - ${vehicle.vehicle_number}`;
+    case 'delete':
+      return `ลบข้อมูลรถ - ${vehicle.vehicle_number}`;
+    case 'transfer':
+      return `โอนย้ายรถจาก ${previousData?.golf_course_name} ไปยัง ${newData?.golf_course_name}`;
+    case 'status_change':
+      return `เปลี่ยนสถานะรถจาก ${previousData?.status} เป็น ${newData?.status}`;
+    default:
+      return `การกระทำ: ${action}`;
+  }
+};
+
+
+
 export const MOCK_PARTS_USAGE_LOG: PartsUsageLog[] = [
     // ข้อมูลจากเดือนที่แล้ว
     {

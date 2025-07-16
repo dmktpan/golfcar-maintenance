@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { User, Job, MOCK_SERIAL_HISTORY, MOCK_GOLF_COURSES, MOCK_JOBS, View } from '@/lib/data';
+import { User, Job, SerialHistoryEntry, MOCK_SERIAL_HISTORY, MOCK_GOLF_COURSES, MOCK_JOBS, View } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
 
@@ -139,26 +139,36 @@ const SerialHistoryScreen = ({ user, setView }: SerialHistoryScreenProps) => {
     });
   };
 
-  const getActionTypeLabel = (actionType: string) => {
-    const labels: Record<string, string> = {
-      'registration': 'ลงทะเบียน',
-      'transfer': 'โอนย้าย',
-      'maintenance': 'ซ่อมบำรุง',
-      'decommission': 'ปลดระวาง',
-      'inspection': 'ตรวจสอบ'
-    };
-    return labels[actionType] || actionType;
+  const getActionTypeLabel = (actionType: string): string => {
+    switch (actionType) {
+      case 'registration': return 'ลงทะเบียน';
+      case 'transfer': return 'โอนย้าย';
+      case 'maintenance': return 'ซ่อมบำรุง';
+      case 'decommission': return 'ปลดระวาง';
+      case 'inspection': return 'ตรวจสอบ';
+      case 'status_change': return 'เปลี่ยนสถานะ';
+      case 'data_edit': return 'แก้ไขข้อมูล';
+      case 'data_delete': return 'ลบข้อมูล';
+      case 'bulk_transfer': return 'โอนย้ายหลายคัน';
+      case 'bulk_upload': return 'อัปโหลดหลายคัน';
+      default: return actionType;
+    }
   };
 
-  const getActionTypeColor = (actionType: string) => {
-    const colors: Record<string, string> = {
-      'registration': '#10b981',
-      'transfer': '#3b82f6',
-      'maintenance': '#f59e0b',
-      'decommission': '#ef4444',
-      'inspection': '#8b5cf6'
-    };
-    return colors[actionType] || '#6b7280';
+  const getActionTypeColorClass = (actionType: string): string => {
+    switch (actionType) {
+      case 'registration': return 'bg-green-100 text-green-800';
+      case 'transfer': return 'bg-blue-100 text-blue-800';
+      case 'maintenance': return 'bg-yellow-100 text-yellow-800';
+      case 'decommission': return 'bg-red-100 text-red-800';
+      case 'inspection': return 'bg-purple-100 text-purple-800';
+      case 'status_change': return 'bg-orange-100 text-orange-800';
+      case 'data_edit': return 'bg-indigo-100 text-indigo-800';
+      case 'data_delete': return 'bg-red-100 text-red-800';
+      case 'bulk_transfer': return 'bg-cyan-100 text-cyan-800';
+      case 'bulk_upload': return 'bg-emerald-100 text-emerald-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const handleViewJob = (jobId: number) => {
@@ -169,13 +179,33 @@ const SerialHistoryScreen = ({ user, setView }: SerialHistoryScreenProps) => {
     }
   };
 
-  const handleViewDetails = (entry: any) => {
-    alert(`รายละเอียด: ${entry.details}\n\nประเภท: ${getActionTypeLabel(entry.action_type)}\nผู้ดำเนินการ: ${entry.performed_by}\nวันที่: ${formatDate(entry.action_date)}`);
+  const handleViewDetails = (entry: SerialHistoryEntry) => {
+    let detailsText = `รายละเอียด: ${entry.details}\n\n`;
+    detailsText += `ประเภท: ${getActionTypeLabel(entry.action_type)}\n`;
+    detailsText += `ผู้ดำเนินการ: ${entry.performed_by}\n`;
+    detailsText += `วันที่: ${formatDate(entry.action_date)}\n`;
+    
+    if (entry.affected_fields && entry.affected_fields.length > 0) {
+      detailsText += `ฟิลด์ที่เปลี่ยนแปลง: ${entry.affected_fields.join(', ')}\n`;
+    }
+    
+    if (entry.previous_data && entry.new_data) {
+      detailsText += `\nข้อมูลก่อนเปลี่ยนแปลง:\n`;
+      detailsText += JSON.stringify(entry.previous_data, null, 2);
+      detailsText += `\n\nข้อมูลหลังเปลี่ยนแปลง:\n`;
+      detailsText += JSON.stringify(entry.new_data, null, 2);
+    }
+    
+    if (entry.parts_used && entry.parts_used.length > 0) {
+      detailsText += `\nอะไหล่ที่ใช้: ${entry.parts_used.join(', ')}`;
+    }
+    
+    alert(detailsText);
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false);
     setSelectedJob(null);
+    setIsModalOpen(false);
   };
 
   const clearFilters = () => {
@@ -184,7 +214,7 @@ const SerialHistoryScreen = ({ user, setView }: SerialHistoryScreenProps) => {
     setFilterGolfCourse('');
     setFilterDateFrom('');
     setFilterDateTo('');
-    setShowInactive(true); // รีเซ็ตเป็น true
+    setShowInactive(true);
   };
 
   const handlePrintReport = () => {
@@ -357,8 +387,7 @@ const SerialHistoryScreen = ({ user, setView }: SerialHistoryScreenProps) => {
                   </td>
                   <td className="action-col">
                     <span 
-                      className="action-badge"
-                      style={{ backgroundColor: getActionTypeColor(entry.action_type) }}
+                      className={`action-badge ${getActionTypeColorClass(entry.action_type)}`}
                     >
                       {getActionTypeLabel(entry.action_type)}
                     </span>

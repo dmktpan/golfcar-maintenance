@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 
-// Import interfaces from lib/data.ts
-import { GolfCourse, Vehicle } from '@/lib/data';
+// Import interfaces and functions from lib/data.ts
+import { 
+  GolfCourse, 
+  Vehicle, 
+  SerialHistoryEntry, 
+  MOCK_SERIAL_HISTORY,
+  logVehicleChange,
+  logBulkTransfer,
+  logBulkUpload
+} from '@/lib/data';
 
 interface GolfCourseManagementScreenProps {
   onBack?: () => void;
@@ -39,6 +47,9 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const [bulkUploadData, setBulkUploadData] = useState<BulkUploadData[]>([]);
   const [bulkUploadErrors, setBulkUploadErrors] = useState<string[]>([]);
   const [transferToCourse, setTransferToCourse] = useState<number | ''>('');
+  
+  // Add serial history state
+  const [serialHistory, setSerialHistory] = useState<SerialHistoryEntry[]>(MOCK_SERIAL_HISTORY);
 
   // Helper function to get status label
   const getStatusLabel = (status: string) => {
@@ -88,13 +99,23 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleAddVehicle = () => {
     if (newVehicle.serial_number && newVehicle.vehicle_number && newVehicle.golf_course_id) {
       const newId = Math.max(...vehicles.map(v => v.id), 0) + 1;
-      setVehicles([...vehicles, { 
+      const golfCourse = golfCourses.find(c => c.id === newVehicle.golf_course_id);
+      
+      const vehicleToAdd: Vehicle = { 
         id: newId, 
         serial_number: newVehicle.serial_number,
         vehicle_number: newVehicle.vehicle_number,
         golf_course_id: newVehicle.golf_course_id,
+        golf_course_name: golfCourse?.name || '',
+        model: 'ไม่ระบุ',
         status: 'active' as const
-      }]);
+      };
+      
+      setVehicles([...vehicles, vehicleToAdd]);
+      
+      // บันทึกประวัติการเพิ่มรถใหม่
+      logVehicleChange('create', vehicleToAdd, 'administrator');
+      
       setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: 0 });
       setShowAddVehicleForm(false);
     }
@@ -102,15 +123,41 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
   const handleUpdateVehicle = () => {
     if (editingVehicle) {
+      const oldVehicle = vehicles.find(v => v.id === editingVehicle.id);
+      
       setVehicles(vehicles.map(vehicle => 
         vehicle.id === editingVehicle.id ? editingVehicle : vehicle
       ));
+      
+      // บันทึกประวัติการเปลี่ยนแปลง
+      if (oldVehicle) {
+        const affectedFields = Object.keys(editingVehicle).filter(key => 
+          oldVehicle[key as keyof Vehicle] !== editingVehicle[key as keyof Vehicle]
+        );
+        
+        logVehicleChange(
+          'update',
+          editingVehicle,
+          'administrator',
+          oldVehicle,
+          editingVehicle,
+          affectedFields
+        );
+      }
+      
       setEditingVehicle(null);
     }
   };
 
   const handleDeleteVehicle = (id: number) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบรถคันนี้?')) {
+      const vehicleToDelete = vehicles.find(v => v.id === id);
+      
+      if (vehicleToDelete) {
+        // บันทึกประวัติการลบ
+        logVehicleChange('delete', vehicleToDelete, 'administrator');
+      }
+      
       setVehicles(vehicles.filter(vehicle => vehicle.id !== id));
     }
   };
@@ -168,16 +215,24 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
     const newVehicles = bulkUploadData.map((data, index) => {
       const newId = Math.max(...vehicles.map(v => v.id), 0) + index + 1;
+      const golfCourse = golfCourses.find(c => c.id === data.golf_course_id);
+      
       return {
         id: newId,
         serial_number: data.serial_number,
         vehicle_number: data.vehicle_number,
         golf_course_id: data.golf_course_id,
+        golf_course_name: golfCourse?.name || '',
+        model: 'ไม่ระบุ',
         status: 'active' as const
       };
     });
 
     setVehicles([...vehicles, ...newVehicles]);
+    
+    // บันทึกประวัติการอัปโหลดหลายคัน
+    logBulkUpload(newVehicles, 'administrator');
+    
     setBulkUploadData([]);
     setBulkUploadErrors([]);
     setShowBulkUploadModal(false);
@@ -197,11 +252,19 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleBulkTransfer = () => {
     if (selectedVehicles.length === 0 || !transferToCourse) return;
 
+    const vehiclesToTransfer = vehicles.filter(v => selectedVehicles.includes(v.id));
+    const targetCourse = golfCourses.find(c => c.id === transferToCourse);
+    
+    if (!targetCourse) return;
+
     setVehicles(vehicles.map(vehicle => 
       selectedVehicles.includes(vehicle.id)
-        ? { ...vehicle, golf_course_id: transferToCourse as number }
+        ? { ...vehicle, golf_course_id: transferToCourse as number, golf_course_name: targetCourse.name }
         : vehicle
     ));
+
+    // บันทึกประวัติการโอนย้ายหลายคัน
+    logBulkTransfer(vehiclesToTransfer, transferToCourse as number, targetCourse.name, 'administrator');
 
     setSelectedVehicles([]);
     setTransferToCourse('');
