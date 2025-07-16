@@ -1,0 +1,199 @@
+.jobCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  border-left: 4px solid #e2e8f0;
+  position: relative;
+  min-height: 200px;
+}
+
+.jobCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Status Colors */
+.jobCard.statusPending {
+  border-left-color: #f6ad55;
+}
+
+.jobCard.statusApproved {
+  border-left-color: #48bb78;
+}
+
+.jobCard.statusRejected {
+  border-left-color: #f56565;
+}
+
+.jobCard.statusAssigned {
+  border-left-color: #4299e1;
+}
+
+.jobCard.statusInProgress {
+  border-left-color: #9f7aea;
+}
+
+.jobCard.statusCompleted {
+  border-left-color: #38b2ac;
+}
+
+/* Header */
+.jobCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.jobHeaderLeft {
+  flex: 1;
+}
+
+.vehicleNumber {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 0.25rem 0;
+}
+
+.jobType {
+  display: inline-block;
+  background: #edf2f7;
+  color: #4a5568;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Body */
+.jobCardBody {
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.jobSummary {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f7fafc;
+}
+
+.summaryItem:last-child {
+  border-bottom: none;
+}
+
+.summaryLabel {
+  font-weight: 500;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.summaryValue {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.875rem;
+  text-align: right;
+}
+
+/* Footer */
+.jobCardFooter {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+/* Action Buttons */
+.actionButton {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: 1;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.actionButton.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.actionButton.success {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+}
+
+.actionButton.danger {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+}
+
+.actionButton.secondary {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.actionButton.info {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  color: white;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.actionButton:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .jobCard {
+    padding: 1rem;
+    min-height: auto;
+  }
+
+  .vehicleNumber {
+    font-size: 1rem;
+  }
+
+  .jobCardFooter {
+    flex-direction: column;
+  }
+
+  .actionButton {
+    min-width: auto;
+    justify-content: center;
+  }
+
+  .summaryItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .summaryValue {
+    text-align: left;
+  }
+}

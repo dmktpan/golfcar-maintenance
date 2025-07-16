@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, JobStatus, User } from '@/lib/data';
-import { View } from '@/app/page';
+import { Job, JobStatus, User, View } from '@/lib/data';
 import JobCard from './JobCard';
+import styles from './Dashboard.module.css';
 
 interface DashboardProps {
     user: User;
@@ -16,162 +16,195 @@ interface DashboardProps {
 
 const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
     
     const onUpdateStatus = (jobId: number, status: JobStatus) => {
         setJobs(jobs.map(job => job.id === jobId ? {...job, status} : job));
     }
 
     // กรองงานตามบทบาทของผู้ใช้
-    let userJobs;
-    if (user.role === 'supervisor' || user.role === 'admin') {
-        userJobs = jobs;
-    } else {
-        // แก้ไข: แสดงงานทั้งหมดของพนักงาน (ทั้งที่สร้างเองและที่ได้รับมอบหมาย)
-        userJobs = jobs.filter(job => 
-            job.user_id === user.id && 
-            job.status !== 'approved'
+    const getUserJobs = () => {
+        if (user.role === 'supervisor' || user.role === 'admin') {
+            return jobs;
+        } else {
+            return jobs.filter(job => 
+                job.user_id === user.id && 
+                job.status !== 'approved'
+            );
+        }
+    };
+
+    // กรองงานตามแท็บและฟิลเตอร์
+    const getFilteredJobs = () => {
+        const userJobs = getUserJobs();
+        
+        if (activeTab === 'history') {
+            return jobs.filter(job => 
+                job.user_id === user.id && job.status === 'approved'
+            ).sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+        }
+
+        const filteredJobs = filter === 'all' 
+            ? userJobs 
+            : userJobs.filter(job => job.status === filter);
+
+        return filteredJobs.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
-    }
-    
-    // กรองงานตามสถานะที่เลือก
-    const filteredJobs = filter === 'all' 
-        ? userJobs 
-        : userJobs.filter(job => job.status === filter);
+    };
 
-    // จัดเรียงงานตามวันที่สร้าง (ล่าสุดขึ้นก่อน)
-    const sortedJobs = filteredJobs.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    const filteredJobs = getFilteredJobs();
 
-    // กรองงานประวัติ (เฉพาะงานที่อนุมัติแล้วของพนักงานคนนั้น)
-    const historyJobs = jobs.filter(job => 
-        job.user_id === user.id && job.status === 'approved'
-    ).sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    // นับจำนวนงานตามสถานะ
+    const getJobCounts = () => {
+        const userJobs = getUserJobs();
+        return {
+            all: userJobs.length,
+            pending: userJobs.filter(job => job.status === 'pending').length,
+            assigned: userJobs.filter(job => job.status === 'assigned').length,
+            in_progress: userJobs.filter(job => job.status === 'in_progress').length,
+            completed: userJobs.filter(job => job.status === 'completed').length,
+            approved: jobs.filter(job => job.user_id === user.id && job.status === 'approved').length,
+            rejected: userJobs.filter(job => job.status === 'rejected').length,
+        };
+    };
+
+    const jobCounts = getJobCounts();
 
     return (
-        <div className="dashboard-container">
-            {(user.role === 'supervisor' || user.role === 'admin') && (
-                <div className="nav-buttons">
-                    <button className="btn-secondary" onClick={() => setView('admin_dashboard')}>
-                        แดชบอร์ดผู้ดูแล
+        <div className={styles.dashboard}>
+            {/* Quick Actions */}
+            <div className={styles.quickActions}>
+                {user.role === 'staff' && (
+                    <button 
+                        className={styles.createJobButton} 
+                        onClick={() => setView('create_job')}
+                    >
+                        <span className="btn-icon">+</span> สร้างงานใหม่
                     </button>
-                    <button className="btn-outline" onClick={() => setView('parts_management')}>จัดการอะไหล่</button>
-                </div>
-            )}
+                )}
+                {(user.role === 'supervisor' || user.role === 'admin') && (
+                    <button 
+                        className={styles.adminButton} 
+                        onClick={() => setView('admin_dashboard')}
+                    >
+                        <span className="btn-icon">⚙️</span> แดชบอร์ดผู้ดูแล
+                    </button>
+                )}
+            </div>
 
-            <div className="page-header">
-                <h2 className="dashboard-title">แดชบอร์ดพนักงาน - {user.name}</h2>
-                <div className="dashboard-actions">
-                    {user.role === 'staff' && activeTab === 'assigned' && (
-                        <button className="btn-primary" onClick={() => setView('create_job')}>
-                            <span className="btn-icon">+</span> สร้างงานใหม่
-                        </button>
-                    )}
+            {/* Page Header */}
+            <div className={styles.pageHeader}>
+                <div className={styles.headerContent}>
+                    <h1 className={styles.pageTitle}>แดชบอร์ดพนักงาน</h1>
+                    <p className={styles.pageSubtitle}>สวัสดี, {user.name}</p>
                 </div>
             </div>
 
             {/* Tab Navigation */}
-            <div className="tab-navigation">
+            <div className={styles.tabNavigation}>
                 <button 
-                    className={`tab-button ${activeTab === 'assigned' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'assigned' ? styles.active : ''}`}
                     onClick={() => setActiveTab('assigned')}
                 >
                     <span className="tab-icon">📋</span>
-                    งานที่ได้รับมอบหมาย
+                    งานปัจจุบัน
+                    {jobCounts.all > 0 && (
+                        <span className={styles.tabBadge}>{jobCounts.all}</span>
+                    )}
                 </button>
                 <button 
-                    className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+                    className={`${styles.tabButton} ${activeTab === 'history' ? styles.active : ''}`}
                     onClick={() => setActiveTab('history')}
                 >
                     <span className="tab-icon">📚</span>
                     ประวัติการซ่อม
+                    {jobCounts.approved > 0 && (
+                        <span className={styles.tabBadge}>{jobCounts.approved}</span>
+                    )}
                 </button>
             </div>
             
-            {/* Tab Content */}
-            {activeTab === 'assigned' ? (
-                <>
-                    <div className="filter-controls">
-                        <div className="filter-label">กรองตามสถานะ:</div>
-                        <div className="filter-buttons">
-                            <button 
-                                className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-                                onClick={() => setFilter('all')}
-                            >
-                                ทั้งหมด
-                            </button>
-                            <button 
-                                className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
-                                onClick={() => setFilter('pending')}
-                            >
-                                รอตรวจสอบ
-                            </button>
-                            <button 
-                                className={`filter-btn ${filter === 'approved' ? 'active' : ''}`}
-                                onClick={() => setFilter('approved')}
-                            >
-                                อนุมัติแล้ว
-                            </button>
-                            <button 
-                                className={`filter-btn ${filter === 'rejected' ? 'active' : ''}`}
-                                onClick={() => setFilter('rejected')}
-                            >
-                                ไม่อนุมัติ
-                            </button>
-                        </div>
+            {/* Filter Controls */}
+            {activeTab === 'assigned' && (
+                <div className={styles.filterControls}>
+                    <div className={styles.filterButtons}>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'all' ? styles.active : ''}`}
+                            onClick={() => setFilter('all')}
+                        >
+                            ทั้งหมด ({jobCounts.all})
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'pending' ? styles.active : ''}`}
+                            onClick={() => setFilter('pending')}
+                        >
+                            รอตรวจสอบ ({jobCounts.pending})
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'assigned' ? styles.active : ''}`}
+                            onClick={() => setFilter('assigned')}
+                        >
+                            ได้รับมอบหมาย ({jobCounts.assigned})
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'in_progress' ? styles.active : ''}`}
+                            onClick={() => setFilter('in_progress')}
+                        >
+                            กำลังดำเนินการ ({jobCounts.in_progress})
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'completed' ? styles.active : ''}`}
+                            onClick={() => setFilter('completed')}
+                        >
+                            เสร็จสิ้น ({jobCounts.completed})
+                        </button>
+                        <button 
+                            className={`${styles.filterButton} ${filter === 'rejected' ? styles.active : ''}`}
+                            onClick={() => setFilter('rejected')}
+                        >
+                            ไม่อนุมัติ ({jobCounts.rejected})
+                        </button>
                     </div>
+                </div>
+            )}
 
-                    {sortedJobs.length === 0 ? (
-                        <div className="empty-state">
-                            <div className="empty-icon">📋</div>
-                            <p>ไม่มีงานที่ได้รับมอบหมาย{filter !== 'all' ? 'ในสถานะที่เลือก' : ''}</p>
-                            <p className="empty-subtitle">งานที่หัวหน้างานมอบหมายจะแสดงที่นี่</p>
-                        </div>
-                    ) : (
-                        <div className="job-list">
-                            {sortedJobs.map(job => (
-                                <JobCard 
-                                    key={job.id} 
-                                    job={job} 
-                                    user={user} 
-                                    onUpdateStatus={onUpdateStatus}
-                                    onFillJobForm={onFillJobForm}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </>
+            {/* Job List */}
+            {filteredJobs.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <div className={styles.emptyIcon}>
+                        {activeTab === 'assigned' ? '📋' : '📚'}
+                    </div>
+                    <h3>
+                        {activeTab === 'assigned' 
+                            ? 'ไม่มีงานในขณะนี้' 
+                            : 'ยังไม่มีประวัตการซ่อม'
+                        }
+                    </h3>
+                    <p>
+                        {activeTab === 'assigned' 
+                            ? filter !== 'all' 
+                                ? 'ไม่มีงานในสถานะที่เลือก' 
+                                : 'งานที่ได้รับมอบหมายจะแสดงที่นี่'
+                            : 'งานที่ได้รับการอนุมัติจะแสดงที่นี่'
+                        }
+                    </p>
+                </div>
             ) : (
-                <>
-                    <div className="history-header">
-                        <h3>ประวัติการซ่อมของ {user.name}</h3>
-                        <p className="history-subtitle">งานที่ได้รับการอนุมัติแล้ว</p>
-                    </div>
-
-                    {historyJobs.length === 0 ? (
-                        <div className="empty-state">
-                            <div className="empty-icon">📚</div>
-                            <p>ยังไม่มีประวัติการซ่อม</p>
-                            <p className="empty-subtitle">งานที่ได้รับการอนุมัติจะแสดงที่นี่</p>
-                        </div>
-                    ) : (
-                        <div className="job-list history-list">
-                            {historyJobs.map(job => (
-                                <JobCard 
-                                    key={job.id} 
-                                    job={job} 
-                                    user={user} 
-                                    onUpdateStatus={onUpdateStatus} 
-                                    onFillJobForm={onFillJobForm}
-                                    isHistory={true} 
-                                />
-                            ))}
-                        </div>
-                    )}
-                </>
+                <div className={styles.jobList}>
+                    {filteredJobs.map(job => (
+                        <JobCard 
+                            key={job.id} 
+                            job={job} 
+                            user={user} 
+                            onUpdateStatus={onUpdateStatus}
+                            onFillJobForm={onFillJobForm}
+                            isHistory={activeTab === 'history'}
+                        />
+                    ))}
+                </div>
             )}
         </div>
     );

@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { View } from '@/app/page';
-import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon, MultiAssignIcon } from './icons';
+import { View } from '@/lib/data';
+import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon } from './icons';
+import styles from './AdminDashboard.module.css';
 
 interface AdminDashboardCardProps {
     icon: React.ReactNode;
@@ -14,11 +15,15 @@ interface AdminDashboardCardProps {
 
 const AdminDashboardCard = ({ icon, title, description, buttonText, onClick }: AdminDashboardCardProps) => {
     return (
-        <div className="admin-card">
-            <div className="admin-card-icon">{icon}</div>
-            <h3 className="admin-card-title">{title}</h3>
-            <p className="admin-card-description">{description}</p>
-            <button className="btn-accent" onClick={onClick}>{buttonText}</button>
+        <div className={styles.adminDashboardCard}>
+            <div className={styles.cardIcon}>{icon}</div>
+            <div className={styles.cardContent}>
+                <h3 className={styles.cardTitle}>{title}</h3>
+                <p className={styles.cardDescription}>{description}</p>
+            </div>
+            <button className={styles.cardButton} onClick={onClick}>
+                {buttonText}
+            </button>
         </div>
     );
 };
@@ -29,9 +34,9 @@ interface AdminDashboardProps {
 
 const AdminDashboard = ({ setView }: AdminDashboardProps) => {
     return (
-        <div className="admin-dashboard">
-            <h2 className="admin-dashboard-title">ระบบจัดการสำหรับผู้ดูแล</h2>
-            <div className="admin-dashboard-grid">
+        <div className={styles.adminDashboard}>
+            <h2 className={styles.adminDashboardTitle}>ระบบจัดการสำหรับผู้ดูแล</h2>
+            <div className={styles.adminDashboardGrid}>
                 <AdminDashboardCard 
                     icon={<GearsIcon />} 
                     title="จัดการสนามและซีเรียล"
@@ -39,54 +44,40 @@ const AdminDashboard = ({ setView }: AdminDashboardProps) => {
                     buttonText="จัดการข้อมูล"
                     onClick={() => setView('golf_course_management')}
                 />
-                 <AdminDashboardCard 
+                <AdminDashboardCard 
                     icon={<UserPlusIcon />} 
-                    title="ลงทะเบียนพนักงาน"
-                    description="เพิ่มและจัดการข้อมูลพนักงาน"
-                    buttonText="จัดการพนักงาน"
+                    title="จัดการผู้ใช้งาน"
+                    description="เพิ่ม แก้ไข และจัดการสิทธิ์ผู้ใช้งาน"
+                    buttonText="จัดการผู้ใช้"
                     onClick={() => setView('manage_users')}
                 />
-                 <AdminDashboardCard 
+                <AdminDashboardCard 
                     icon={<ChecklistIcon />} 
-                    title="จัดการงาน"
-                    description="จัดการงานที่มอบหมายทั้งหมด"
-                    buttonText="จัดการงาน"
-                    onClick={() => setView('dashboard')}
+                    title="งานที่รอตรวจสอบ"
+                    description="ตรวจสอบและอนุมัติงานซ่อมบำรุง"
+                    buttonText="ดูงานที่รอ"
+                    onClick={() => setView('supervisor_pending_jobs')}
                 />
-                 <AdminDashboardCard 
+                <AdminDashboardCard 
                     icon={<ClipboardIcon />} 
-                    title="บันทึกการบำรุงรักษา"
-                    description="จัดการบันทึกการบำรุงรักษา"
-                    buttonText="ดูบันทึก"
-                    onClick={() => setView('history')}
-                />
-                  <AdminDashboardCard 
-                    icon={<UserShieldIcon />} 
-                    title="จัดการผู้ดูแล"
-                    description="จัดการผู้ดูแลและระบบสิทธิ์"
-                    buttonText="จัดการผู้ดูแล"
-                    onClick={() => setView('admin_management')}
-                />
-                 <AdminDashboardCard 
-                    icon={<SerialHistoryIcon />} 
-                    title="ประวัติซีเรียล"
-                    description="ดูประวัติหมายเลขซีเรียล"
-                    buttonText="ดูประวัติ"
-                    onClick={() => setView('serial_history')}
-                />
-                 <AdminDashboardCard 
-                    icon={<MultiAssignIcon />} 
-                    title="มอบหมายงานหลายรายการ"
-                    description="จัดการงานหลายรายการพร้อมกัน"
+                    title="มอบหมายงานหลายคน"
+                    description="มอบหมายงานให้พนักงานหลายคนพร้อมกัน"
                     buttonText="มอบหมายงาน"
                     onClick={() => setView('multi_assign')}
                 />
-                <AdminDashboardCard
-                    icon={<ClipboardIcon />}
-                    title="ดูงานที่ถูกมอบหมาย"
-                    description="ดูและจัดการงานที่ถูกมอบหมายให้พนักงาน"
-                    buttonText="ดูงานที่มอบหมาย"
-                    onClick={() => setView('view_assigned_jobs')}
+                <AdminDashboardCard 
+                    icon={<UserShieldIcon />} 
+                    title="จัดการระบบ"
+                    description="ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง"
+                    buttonText="จัดการระบบ"
+                    onClick={() => setView('admin_management')}
+                />
+                <AdminDashboardCard 
+                    icon={<SerialHistoryIcon />} 
+                    title="ประวัติซีเรียล"
+                    description="ดูประวัติการใช้งานและซ่อมบำรุงของรถแต่ละคัน"
+                    buttonText="ดูประวัติ"
+                    onClick={() => setView('serial_history')}
                 />
             </div>
         </div>

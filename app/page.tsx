@@ -2,8 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, Part, GolfCourse, Vehicle, MOCK_USERS, MOCK_JOBS, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_VEHICLES } from '@/lib/data';
-import { PartsUsageLog } from '@/components/PartsManagementScreen';
+import { User, Job, Part, GolfCourse, Vehicle, MOCK_USERS, MOCK_JOBS, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_VEHICLES, PartsUsageLog, MOCK_PARTS_USAGE_LOG, View } from '@/lib/data';
 import LoginScreen from '@/components/LoginScreen';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
@@ -17,10 +16,9 @@ import MultiAssignScreen from '@/components/MultiAssignScreen';
 import SerialHistoryScreen from '@/components/SerialHistoryScreen';
 import AdminManagementScreen from '@/components/AdminManagementScreen';
 import GolfCourseManagementScreen from '@/components/GolfCourseManagementScreen';
-import AssignedJobFormScreen from '@/components/AssignedJobFormScreen'; // แก้ไขจาก Backup เป็นไฟล์หลัก
+import AssignedJobFormScreen from '@/components/AssignedJobFormScreen';
 import ViewAssignedJobsScreen from '@/components/ViewAssignedJobsScreen';
-
-export type View = 'dashboard' | 'create_job' | 'parts_management' | 'admin_dashboard' | 'history' | 'profile' | 'manage_users' | 'multi_assign' | 'serial_history' | 'admin_management' | 'golf_course_management' | 'assigned_job_form' | 'view_assigned_jobs';
+import SupervisorPendingJobsScreen from '@/components/SupervisorPendingJobsScreen';
 
 // เพิ่มอินเตอร์เฟซสำหรับสิทธิ์ของผู้ใช้
 export interface UserPermission {
@@ -109,9 +107,9 @@ export default function HomePage() {
   const [partsUsageLog, setPartsUsageLog] = useState<PartsUsageLog[]>(() => {
     if (typeof window !== 'undefined') {
       const savedLog = localStorage.getItem('partsUsageLog');
-      return savedLog ? JSON.parse(savedLog) : [];
+      return savedLog ? JSON.parse(savedLog) : MOCK_PARTS_USAGE_LOG;
     }
-    return [];
+    return MOCK_PARTS_USAGE_LOG;
   });
 
   // บันทึกข้อมูลลง localStorage เมื่ยนแปลง
@@ -202,64 +200,7 @@ export default function HomePage() {
     setView('assigned_job_form');
   };
 
-  // เพิ่มฟังก์ชันสำหรับเพิ่ม Log การใช้อะไหล่
-  // แก้ไขฟังก์ชัน addPartsUsageLog ให้ถูกต้อง
-  const addPartsUsageLog = (jobId: number, partsNotes: string) => {
-    if (!partsNotes.trim() || !user) return;
-    
-    const job = jobs.find(j => j.id === jobId);
-    if (!job) return;
-    
-    // แก้ไขการใช้ตัวแปร - เปลี่ยนชื่อเพื่อหลีกเลี่ยง shadowing
-    const vehicleData = vehicles.find(v => v.id === job.vehicle_id);
-    const golfCourseData = golfCourses.find(gc => gc.id === vehicleData?.golf_course_id);
-    
-    // ปรับปรุงการ parse partsNotes ให้ดีขึ้น
-    const lines = partsNotes.split('\n').filter(line => line.trim());
-    const newLogs: PartsUsageLog[] = [];
-    
-    lines.forEach((line, index) => {
-      // รองรับรูปแบบต่างๆ เช่น "ชื่ออะไหล่ x จำนวน" หรือ "ชื่ออะไหล่ จำนวน ชิ้น"
-      const patterns = [
-        /(.+?)\s*x\s*(\d+)/i,  // "ชื่ออะไหล่ x 2"
-        /(.+?)\s*(\d+)\s*(?:ชิ้น|ลูก|เส้น|ชุด)/i,  // "ชื่ออะไหล่ 2 ชิ้น"
-        /เปลี่ยน(.+?)\s*(\d+)/i  // "เปลี่ยนชื่ออะไหล่ 2"
-      ];
-      
-      for (const pattern of patterns) {
-        const match = line.match(pattern);
-        if (match) {
-          const partName = match[1].trim();
-          const quantity = parseInt(match[2]);
-          
-          if (partName && quantity > 0) {
-            const maxLogId = Math.max(...partsUsageLog.map(log => log.id), 0);
-            
-            newLogs.push({
-              id: maxLogId + newLogs.length + 1,
-              jobId: jobId,
-              partName,
-              partId: `PART-${Date.now()}-${index}`,
-              quantity,
-              usedDate: new Date().toISOString().split('T')[0],
-              userName: user.name,
-              vehicleNumber: vehicleData?.vehicle_number || 'N/A',
-              golfCourseName: golfCourseData?.name || 'N/A',
-              jobType: job.type as 'PM' | 'BM' | 'Recondition',
-              system: job.system
-            });
-          }
-          break;
-        }
-      }
-    });
-    
-    if (newLogs.length > 0) {
-      setPartsUsageLog(prev => [...newLogs, ...prev]);
-    }
-  };
-
-  // ฟังก์ชันสำหรับอัปเดตงานที่กรอกฟอร์มแล้ว
+  // ฟังก์ชันสำหรับอัปเดตงาน
   const handleJobUpdate = (updatedJob: Job) => {
     // เพิ่ม Log การใช้อะไหล่ถ้ามีการบันทึก partsNotes
     if (updatedJob.partsNotes && updatedJob.partsNotes.trim()) {
@@ -270,207 +211,164 @@ export default function HomePage() {
     setSelectedJobForForm(null);
   };
 
-  // เพิ่มฟังก์ชันสำหรับจัดการสิทธิ์ของผู้ใช้
-  const handleUpdateUserPermissions = (userId: number, permissions: string[]) => {
-    const existingIndex = userPermissions.findIndex(up => up.userId === userId);
-    
-    if (existingIndex >= 0) {
-      // อัพเดทสิทธิ์ที่มีอยู่
-      const updatedPermissions = [...userPermissions];
-      updatedPermissions[existingIndex] = { userId, permissions };
-      setUserPermissions(updatedPermissions);
-    } else {
-      // เพิ่มสิทธิ์ใหม่
-      setUserPermissions([...userPermissions, { userId, permissions }]);
-    }
+  // ฟังก์ชันสำหรับเพิ่ม Log การใช้อะไหล่
+  const addPartsUsageLog = (jobId: number, partsNotes: string) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    const vehicle = vehicles.find(v => v.id === job.vehicle_id);
+    const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
+
+    const newLog: PartsUsageLog = {
+      id: Date.now(), // ใช้ timestamp เป็น ID ชั่วคราว
+      jobId: jobId,
+      partName: partsNotes,
+      partId: `PART-${Date.now()}`,
+      quantity: 1, // ค่าเริ่มต้น
+      usedDate: new Date().toISOString().split('T')[0],
+      userName: job.userName,
+      vehicleNumber: job.vehicle_number,
+      serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
+      golfCourseName: golfCourse?.name || 'ไม่ระบุ',
+      jobType: job.type,
+      system: job.system
+    };
+
+    setPartsUsageLog(prev => [newLog, ...prev]);
   };
 
-  // เพิ่มฟังก์ชันสำหรับตรวจสอบสิทธิ์ของผู้ใช้
+  // ฟังก์ชันสำหรับจัดการสิทธิ์ผู้ใช้
+  const updateUserPermissions = (userId: number, permissions: string[]) => {
+    setUserPermissions(prev => {
+      const existing = prev.find(p => p.userId === userId);
+      if (existing) {
+        return prev.map(p => p.userId === userId ? { ...p, permissions } : p);
+      } else {
+        return [...prev, { userId, permissions }];
+      }
+    });
+  };
+
   const getUserPermissions = (userId: number): string[] => {
-    const userPerm = userPermissions.find(up => up.userId === userId);
+    const userPerm = userPermissions.find(p => p.userId === userId);
     return userPerm ? userPerm.permissions : [];
   };
 
-  // เพิ่มฟังก์ชันสำหรับการทดสอบใส่ข้อมูล
-  const loadTestData = () => {
-    // ข้อมูลทดสอบสำหรับผู้ใช้
-    const testUsers: User[] = [
-      { id: 1, name: 'Admin Test', code: 'admin', role: 'admin', golf_course_id: 1 },
-      { id: 2, name: 'Staff Test', code: 'staff', role: 'staff', golf_course_id: 1 },
-      { id: 3, name: 'Supervisor Test', code: 'super', role: 'supervisor', golf_course_id: 1 }
-    ];
-    
-    // ข้อมูลทดสอบสำหรับงาน
-    const testJobs: Job[] = [
-      {
-        id: 1,
-        user_id: 1,
-        userName: 'Admin Test',
-        vehicle_id: 1,
-        vehicle_number: '1',
-        golf_course_id: 1, // เพิ่ม golf_course_id
-        type: 'PM',
-        system: 'brake',
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        parts: [],
-        subTasks: [],
-        partsNotes: '',
-        remarks: 'ทดสอบงาน PM'
-      }
-    ];
-    
-    setUsers(testUsers);
-    setJobs(testJobs);
-    alert('ข้อมูลทดสอบถูกโหลดแล้ว');
-  };
-
-  // เพิ่มฟังก์ชันสำหรับรีเซ็ตข้อมูลทั้งหมด
-  const resetAllData = () => {
-    if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดหรือไม่?')) {
-      setJobs(MOCK_JOBS);
-      setParts(MOCK_PARTS);
-      setUsers(MOCK_USERS);
-      setGolfCourses(MOCK_GOLF_COURSES);
-      setVehicles(MOCK_VEHICLES);
-      setUserPermissions([]);
-      setPartsUsageLog([]);
-      alert('ข้อมูลทั้งหมดถูกรีเซ็ตแล้ว');
-    }
-  };
-
   if (!user) {
-    return (
-      <div className="app">
-        <LoginScreen onLogin={handleLogin} error={loginError} />
-      </div>
-    );
+    return <LoginScreen onLogin={handleLogin} error={loginError} />;
   }
 
   return (
     <div className="app">
-      <Header 
-        user={user} 
-        onLogout={handleLogout} 
-        setView={handleSetView}
-      />
-      
-      {showWelcome && (
-        <WelcomeBanner 
-          user={user} 
-          onDismiss={() => setShowWelcome(false)} 
-        />
-      )}
+      <Header user={user} onLogout={handleLogout} setView={handleSetView} />
+      {showWelcome && <WelcomeBanner user={user} onDismiss={() => setShowWelcome(false)} />}
       
       <main className="main-content">
         {view === 'dashboard' && (
           <Dashboard 
             user={user} 
             jobs={jobs} 
-            setJobs={setJobs}
+            setJobs={setJobs} 
             setView={handleSetView}
             onFillJobForm={handleFillJobForm}
           />
         )}
-        
         {view === 'create_job' && (
           <CreateJobScreen 
-            user={user}
-            golfCourses={golfCourses}
-            vehicles={vehicles}
-            jobs={jobs} // เพิ่ม jobs prop
-            onJobCreate={handleCreateJob}
+            user={user} 
+            onJobCreate={handleCreateJob} 
             setView={handleSetView}
+            vehicles={vehicles}
+            golfCourses={golfCourses}
+            jobs={jobs}
           />
         )}
-        
         {view === 'parts_management' && (
           <PartsManagementScreen 
             parts={parts} 
-            setParts={setParts}
+            setParts={setParts} 
+            setView={handleSetView}
             partsUsageLog={partsUsageLog}
-            setView={handleSetView}
-          />
-        )}
-        
-        {view === 'admin_dashboard' && (
-          <AdminDashboard 
-            setView={handleSetView}
-          />
-        )}
-        
-        {view === 'history' && (
-          <HistoryScreen 
             vehicles={vehicles}
-            parts={parts}
-            setView={handleSetView}
+            golfCourses={golfCourses}
           />
         )}
-        
+        {view === 'admin_dashboard' && (
+          <AdminDashboard setView={handleSetView} />
+        )}
         {view === 'manage_users' && (
           <ManageUsersScreen 
-            users={users}
-            setUsers={setUsers}
-            golfCourses={golfCourses}
+            users={users} 
+            setUsers={setUsers} 
             setView={handleSetView}
+            golfCourses={golfCourses}
           />
         )}
-        
+        {view === 'history' && (
+          <HistoryScreen 
+            setView={handleSetView}
+            vehicles={vehicles}
+            parts={parts}
+          />
+        )}
         {view === 'multi_assign' && (
           <MultiAssignScreen 
+            setView={handleSetView}
             user={user}
             jobs={jobs}
             setJobs={setJobs}
             users={users}
-            golfCourses={golfCourses}
             vehicles={vehicles}
-            setView={handleSetView}
+            golfCourses={golfCourses}
           />
         )}
-        
         {view === 'serial_history' && (
           <SerialHistoryScreen 
-            vehicles={vehicles}
+            user={user}
             setView={handleSetView}
           />
         )}
-        
         {view === 'admin_management' && (
           <AdminManagementScreen 
+            setView={handleSetView}
             users={users}
             setUsers={setUsers}
             userPermissions={userPermissions}
-            updateUserPermissions={handleUpdateUserPermissions}
+            updateUserPermissions={updateUserPermissions}
             getUserPermissions={getUserPermissions}
             golfCourses={golfCourses}
-            setView={handleSetView}
           />
         )}
-        
         {view === 'golf_course_management' && (
           <GolfCourseManagementScreen 
+            onBack={() => setView('admin_dashboard')}
             golfCourses={golfCourses}
             setGolfCourses={setGolfCourses}
             vehicles={vehicles}
             setVehicles={setVehicles}
-            onBack={() => handleSetView('admin_dashboard')}
           />
         )}
-        
         {view === 'assigned_job_form' && selectedJobForForm && (
           <AssignedJobFormScreen 
-            user={user}
             job={selectedJobForForm}
+            user={user}
             onJobUpdate={handleJobUpdate}
+            setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
-            setView={handleSetView}
           />
         )}
-        
         {view === 'view_assigned_jobs' && (
           <ViewAssignedJobsScreen 
             currentUser={user}
+          />
+        )}
+        {view === 'supervisor_pending_jobs' && (
+          <SupervisorPendingJobsScreen 
+            user={user}
+            jobs={jobs}
+            setJobs={setJobs}
+            setView={handleSetView}
           />
         )}
       </main>

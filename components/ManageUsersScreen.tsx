@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, UserRole, GolfCourse } from '@/lib/data';
-import { View } from '@/app/page';
+import { User, UserRole, GolfCourse, View } from '@/lib/data';
 
 interface ManageUsersScreenProps {
     setView: (view: View) => void;
@@ -17,11 +16,13 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         name: string;
         role: UserRole;
         golf_course_id: number;
+        managed_golf_courses: number[];
     }>({  
         code: '',
         name: '',
         role: 'staff',
-        golf_course_id: 1
+        golf_course_id: 1,
+        managed_golf_courses: []
     });
     const [editMode, setEditMode] = useState(false);
     const [editUserId, setEditUserId] = useState<number | null>(null);
@@ -34,19 +35,42 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         }));
     };
 
+    const handleManagedCoursesChange = (courseId: number, checked: boolean) => {
+        setNewUser(prev => ({
+            ...prev,
+            managed_golf_courses: checked 
+                ? [...prev.managed_golf_courses, courseId]
+                : prev.managed_golf_courses.filter(id => id !== courseId)
+        }));
+    };
+
     const handleAddUser = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // ตั้งค่า managed_golf_courses ตามบทบาท
+        let finalManagedCourses = newUser.managed_golf_courses;
+        if (newUser.role === 'admin') {
+            finalManagedCourses = golfCourses.map(c => c.id); // Admin ดูแลทุกสนาม
+        } else if (newUser.role === 'staff') {
+            finalManagedCourses = []; // Staff ไม่ดูแลสนามใด
+        }
+
+        const userData = {
+            ...newUser,
+            managed_golf_courses: finalManagedCourses.length > 0 ? finalManagedCourses : undefined
+        };
+
         if (editMode && editUserId !== null) {
             // Update existing user
             setUsers(users.map(user => 
-                user.id === editUserId ? { ...user, ...newUser } : user
+                user.id === editUserId ? { ...user, ...userData } : user
             ));
             setEditMode(false);
             setEditUserId(null);
         } else {
             // Add new user
             const newId = Math.max(...users.map(u => u.id), 0) + 1;
-            setUsers([...users, { id: newId, ...newUser }]);
+            setUsers([...users, { id: newId, ...userData }]);
         }
         
         // Reset form
@@ -54,7 +78,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
             code: '',
             name: '',
             role: 'staff',
-            golf_course_id: 1
+            golf_course_id: 1,
+            managed_golf_courses: []
         });
     };
 
@@ -63,7 +88,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
             code: user.code,
             name: user.name,
             role: user.role,
-            golf_course_id: user.golf_course_id
+            golf_course_id: user.golf_course_id,
+            managed_golf_courses: user.managed_golf_courses || []
         });
         setEditMode(true);
         setEditUserId(user.id);
@@ -78,6 +104,20 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
     const getGolfCourseName = (id: number) => {
         const course = golfCourses.find(c => c.id === id);
         return course ? course.name : 'ไม่ระบุ';
+    };
+
+    const getManagedCoursesText = (user: User) => {
+        if (!user.managed_golf_courses || user.managed_golf_courses.length === 0) {
+            return '-';
+        }
+        
+        if (user.managed_golf_courses.length === golfCourses.length) {
+            return 'ทั้งหมด';
+        }
+        
+        return user.managed_golf_courses
+            .map(id => getGolfCourseName(id))
+            .join(', ');
     };
 
     return (
@@ -125,7 +165,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                     </select>
                 </div>
                 <div className="form-group">
-                    <label htmlFor="golf_course_id">สนามกอล์ฟ</label>
+                    <label htmlFor="golf_course_id">สนามกอล์ฟหลัก</label>
                     <select 
                         id="golf_course_id" 
                         name="golf_course_id" 
@@ -138,6 +178,37 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                         ))}
                     </select>
                 </div>
+
+                {/* แสดงการเลือกสนามที่ดูแลเฉพาะหัวหน้า */}
+                {newUser.role === 'supervisor' && (
+                    <div className="form-group full-width">
+                        <label>สนามกอล์ฟที่รับผิดชอบ:</label>
+                        <div className="checkbox-group">
+                            {golfCourses.map(course => (
+                                <label key={course.id} className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={newUser.managed_golf_courses.includes(course.id)}
+                                        onChange={(e) => handleManagedCoursesChange(course.id, e.target.checked)}
+                                    />
+                                    {course.name}
+                                </label>
+                            ))}
+                        </div>
+                        <small className="form-hint">
+                            หัวหน้าสามารถเลือก "ทั้งหมด" เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ
+                        </small>
+                    </div>
+                )}
+
+                {newUser.role === 'admin' && (
+                    <div className="form-group full-width">
+                        <div className="info-box">
+                            <strong>หมายเหตุ:</strong> ผู้ดูแลระบบจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟโดยอัตโนมัติ
+                        </div>
+                    </div>
+                )}
+
                 <div className="form-actions">
                     <button type="submit" className="btn-primary">
                         {editMode ? 'อัพเดทข้อมูล' : 'เพิ่มผู้ใช้'}
@@ -153,7 +224,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                                     code: '',
                                     name: '',
                                     role: 'staff',
-                                    golf_course_id: 1
+                                    golf_course_id: 1,
+                                    managed_golf_courses: []
                                 });
                             }}
                         >
@@ -171,7 +243,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                             <th>รหัสพนักงาน</th>
                             <th>ชื่อ-นามสกุล</th>
                             <th>ตำแหน่ง</th>
-                            <th>สนามกอล์ฟ</th>
+                            <th>สนามกอล์ฟหลัก</th>
+                            <th>สนามที่รับผิดชอบ</th>
                             <th>การจัดการ</th>
                         </tr>
                     </thead>
@@ -186,6 +259,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                                     {user.role === 'admin' && 'ผู้ดูแลระบบ'}
                                 </td>
                                 <td>{getGolfCourseName(user.golf_course_id)}</td>
+                                <td>{getManagedCoursesText(user)}</td>
                                 <td>
                                     <button 
                                         className="btn-secondary btn-sm" 

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MOCK_SYSTEMS, JobType, Job, User, Vehicle, GolfCourse } from '@/lib/data';
-import { View } from '@/app/page';
+import { MOCK_SYSTEMS, JobType, JobStatus, Job, User, Vehicle, GolfCourse, View } from '@/lib/data';
+//import { View } from '@/app/page';
 
 interface MultiAssignScreenProps {
     setView: (view: View) => void;
@@ -188,8 +188,9 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                 userName: assignedUser?.name || '',
                 vehicle_id: vehicle?.id || 0,
                 vehicle_number: vehicle?.vehicle_number || assignment.vehicleNumber,
+                golf_course_id: assignment.golfCourseId, // เพิ่ม golf_course_id
                 type: assignment.jobType,
-                status: 'assigned' as const, // เปลี่ยนจาก 'pending' เป็น 'assigned'
+                status: 'assigned' as JobStatus, // ใช้ JobStatus type
                 created_at: new Date().toISOString(),
                 parts: [],
                 system: assignment.system || '',

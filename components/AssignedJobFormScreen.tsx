@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS } from '@/lib/data';
-import { View } from '@/app/page';
+import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart } from '@/lib/data';
 
 interface AssignedJobFormScreenProps {
     user: User;
@@ -13,52 +12,56 @@ interface AssignedJobFormScreenProps {
     golfCourses: GolfCourse[];
 }
 
-// รายการอะไหล่ตามระบบ
+// รายการอะไหล่ตามระบบ พร้อมข้อมูลเพิ่มเติม
 const PARTS_BY_SYSTEM = {
     'brake': [
-        { id: 'brake_1', name: 'แป้นเบรค' },
-        { id: 'brake_2', name: 'ชุดล็อคเบรค' },
-        { id: 'brake_3', name: 'เฟืองปาร์คเบรค' },
-        { id: 'brake_4', name: 'สปริงคคันเร่ง' },
-        { id: 'brake_5', name: 'สายเบรกสั้น' },
-        { id: 'brake_6', name: 'สายเบรกยาว' },
-        { id: 'brake_7', name: 'ผ้าเบรก EZGO' },
-        { id: 'brake_8', name: 'ผ้าเบรก EZGO สั้น' },
-        { id: 'brake_9', name: 'ผ้าเบรก EZGO ยาว' },
-        { id: 'brake_10', name: 'ซีลล้อหลัง' },
-        { id: 'brake_11', name: 'ลูกปืน 6205' },
-        { id: 'brake_12', name: 'น๊อตยึดแป้นเบรก' }
+        { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น', price: 150 },
+        { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด', price: 800 },
+        { id: 3, name: 'เฟืองปาร์คเบรค', unit: 'ชิ้น', price: 300 },
+        { id: 4, name: 'สปริงคันเร่ง', unit: 'ชิ้น', price: 120 },
+        { id: 5, name: 'สายเบรกสั้น', unit: 'เส้น', price: 250 },
+        { id: 6, name: 'สายเบรกยาว', unit: 'เส้น', price: 350 },
+        { id: 7, name: 'ผ้าเบรก EZGO', unit: 'ชุด', price: 450 },
+        { id: 8, name: 'ผ้าเบรก EZGO สั้น', unit: 'ชุด', price: 400 },
+        { id: 9, name: 'ผ้าเบรก EZGO ยาว', unit: 'ชุด', price: 500 },
+        { id: 10, name: 'ซีลล้อหลัง', unit: 'ชิ้น', price: 80 },
+        { id: 11, name: 'ลูกปืน 6205', unit: 'ชิ้น', price: 180 },
+        { id: 12, name: 'น๊อตยึดแป้นเบรก', unit: 'ชิ้น', price: 25 }
     ],
     'steering': [
-        { id: 'steering_1', name: 'ยอยด์' },
-        { id: 'steering_2', name: 'ระปุกพวงมาลัย' },
-        { id: 'steering_3', name: 'เอ็นแร็ค' },
-        { id: 'steering_4', name: 'ลูกหมาก' },
-        { id: 'steering_5', name: 'ลูกหมากใต้โช๊ค' },
-        { id: 'steering_6', name: 'ลูกปืน 6005' },
-        { id: 'steering_7', name: 'ลูกปืน 6204' },
-        { id: 'steering_8', name: 'ยางกันฝัน' },
-        { id: 'steering_9', name: 'โช้คหน้า' },
-        { id: 'steering_10', name: 'ลูกหมากหัวโช้คบน' },
-        { id: 'steering_11', name: 'ปีกนก L+R' }
+        { id: 13, name: 'ยอยด์', unit: 'ชิ้น', price: 200 },
+        { id: 14, name: 'ระปุกพวงมาลัย', unit: 'ชิ้น', price: 350 },
+        { id: 15, name: 'เอ็นแร็ค', unit: 'ชิ้น', price: 600 },
+        { id: 16, name: 'ลูกหมาก', unit: 'ชิ้น', price: 150 },
+        { id: 17, name: 'ลูกหมากใต้โช๊ค', unit: 'ชิ้น', price: 180 },
+        { id: 18, name: 'ลูกปืน 6005', unit: 'ชิ้น', price: 160 },
+        { id: 19, name: 'ลูกปืน 6204', unit: 'ชิ้น', price: 140 },
+        { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น', price: 50 },
+        { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น', price: 800 },
+        { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น', price: 200 },
+        { id: 23, name: 'ปีกนก L+R', unit: 'คู่', price: 300 }
     ],
     'motor': [
-        { id: 'motor_1', name: 'แปลงถ่าน' },
-        { id: 'motor_2', name: 'ลูกปืน 6205' },
-        { id: 'motor_3', name: 'แม่เหล็กมอเตอร์' },
-        { id: 'motor_4', name: 'เซ็นเซอร์มอเตอร์' }
+        { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น', price: 120 },
+        { id: 25, name: 'ลูกปืน 6205', unit: 'ชิ้น', price: 180 },
+        { id: 26, name: 'แม่เหล็กมอเตอร์', unit: 'ชิ้น', price: 500 },
+        { id: 27, name: 'เซ็นเซอร์มอเตอร์', unit: 'ชิ้น', price: 350 }
     ],
-    'electric': [],
+    'electric': [
+        { id: 28, name: 'แบตเตอรี่ 12V', unit: 'ก้อน', price: 2500 },
+        { id: 29, name: 'ชุดควบคุมมอเตอร์', unit: 'ชุด', price: 8000 },
+        { id: 30, name: 'สายไฟหลัก', unit: 'เมตร', price: 80 }
+    ],
     'others': [
-        { id: 'others_1', name: 'บอดี้หน้า' },
-        { id: 'others_2', name: 'บอดี้หลัง' },
-        { id: 'others_3', name: 'โครงหลังคาหน้า' },
-        { id: 'others_4', name: 'โครงหลังคาหลัง' },
-        { id: 'others_5', name: 'หลังคา' },
-        { id: 'others_6', name: 'เบาะนั่ง' },
-        { id: 'others_7', name: 'พนักพิง' },
-        { id: 'others_8', name: 'ยาง' },
-        { id: 'others_9', name: 'แคดดี้เพลต' }
+        { id: 31, name: 'บอดี้หน้า', unit: 'ชิ้น', price: 1200 },
+        { id: 32, name: 'บอดี้หลัง', unit: 'ชิ้น', price: 1500 },
+        { id: 33, name: 'โครงหลังคาหน้า', unit: 'ชิ้น', price: 800 },
+        { id: 34, name: 'โครงหลังคาหลัง', unit: 'ชิ้น', price: 900 },
+        { id: 35, name: 'หลังคา', unit: 'ชิ้น', price: 2000 },
+        { id: 36, name: 'เบาะนั่ง', unit: 'ชิ้น', price: 1800 },
+        { id: 37, name: 'พนักพิง', unit: 'ชิ้น', price: 1200 },
+        { id: 38, name: 'ยาง', unit: 'เส้น', price: 600 },
+        { id: 39, name: 'แคดดี้เพลต', unit: 'ชิ้น', price: 300 }
     ]
 };
 
@@ -69,7 +72,21 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [subTasks, setSubTasks] = useState<string[]>(job.subTasks || []);
     const [partsNotes, setPartsNotes] = useState(job.partsNotes || '');
     const [remarks, setRemarks] = useState(job.remarks || '');
-    const [selectedParts, setSelectedParts] = useState<string[]>([]);
+    const [selectedParts, setSelectedParts] = useState<SelectedPart[]>(() => {
+        // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น SelectedPart[]
+        return job.parts?.map(part => {
+            // หาข้อมูลอะไหล่จาก PARTS_BY_SYSTEM
+            const allParts = Object.values(PARTS_BY_SYSTEM).flat();
+            const partInfo = allParts.find(p => p.id === part.part_id);
+            return {
+                id: part.part_id,
+                name: part.part_name || partInfo?.name || 'ไม่ทราบชื่อ',
+                quantity: part.quantity_used,
+                unit: partInfo?.unit || 'ชิ้น',
+                price: partInfo?.price || 0
+            };
+        }) || [];
+    });
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [workStartTime, setWorkStartTime] = useState('');
@@ -99,31 +116,44 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
     }
-    
-    const handlePartSelection = (partName: string) => {
-        setSelectedParts(prev => {
-            if (prev.includes(partName)) {
-                return prev.filter(p => p !== partName);
-            } else {
-                return [...prev, partName];
-            }
-        });
-    }
-    
-    const handleRemovePart = (partName: string) => {
-        setSelectedParts(prev => prev.filter(p => p !== partName));
-    }
 
     const handleAddSubTask = () => {
         if (newSubTask.trim() && !additionalSubTasks.includes(newSubTask.trim())) {
             setAdditionalSubTasks(prev => [...prev, newSubTask.trim()]);
             setNewSubTask('');
         }
-    }
+    };
 
-    const handleRemoveAdditionalSubTask = (task: string) => {
-        setAdditionalSubTasks(prev => prev.filter(t => t !== task));
-    }
+    const handleRemoveAdditionalSubTask = (taskToRemove: string) => {
+        setAdditionalSubTasks(prev => prev.filter(task => task !== taskToRemove));
+    };
+    
+    const handlePartSelection = (part: { id: number; name: string; unit: string; price: number }) => {
+        const existingPart = selectedParts.find(p => p.id === part.id);
+        if (existingPart) {
+            // ถ้ามีอะไหล่นี้แล้ว ให้เพิ่มจำนวน
+            setSelectedParts(prev => prev.map(p => 
+                p.id === part.id ? { ...p, quantity: p.quantity + 1 } : p
+            ));
+        } else {
+            // ถ้ายังไม่มี ให้เพิ่มใหม่
+            setSelectedParts(prev => [...prev, { ...part, quantity: 1 }]);
+        }
+    };
+
+    const handlePartQuantityChange = (partId: number, quantity: number) => {
+        if (quantity <= 0) {
+            setSelectedParts(prev => prev.filter(p => p.id !== partId));
+        } else {
+            setSelectedParts(prev => prev.map(p => 
+                p.id === partId ? { ...p, quantity } : p
+            ));
+        }
+    };
+
+    const handleRemovePart = (partId: number) => {
+        setSelectedParts(prev => prev.filter(p => p.id !== partId));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -152,7 +182,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 type: jobType,
                 system: system,
                 subTasks: allSubTasks,
-                partsNotes: partsNotes + (selectedParts.length > 0 ? '\n' + selectedParts.join(', ') : ''),
+                parts: selectedParts.map(part => ({
+                    part_id: part.id,
+                    quantity_used: part.quantity,
+                    part_name: part.name
+                })),
+                partsNotes: partsNotes,
                 remarks: remarks,
                 updated_at: new Date().toISOString(),
                 status: 'pending' // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
@@ -377,13 +412,13 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         
                         {selectedParts.length > 0 && (
                             <div className="selected-parts-list">
-                                {selectedParts.map((partName, index) => (
+                                {selectedParts.map((part, index) => (
                                     <div key={index} className="selected-part-item">
-                                        <span>{partName}</span>
+                                        <span>{part.name} (จำนวน: {part.quantity} {part.unit})</span>
                                         <button 
                                             type="button" 
                                             className="remove-part-btn"
-                                            onClick={() => handleRemovePart(partName)}
+                                            onClick={() => handleRemovePart(part.id)}
                                         >
                                             ×
                                         </button>
@@ -446,7 +481,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             <em>อะไหล่ที่เลือกจากระบบ:</em>
                                             <ul className="parts-list">
                                                 {selectedParts.map((part, index) => (
-                                                    <li key={index}>{part}</li>
+                                                    <li key={index}>{part.name} - จำนวน: {part.quantity} {part.unit}</li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -505,12 +540,15 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <div className="modal-body">
                             <div className="parts-grid">
                                 {PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM].map(part => (
-                                    <div 
-                                        key={part.id} 
-                                        className={`part-item ${selectedParts.includes(part.name) ? 'selected' : ''}`}
-                                        onClick={() => handlePartSelection(part.name)}
-                                    >
-                                        {part.name}
+                                    <div key={part.id} className="part-item">
+                                        <span>{part.name} ({part.unit}) - ฿{part.price}</span>
+                                        <button 
+                                            type="button" 
+                                            className="btn-select-part"
+                                            onClick={() => handlePartSelection(part)}
+                                        >
+                                            เลือก
+                                        </button>
                                     </div>
                                 ))}
                             </div>

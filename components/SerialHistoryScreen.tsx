@@ -1,202 +1,138 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Job, Vehicle, MOCK_JOBS } from '@/lib/data';
-import { View } from '@/app/page';
+import React, { useState, useMemo } from 'react';
+import { User, Job, MOCK_SERIAL_HISTORY, MOCK_GOLF_COURSES, MOCK_JOBS, View } from '@/lib/data';
 import StatusBadge from './StatusBadge';
-
-// สร้างข้อมูลจำลองสำหรับประวัติซีเรียล
-interface SerialHistoryEntry {
-  id: number;
-  serial_number: string;
-  vehicle_number: string;
-  action_type: 'registration' | 'transfer' | 'maintenance' | 'decommission';
-  action_date: string;
-  details: string;
-  performed_by: string;
-  golf_course_id: number;
-  golf_course_name: string;
-  is_active: boolean;
-  related_job_id?: number;
-}
-
-// ข้อมูลจำลองสำหรับประวัติซีเรียล
-const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
-  {
-    id: 1,
-    serial_number: 'KT-20220601',
-    vehicle_number: 'A01',
-    action_type: 'registration',
-    action_date: new Date(2022, 5, 1).toISOString(),
-    details: 'ลงทะเบียนรถใหม่เข้าระบบ',
-    performed_by: 'administrator',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: undefined
-  },
-  {
-    id: 2,
-    serial_number: 'KT-20220601',
-    vehicle_number: 'A01',
-    action_type: 'maintenance',
-    action_date: new Date(Date.now() - 86400000).toISOString(),
-    details: 'ซ่อมบำรุงระบบแบตเตอรี่ เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก',
-    performed_by: 'tape1408',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: 1
-  },
-  {
-    id: 3,
-    serial_number: 'GC-SN-002',
-    vehicle_number: 'A02',
-    action_type: 'registration',
-    action_date: new Date(2022, 3, 15).toISOString(),
-    details: 'ลงทะเบียนรถใหม่เข้าระบบ',
-    performed_by: 'administrator',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: undefined
-  },
-  {
-    id: 4,
-    serial_number: 'GC-SN-002',
-    vehicle_number: 'A02',
-    action_type: 'maintenance',
-    action_date: new Date(Date.now() - 172800000).toISOString(),
-    details: 'ตรวจเช็คระยะ 500 ชั่วโมง',
-    performed_by: 'tape1408',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: 2
-  },
-  {
-    id: 5,
-    serial_number: 'GC-SN-003',
-    vehicle_number: 'B05',
-    action_type: 'registration',
-    action_date: new Date(2022, 2, 10).toISOString(),
-    details: 'ลงทะเบียนรถใหม่เข้าระบบ',
-    performed_by: 'administrator',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: undefined
-  },
-  {
-    id: 6,
-    serial_number: 'GC-SN-004',
-    vehicle_number: 'C03',
-    action_type: 'registration',
-    action_date: new Date(2021, 11, 5).toISOString(),
-    details: 'ลงทะเบียนรถใหม่เข้าระบบ',
-    performed_by: 'administrator',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: false,
-    related_job_id: undefined
-  },
-  {
-    id: 7,
-    serial_number: 'GC-SN-004',
-    vehicle_number: 'C03',
-    action_type: 'decommission',
-    action_date: new Date(2023, 6, 15).toISOString(),
-    details: 'ปลดระวางรถออกจากระบบเนื่องจากสภาพทรุดโทรม',
-    performed_by: 'สมศรี หัวหน้า',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: false,
-    related_job_id: undefined
-  },
-  {
-    id: 8,
-    serial_number: 'GC-SN-005',
-    vehicle_number: 'D07',
-    action_type: 'registration',
-    action_date: new Date(2022, 1, 20).toISOString(),
-    details: 'ลงทะเบียนรถใหม่เข้าระบบ',
-    performed_by: 'administrator',
-    golf_course_id: 2,
-    golf_course_name: 'กรีนวัลเลย์',
-    is_active: true,
-    related_job_id: undefined
-  },
-  {
-    id: 9,
-    serial_number: 'GC-SN-005',
-    vehicle_number: 'D07',
-    action_type: 'transfer',
-    action_date: new Date(2023, 3, 10).toISOString(),
-    details: 'โอนย้ายรถจากสนาม กรีนวัลเลย์ ไปยัง วอเตอร์แลนด์',
-    performed_by: 'administrator',
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: true,
-    related_job_id: undefined
-  }
-];
+import JobDetailsModal from './JobDetailsModal';
 
 interface SerialHistoryScreenProps {
+  user: User;
   setView: (view: View) => void;
-  vehicles: Vehicle[];
 }
 
-const SerialHistoryScreen = ({ setView, vehicles }: SerialHistoryScreenProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterSerial, setFilterSerial] = useState('');
+const SerialHistoryScreen = ({ user, setView }: SerialHistoryScreenProps) => {
+  // Search and filter states
+  const [searchSerial, setSearchSerial] = useState('');
   const [filterActionType, setFilterActionType] = useState('');
+  const [filterGolfCourse, setFilterGolfCourse] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
   
-  // Sort history entries by date (newest first)
-  const sortedEntries = [...MOCK_SERIAL_HISTORY].sort((a, b) => 
-    new Date(b.action_date).getTime() - new Date(a.action_date).getTime()
-  );
+  // Sort states
+  const [sortBy, setSortBy] = useState<'date' | 'serial' | 'action'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Apply filters
-  const filteredEntries = sortedEntries.filter(entry => {
-    // Search term filter (search in serial number, vehicle number, or details)
-    const searchMatch = searchTerm === '' || 
-      entry.serial_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.vehicle_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.performed_by.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Serial filter
-    const serialMatch = filterSerial === '' || entry.serial_number === filterSerial;
-    
-    // Action type filter
-    const actionTypeMatch = filterActionType === '' || entry.action_type === filterActionType;
-    
-    // Date range filter
-    const entryDate = new Date(entry.action_date);
-    const fromDate = filterDateFrom ? new Date(filterDateFrom) : null;
-    const toDate = filterDateTo ? new Date(filterDateTo) : null;
-    
-    const dateMatch = 
-      (!fromDate || entryDate >= fromDate) && 
-      (!toDate || entryDate <= toDate);
-    
-    // Active status filter
-    const activeMatch = showInactive || entry.is_active;
-    
-    return searchMatch && serialMatch && actionTypeMatch && dateMatch && activeMatch;
-  });
+  // Modal states
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Get unique serial numbers for filter dropdown
-  const uniqueSerials = Array.from(new Set(MOCK_SERIAL_HISTORY.map(entry => entry.serial_number)));
+  // Get unique action types for filter
+  const actionTypes = useMemo(() => {
+    return Array.from(new Set(MOCK_SERIAL_HISTORY.map(entry => entry.action_type)));
+  }, []);
 
+  // Get available golf courses based on user role and managed courses
+  const availableGolfCourses = useMemo(() => {
+    if (user.role === 'admin') {
+      return MOCK_GOLF_COURSES; // Admin เห็นทุกสนาม
+    } else if (user.role === 'supervisor' && user.managed_golf_courses) {
+      return MOCK_GOLF_COURSES.filter(course => 
+        user.managed_golf_courses!.includes(course.id)
+      );
+    } else {
+      // Staff เห็นเฉพาะสนามของตน
+      return MOCK_GOLF_COURSES.filter(course => course.id === user.golf_course_id);
+    }
+  }, [user]);
+
+  // Filter and sort entries
+  const filteredEntries = useMemo(() => {
+    let filtered = MOCK_SERIAL_HISTORY.filter(entry => {
+      // ระบบ filter ใหม่ตาม managed_golf_courses
+      let hasAccess = false;
+      
+      if (user.role === 'admin') {
+        hasAccess = true; // Admin เห็นทุกอย่าง
+      } else if (user.role === 'supervisor' && user.managed_golf_courses) {
+        hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
+      } else {
+        hasAccess = entry.golf_course_id === user.golf_course_id; // Staff เห็นเฉพาะสนามของตน
+      }
+
+      if (!hasAccess) {
+        return false;
+      }
+
+      // Search by serial number
+      if (searchSerial && !entry.serial_number.toLowerCase().includes(searchSerial.toLowerCase())) {
+        return false;
+      }
+
+      // Filter by action type
+      if (filterActionType && entry.action_type !== filterActionType) {
+        return false;
+      }
+
+      // Filter by golf course
+      if (filterGolfCourse && entry.golf_course_id.toString() !== filterGolfCourse) {
+        return false;
+      }
+
+      // Filter by date range
+      if (filterDateFrom) {
+        const entryDate = new Date(entry.action_date);
+        const fromDate = new Date(filterDateFrom);
+        if (entryDate < fromDate) {
+          return false;
+        }
+      }
+
+      if (filterDateTo) {
+        const entryDate = new Date(entry.action_date);
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (entryDate > toDate) {
+          return false;
+        }
+      }
+
+      // Filter by active status
+      if (!showInactive && !entry.is_active) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Sort entries
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.action_date).getTime() - new Date(b.action_date).getTime();
+          break;
+        case 'serial':
+          comparison = a.serial_number.localeCompare(b.serial_number);
+          break;
+        case 'action':
+          comparison = a.action_type.localeCompare(b.action_type);
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [searchSerial, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder, user]);
+
+  // Helper functions
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('th-TH', { 
-      year: 'numeric', 
-      month: 'long', 
+    return date.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -204,143 +140,291 @@ const SerialHistoryScreen = ({ setView, vehicles }: SerialHistoryScreenProps) =>
   };
 
   const getActionTypeLabel = (actionType: string) => {
-    switch(actionType) {
-      case 'registration': return 'ลงทะเบียน';
-      case 'transfer': return 'โอนย้าย';
-      case 'maintenance': return 'ซ่อมบำรุง';
-      case 'decommission': return 'ปลดระวาง';
-      default: return actionType;
+    const labels: Record<string, string> = {
+      'registration': 'ลงทะเบียน',
+      'transfer': 'โอนย้าย',
+      'maintenance': 'ซ่อมบำรุง',
+      'decommission': 'ปลดระวาง',
+      'inspection': 'ตรวจสอบ'
+    };
+    return labels[actionType] || actionType;
+  };
+
+  const getActionTypeColor = (actionType: string) => {
+    const colors: Record<string, string> = {
+      'registration': '#10b981',
+      'transfer': '#3b82f6',
+      'maintenance': '#f59e0b',
+      'decommission': '#ef4444',
+      'inspection': '#8b5cf6'
+    };
+    return colors[actionType] || '#6b7280';
+  };
+
+  const handleViewJob = (jobId: number) => {
+    const job = MOCK_JOBS.find(j => j.id === jobId);
+    if (job) {
+      setSelectedJob(job);
+      setIsModalOpen(true);
     }
   };
 
-  const getActionTypeClass = (actionType: string) => {
-    switch(actionType) {
-      case 'registration': return 'action-registration';
-      case 'transfer': return 'action-transfer';
-      case 'maintenance': return 'action-maintenance';
-      case 'decommission': return 'action-decommission';
-      default: return '';
-    }
+  const handleViewDetails = (entry: any) => {
+    alert(`รายละเอียด: ${entry.details}\n\nประเภท: ${getActionTypeLabel(entry.action_type)}\nผู้ดำเนินการ: ${entry.performed_by}\nวันที่: ${formatDate(entry.action_date)}`);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedJob(null);
+  };
+
+  const clearFilters = () => {
+    setSearchSerial('');
+    setFilterActionType('');
+    setFilterGolfCourse('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setShowInactive(true); // รีเซ็ตเป็น true
+  };
+
+  const handlePrintReport = () => {
+    window.print();
   };
 
   return (
-    <div className="card">
-      <div className="page-header">
-        <h2>ประวัติซีเรียล (Serial History Log)</h2>
-        <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+    <div className="serial-history-container">
+      {/* Header */}
+      <div className="serial-header">
+        <h1 className="serial-title">ประวัติซีเรียล (Serial History Log)</h1>
+        <div className="header-actions">
+          <button onClick={handlePrintReport} className="btn-print">
+            พิมพ์รายงาน
+          </button>
+          <button onClick={() => setView('dashboard')} className="btn-back">
+            กลับ
+          </button>
+        </div>
       </div>
 
-      <div className="filter-section">
-        <div className="search-box">
-          <input 
-            type="text" 
-            placeholder="ค้นหาตามซีเรียล, เบอร์รถ, รายละเอียด, ผู้ดำเนินการ" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-          />
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-number">{Array.from(new Set(MOCK_SERIAL_HISTORY.map(e => e.serial_number))).length}</div>
+          <div className="stat-label">รถทั้งหมด</div>
         </div>
-        
-        <div className="filter-controls">
+        <div className="stat-card">
+          <div className="stat-number">{MOCK_SERIAL_HISTORY.filter(e => e.action_type === 'maintenance').length}</div>
+          <div className="stat-label">งานซ่อมบำรุง</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{Array.from(new Set(MOCK_SERIAL_HISTORY.filter(e => e.is_active).map(e => e.serial_number))).length}</div>
+          <div className="stat-label">รถใช้งาน</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">{Array.from(new Set(MOCK_SERIAL_HISTORY.filter(e => !e.is_active).map(e => e.serial_number))).length}</div>
+          <div className="stat-label">รถปลดระวาง</div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="filters-section">
+        <div className="filters-grid">
           <div className="filter-group">
-            <label>ซีเรียล:</label>
-            <select value={filterSerial} onChange={(e) => setFilterSerial(e.target.value)}>
+            <label>ค้นหาซีเรียล:</label>
+            <input
+              type="text"
+              value={searchSerial}
+              onChange={(e) => setSearchSerial(e.target.value)}
+              placeholder="ใส่หมายเลขซีเรียล..."
+              className="filter-input"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label>ประเภทการดำเนินการ:</label>
+            <select
+              value={filterActionType}
+              onChange={(e) => setFilterActionType(e.target.value)}
+              className="filter-select"
+            >
               <option value="">ทั้งหมด</option>
-              {uniqueSerials.map(serial => (
-                <option key={serial} value={serial}>{serial}</option>
+              {actionTypes.map(type => (
+                <option key={type} value={type}>
+                  {getActionTypeLabel(type)}
+                </option>
               ))}
             </select>
           </div>
-          
+
           <div className="filter-group">
-            <label>ประเภทการดำเนินการ:</label>
-            <select value={filterActionType} onChange={(e) => setFilterActionType(e.target.value)}>
+            <label>สนามกอล์ฟ:</label>
+            <select
+              value={filterGolfCourse}
+              onChange={(e) => setFilterGolfCourse(e.target.value)}
+              className="filter-select"
+            >
               <option value="">ทั้งหมด</option>
-              <option value="registration">ลงทะเบียน</option>
-              <option value="transfer">โอนย้าย</option>
-              <option value="maintenance">ซ่อมบำรุง</option>
-              <option value="decommission">ปลดระวาง</option>
+              {availableGolfCourses.map(course => (
+                <option key={course.id} value={course.id.toString()}>
+                  {course.name}
+                </option>
+              ))}
             </select>
           </div>
-          
+
           <div className="filter-group">
-            <label>ตั้งแต่วันที่:</label>
-            <input 
-              type="date" 
-              value={filterDateFrom} 
-              onChange={(e) => setFilterDateFrom(e.target.value)} 
+            <label>วันที่เริ่มต้น:</label>
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="filter-input"
             />
           </div>
-          
+
           <div className="filter-group">
-            <label>ถึงวันที่:</label>
-            <input 
-              type="date" 
-              value={filterDateTo} 
-              onChange={(e) => setFilterDateTo(e.target.value)} 
+            <label>วันที่สิ้นสุด:</label>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="filter-input"
             />
           </div>
 
           <div className="filter-group checkbox-group">
-            <label>
-              <input 
-                type="checkbox" 
-                checked={showInactive} 
-                onChange={(e) => setShowInactive(e.target.checked)} 
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="filter-checkbox"
               />
-              แสดงรถที่ปลดระวางแล้ว
+              แสดงรถปลดระวาง
             </label>
           </div>
         </div>
+
+        <div className="filter-actions">
+          <button onClick={clearFilters} className="btn-clear">
+            ล้างตัวกรอง
+          </button>
+          <span className="results-count">
+            พบ {filteredEntries.length} รายการ จากทั้งหมด {MOCK_SERIAL_HISTORY.length} รายการ
+          </span>
+        </div>
       </div>
 
-      <div className="serial-history-list">
+      {/* Results Info */}
+      <div className="results-info">
+        พบ <strong>{filteredEntries.length}</strong> รายการ จากทั้งหมด <strong>{MOCK_SERIAL_HISTORY.length}</strong> รายการ
+      </div>
+
+      {/* Table */}
+      <div className="table-container">
         {filteredEntries.length === 0 ? (
-          <p className="no-data">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
+          <div className="no-data">
+            <div className="no-data-icon">📋</div>
+            <h3>ไม่พบข้อมูล</h3>
+            <p>ไม่พบประวัติที่ตรงกับเงื่อนไขการค้นหา</p>
+          </div>
         ) : (
-          filteredEntries.map(entry => (
-            <div key={entry.id} className={`serial-history-card ${!entry.is_active ? 'inactive-serial' : ''}`}>
-              <div className="serial-history-card-header">
-                <div>
-                  <h3>ซีเรียล: {entry.serial_number}</h3>
-                  <p className="serial-vehicle-number">รถเบอร์: {entry.vehicle_number}</p>
-                  <p className="history-date">{formatDate(entry.action_date)}</p>
-                </div>
-                <div className={`action-type-badge ${getActionTypeClass(entry.action_type)}`}>
-                  {getActionTypeLabel(entry.action_type)}
-                </div>
-              </div>
-              
-              <div className="serial-history-card-body">
-                <div className="serial-history-details">
-                  <p><strong>รายละเอียด:</strong> {entry.details}</p>
-                  <p><strong>ผู้ดำเนินการ:</strong> {entry.performed_by}</p>
-                  <p><strong>สนาม:</strong> {entry.golf_course_name}</p>
-                  {entry.related_job_id && (
-                    <p><strong>รหัสงาน:</strong> {entry.related_job_id}</p>
-                  )}
-                  <p className="serial-status">
-                    <strong>สถานะ:</strong> 
-                    <span className={entry.is_active ? 'active-status' : 'inactive-status'}>
-                      {entry.is_active ? 'ใช้งานอยู่' : 'ปลดระวางแล้ว'}
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>วันที่/เวลา</th>
+                <th>หมายเลขซีเรียล</th>
+                <th>หมายเลขรถ</th>
+                <th>ประเภท</th>
+                <th>รายละเอียด</th>
+                <th>ผู้ดำเนินการ</th>
+                <th>สนามกอล์ฟ</th>
+                <th>สถานะ</th>
+                <th>การดำเนินการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredEntries.map((entry) => (
+                <tr key={entry.id} className={!entry.is_active ? 'inactive-row' : ''}>
+                  <td className="date-col">
+                    {formatDate(entry.action_date)}
+                  </td>
+                  <td className="serial-col">
+                    <span className="serial-badge">{entry.serial_number}</span>
+                  </td>
+                  <td className="vehicle-col">
+                    <span className="vehicle-badge">{entry.vehicle_number}</span>
+                  </td>
+                  <td className="action-col">
+                    <span 
+                      className="action-badge"
+                      style={{ backgroundColor: getActionTypeColor(entry.action_type) }}
+                    >
+                      {getActionTypeLabel(entry.action_type)}
                     </span>
-                  </p>
-                </div>
-              </div>
-              
-              <div className="serial-history-card-footer">
-                <button className="btn-secondary btn-sm">พิมพ์รายงาน</button>
-                {entry.related_job_id && (
-                  <button className="btn-outline btn-sm">ดูรายละเอียดงาน</button>
-                )}
-              </div>
-            </div>
-          ))
+                  </td>
+                  <td className="details-col">
+                    <div className="details-content">
+                      <p>{entry.details}</p>
+                      {entry.parts_used && entry.parts_used.length > 0 && (
+                        <div className="parts-info">
+                          <strong>อะไหล่:</strong> {entry.parts_used.join(', ')}
+                        </div>
+                      )}
+                      {entry.system && (
+                        <div className="system-info">
+                          <strong>ระบบ:</strong> {entry.system}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="performer-col">
+                    {entry.performed_by}
+                  </td>
+                  <td className="course-col">
+                    {entry.golf_course_name}
+                  </td>
+                  <td className="status-col">
+                    <div className="status-container">
+                      <span className={`status-badge ${entry.is_active ? 'active' : 'inactive'}`}>
+                        {entry.is_active ? 'ใช้งาน' : 'ปลดระวาง'}
+                      </span>
+                      {entry.status && (
+                        <StatusBadge status={entry.status} />
+                      )}
+                    </div>
+                  </td>
+                  <td className="actions-col">
+                    {entry.related_job_id ? (
+                      <button
+                        onClick={() => handleViewJob(entry.related_job_id!)}
+                        className="action-btn primary"
+                      >
+                        ดูงาน
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleViewDetails(entry)}
+                        className="action-btn secondary"
+                      >
+                        รายละเอียด
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
-      <div className="serial-history-note">
-        <p><strong>หมายเหตุ:</strong> ข้อมูลประวัติซีเรียลทั้งหมดจะถูกเก็บไว้ถาวรและไม่สามารถลบได้ เพื่อการติดตามประวัติการใช้งานของรถแต่ละคัน</p>
-      </div>
+      {/* Job Details Modal */}
+      {selectedJob && (
+        <JobDetailsModal
+          job={selectedJob}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

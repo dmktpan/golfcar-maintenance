@@ -40,6 +40,17 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const [bulkUploadErrors, setBulkUploadErrors] = useState<string[]>([]);
   const [transferToCourse, setTransferToCourse] = useState<number | ''>('');
 
+  // Helper function to get status label
+  const getStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      'active': 'ใช้งาน',
+      'inactive': 'ไม่ใช้งาน',
+      'parked': 'ฝากจอด',
+      'spare': 'สแปร์'
+    };
+    return statusLabels[status] || 'ใช้งาน';
+  };
+
   // Helper function to count vehicles by course
   const getVehicleCountByCourse = (courseId: number): number => {
     return vehicles.filter(vehicle => vehicle.golf_course_id === courseId).length;
@@ -480,21 +491,23 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                       <td>
                         {editingVehicle?.id === vehicle.id ? (
                           <select
-                            value={editingVehicle.golf_course_id}
-                            onChange={(e) => setEditingVehicle({...editingVehicle, golf_course_id: parseInt(e.target.value)})}
+                            value={editingVehicle.status || 'active'}
+                            onChange={(e) => setEditingVehicle({
+                              ...editingVehicle, 
+                              status: e.target.value as 'active' | 'inactive' | 'parked' | 'spare'
+                            })}
+                            className="status-select"
                           >
-                            {golfCourses.map(course => (
-                              <option key={course.id} value={course.id}>{course.name}</option>
-                            ))}
+                            <option value="active">ใช้งาน</option>
+                            <option value="inactive">ไม่ใช้งาน</option>
+                            <option value="parked">ฝากจอด</option>
+                            <option value="spare">สแปร์</option>
                           </select>
                         ) : (
-                          course?.name || 'ไม่ระบุ'
+                          <span className={`status-badge ${vehicle.status || 'active'}`}>
+                            {getStatusLabel(vehicle.status || 'active')}
+                          </span>
                         )}
-                      </td>
-                      <td>
-                        <span className={`status-badge ${vehicle.status}`}>
-                          {vehicle.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
-                        </span>
                       </td>
                       <td>
                         {editingVehicle?.id === vehicle.id ? (
@@ -647,3 +660,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 };
 
 export default GolfCourseManagementScreen;
+
+  // Helper function to get status color class
+  const getStatusColorClass = (status: string) => {
+    const statusColors: Record<string, string> = {
+      'active': 'status-active',
+      'inactive': 'status-inactive',
+      'parked': 'status-parked',
+      'spare': 'status-spare'
+    };
+    return statusColors[status] || 'status-active';
+  };

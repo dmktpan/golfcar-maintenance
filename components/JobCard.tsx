@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Job, JobStatus, User, MOCK_PARTS } from '@/lib/data';
 import StatusBadge from './StatusBadge';
+import JobDetailsModal from './JobDetailsModal';
+import styles from './JobCard.module.css';
 
 interface JobCardProps {
   job: Job;
@@ -13,7 +15,7 @@ interface JobCardProps {
 }
 
 const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }: JobCardProps) => {
-    const getPartName = (partId: number) => MOCK_PARTS.find(p => p.id === partId)?.name || 'ไม่พบอะไหล่';
+    const [showDetails, setShowDetails] = useState(false);
     
     // แปลงวันที่ให้อยู่ในรูปแบบที่อ่านง่าย
     const formatDate = (dateString: string) => {
@@ -27,119 +29,135 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
         });
     };
 
+    // ฟังก์ชันสำหรับแสดงปุ่มตามสถานะและบทบาท
+    const renderActionButtons = () => {
+        const buttons = [];
+
+        // ปุ่มดูรายละเอียด (แสดงเสมอ)
+        buttons.push(
+            <button 
+                key="details"
+                className={`${styles.actionButton} ${styles.info}`} 
+                onClick={() => setShowDetails(true)}
+            >
+                <span className="btn-icon">👁️</span> ดูรายละเอียด
+            </button>
+        );
+
+        // ปุ่มสำหรับพนักงานที่ได้รับงานมอบหมาย
+        if (user.role === 'staff' && job.status === 'assigned' && job.assigned_to === user.id && onFillJobForm) {
+            buttons.push(
+                <button 
+                    key="fill-form"
+                    className={`${styles.actionButton} ${styles.primary}`} 
+                    onClick={() => onFillJobForm(job)}
+                >
+                    <span className="btn-icon">📝</span> กรอกรายละเอียด
+                </button>
+            );
+        }
+
+        // ปุ่มเสร็จสิ้นงาน
+        if (user.role === 'staff' && 
+            (job.status === 'assigned' || job.status === 'in_progress') && 
+            job.assigned_to === user.id) {
+            buttons.push(
+                <button 
+                    key="complete"
+                    className={`${styles.actionButton} ${styles.success}`} 
+                    onClick={() => onUpdateStatus(job.id, 'completed')}
+                >
+                    <span className="btn-icon">✓</span> เสร็จสิ้น
+                </button>
+            );
+        }
+
+        // ปุ่มแก้ไขสำหรับงานที่พนักงานสร้างเอง
+        if (user.role === 'staff' && 
+            job.status === 'pending' && 
+            job.user_id === user.id && 
+            !job.assigned_by && 
+            onFillJobForm) {
+            buttons.push(
+                <button 
+                    key="edit"
+                    className={`${styles.actionButton} ${styles.secondary}`} 
+                    onClick={() => onFillJobForm(job)}
+                >
+                    <span className="btn-icon">✏️</span> แก้ไข
+                </button>
+            );
+        }
+
+        // ปุ่มสำหรับหัวหน้างาน
+        if (user.role === 'supervisor' && job.status === 'pending') {
+            buttons.push(
+                <button 
+                    key="approve"
+                    className={`${styles.actionButton} ${styles.success}`} 
+                    onClick={() => onUpdateStatus(job.id, 'approved')}
+                >
+                    <span className="btn-icon">✓</span> อนุมัติ
+                </button>,
+                <button 
+                    key="reject"
+                    className={`${styles.actionButton} ${styles.danger}`} 
+                    onClick={() => onUpdateStatus(job.id, 'rejected')}
+                >
+                    <span className="btn-icon">✕</span> ไม่อนุมัติ
+                </button>
+            );
+        }
+
+        return buttons;
+    };
+
     return (
-        <div className={`card job-card status-${job.status}`}>
-            <div className="job-card-content">
-                <div className="job-card-header">
-                    <div className="job-header-left">
-                        <span className="vehicle-number">รถเบอร์: {job.vehicle_number}</span>
-                        <span className="job-date">{formatDate(job.created_at)}</span>
-                        {job.assigned_by_name && (
-                            <span className="job-assigned-by">มอบหมายโดย: {job.assigned_by_name}</span>
-                        )}
+        <>
+            <div className={`${styles.jobCard} ${styles[`status${job.status.charAt(0).toUpperCase() + job.status.slice(1)}`]}`}>
+                <div className={styles.jobCardHeader}>
+                    <div className={styles.jobHeaderLeft}>
+                        <h3 className={styles.vehicleNumber}>รถเบอร์ {job.vehicle_number}</h3>
+                        <span className={styles.jobType}>{job.type}</span>
                     </div>
                     <StatusBadge status={job.status} />
                 </div>
-                <div className="job-card-body">
-                    <div className="job-info-grid">
-                        <div className="job-info-item">
-                            <span className="info-label">ประเภท:</span>
-                            <span className="info-value">{job.type}</span>
+
+                <div className={styles.jobCardBody}>
+                    <div className={styles.jobSummary}>
+                        <div className={styles.summaryItem}>
+                            <span className={styles.summaryLabel}>ระบบ:</span>
+                            <span className={styles.summaryValue}>{job.system}</span>
                         </div>
-                        <div className="job-info-item">
-                            <span className="info-label">ผู้แจ้ง:</span>
-                            <span className="info-value">{job.userName}</span>
+                        <div className={styles.summaryItem}>
+                            <span className={styles.summaryLabel}>ผู้แจ้ง:</span>
+                            <span className={styles.summaryValue}>{job.userName}</span>
                         </div>
-                        <div className="job-info-item">
-                            <span className="info-label">ระบบ:</span>
-                            <span className="info-value">{job.system}</span>
+                        <div className={styles.summaryItem}>
+                            <span className={styles.summaryLabel}>วันที่:</span>
+                            <span className={styles.summaryValue}>{formatDate(job.created_at)}</span>
                         </div>
-                    </div>
-                    
-                    <div className="job-details">
-                        {job.subTasks.length > 0 && (
-                            <div className="job-detail-item">
-                                <span className="detail-label">งานย่อย:</span>
-                                <span className="detail-value">{job.subTasks.join(', ')}</span>
-                            </div>
-                        )}
-                        
-                        {job.partsNotes && (
-                            <div className="job-detail-item">
-                                <span className="detail-label">อะไหล่ที่เปลี่ยน:</span>
-                                <span className="detail-value parts-notes-display">{job.partsNotes}</span>
-                            </div>
-                        )}
-                        
-                        {job.remarks && (
-                            <div className="job-detail-item">
-                                <span className="detail-label">หมายเหตุ:</span>
-                                <span className="detail-value">{job.remarks}</span>
-                            </div>
-                        )}
-                        
-                        {job.parts.length > 0 && (
-                            <div className="job-detail-item">
-                                <span className="detail-label">อะไหล่ที่ใช้ (เก่า):</span>
-                                <ul className="parts-list">
-                                    {job.parts.map(p => (
-                                        <li key={p.part_id}>{getPartName(p.part_id)} (x{p.quantity_used})</li>
-                                    ))}
-                                </ul>
+                        {job.assigned_by_name && (
+                            <div className={styles.summaryItem}>
+                                <span className={styles.summaryLabel}>มอบหมายโดย:</span>
+                                <span className={styles.summaryValue}>{job.assigned_by_name}</span>
                             </div>
                         )}
                     </div>
+                </div>
+
+                <div className={styles.jobCardFooter}>
+                    {renderActionButtons()}
                 </div>
             </div>
-            {/* ปุ่มสำหรับพนักงานที่ได้รับงานมอบหมาย */}
-            {user.role === 'staff' && job.status === 'assigned' && job.assigned_to === user.id && onFillJobForm && (
-                <div className="job-card-footer">
-                    <button className="btn-primary" onClick={() => onFillJobForm(job)}>
-                        <span className="btn-icon">📝</span> กรอกรายละเอียดงาน
-                    </button>
-                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
-                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
-                    </button>
-                </div>
+
+            {showDetails && (
+                <JobDetailsModal 
+                    job={job} 
+                    onClose={() => setShowDetails(false)} 
+                />
             )}
-            
-            {/* ปุ่มเสร็จสิ้นงานสำหรับงานที่อยู่ในสถานะ in_progress */}
-            {user.role === 'staff' && job.status === 'in_progress' && job.assigned_to === user.id && (
-                <div className="job-card-footer">
-                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
-                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
-                    </button>
-                </div>
-            )}
-            
-            {/* เพิ่ม: ปุ่มแก้ไขสำหรับงานที่พนักงานสร้างเองและอยู่ในสถานะ pending */}
-            {user.role === 'staff' && job.status === 'pending' && job.user_id === user.id && !job.assigned_by && onFillJobForm && (
-                <div className="job-card-footer">
-                    <button className="btn-secondary" onClick={() => onFillJobForm(job)}>
-                        <span className="btn-icon">✏️</span> แก้ไขงาน
-                    </button>
-                </div>
-            )}
-            
-            {/* ปุ่มสำหรับหัวหน้างานอนุมัติ/ไม่อนุมัติ */}
-            {user.role === 'supervisor' && job.status === 'pending' && (
-                <div className="job-card-footer">
-                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'approved')}>
-                        <span className="btn-icon">✓</span> อนุมัติ
-                    </button>
-                    <button className="btn-danger" onClick={() => onUpdateStatus(job.id, 'rejected')}>
-                        <span className="btn-icon">✕</span> ไม่อนุมัติ
-                    </button>
-                </div>
-            )}
-            {user.role === 'staff' && (job.status === 'assigned' || job.status === 'in_progress') && job.assigned_to === user.id && (
-                <div className="job-card-footer">
-                    <button className="btn-success" onClick={() => onUpdateStatus(job.id, 'completed')}>
-                        <span className="btn-icon">✓</span> เสร็จสิ้นงาน
-                    </button>
-                </div>
-            )}
-        </div>
+        </>
     );
 }
 
