@@ -13,59 +13,6 @@ interface CreateJobScreenProps {
     jobs: Job[];
 }
 
-// รายการอะไหล่ตามระบบ พร้อมข้อมูลเพิ่มเติม
-const PARTS_BY_SYSTEM = {
-    'brake': [
-        { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น', price: 150 },
-        { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด', price: 800 },
-        { id: 3, name: 'เฟืองปาร์คเบรค', unit: 'ชิ้น', price: 300 },
-        { id: 4, name: 'สปริงคันเร่ง', unit: 'ชิ้น', price: 120 },
-        { id: 5, name: 'สายเบรกสั้น', unit: 'เส้น', price: 250 },
-        { id: 6, name: 'สายเบรกยาว', unit: 'เส้น', price: 350 },
-        { id: 7, name: 'ผ้าเบรก EZGO', unit: 'ชุด', price: 450 },
-        { id: 8, name: 'ผ้าเบรก EZGO สั้น', unit: 'ชุด', price: 400 },
-        { id: 9, name: 'ผ้าเบรก EZGO ยาว', unit: 'ชุด', price: 500 },
-        { id: 10, name: 'ซีลล้อหลัง', unit: 'ชิ้น', price: 80 },
-        { id: 11, name: 'ลูกปืน 6205', unit: 'ชิ้น', price: 180 },
-        { id: 12, name: 'น๊อตยึดแป้นเบรก', unit: 'ชิ้น', price: 25 }
-    ],
-    'steering': [
-        { id: 13, name: 'ยอยด์', unit: 'ชิ้น', price: 200 },
-        { id: 14, name: 'ระปุกพวงมาลัย', unit: 'ชิ้น', price: 350 },
-        { id: 15, name: 'เอ็นแร็ค', unit: 'ชิ้น', price: 600 },
-        { id: 16, name: 'ลูกหมาก', unit: 'ชิ้น', price: 150 },
-        { id: 17, name: 'ลูกหมากใต้โช๊ค', unit: 'ชิ้น', price: 180 },
-        { id: 18, name: 'ลูกปืน 6005', unit: 'ชิ้น', price: 160 },
-        { id: 19, name: 'ลูกปืน 6204', unit: 'ชิ้น', price: 140 },
-        { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น', price: 50 },
-        { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น', price: 800 },
-        { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น', price: 200 },
-        { id: 23, name: 'ปีกนก L+R', unit: 'คู่', price: 300 }
-    ],
-    'motor': [
-        { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น', price: 120 },
-        { id: 25, name: 'ลูกปืน 6205', unit: 'ชิ้น', price: 180 },
-        { id: 26, name: 'แม่เหล็กมอเตอร์', unit: 'ชิ้น', price: 500 },
-        { id: 27, name: 'เซ็นเซอร์มอเตอร์', unit: 'ชิ้น', price: 350 }
-    ],
-    'electric': [
-        { id: 28, name: 'แบตเตอรี่ 12V', unit: 'ก้อน', price: 2500 },
-        { id: 29, name: 'ชุดควบคุมมอเตอร์', unit: 'ชุด', price: 8000 },
-        { id: 30, name: 'สายไฟหลัก', unit: 'เมตร', price: 80 }
-    ],
-    'others': [
-        { id: 31, name: 'บอดี้หน้า', unit: 'ชิ้น', price: 1200 },
-        { id: 32, name: 'บอดี้หลัง', unit: 'ชิ้น', price: 1500 },
-        { id: 33, name: 'โครงหลังคาหน้า', unit: 'ชิ้น', price: 800 },
-        { id: 34, name: 'โครงหลังคาหลัง', unit: 'ชิ้น', price: 900 },
-        { id: 35, name: 'หลังคา', unit: 'ชิ้น', price: 2000 },
-        { id: 36, name: 'เบาะนั่ง', unit: 'ชิ้น', price: 1800 },
-        { id: 37, name: 'พนักพิง', unit: 'ชิ้น', price: 1200 },
-        { id: 38, name: 'ยาง', unit: 'เส้น', price: 600 },
-        { id: 39, name: 'แคดดี้เพลต', unit: 'ชิ้น', price: 300 }
-    ]
-};
-
 const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jobs }: CreateJobScreenProps) => {
     const [vehicleId, setVehicleId] = useState('');
     const [jobType, setJobType] = useState<JobType>('PM');
@@ -109,11 +56,16 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             setSystem('');
             setSubTasks([]);
         }
+        // รีเซ็ต remarks และ newSubTask เมื่อเปลี่ยนเป็น BM หรือ RC
+        if (jobType === 'BM' || jobType === 'Recondition') {
+            setRemarks('');
+            setNewSubTask('');
+        }
     }, [jobType]);
 
-    // เพิ่มฟังก์ชันสำหรับจัดการงานย่อยใหม่
+    // เพิ่มฟังก์ชันสำหรับจัดการงานย่อยใหม่ (เฉพาะ PM)
     const handleAddSubTask = () => {
-        if (newSubTask.trim() && !subTasks.includes(newSubTask.trim())) {
+        if (jobType === 'PM' && newSubTask.trim() && !subTasks.includes(newSubTask.trim())) {
             setSubTasks(prev => [...prev, newSubTask.trim()]);
             setNewSubTask('');
         }
@@ -124,7 +76,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     }
     
     // รายการอะไหล่ตามระบบ (เอาราคาออกแล้ว)
-    const PARTS_BY_SYSTEM = {
+    const PARTS_BY_SYSTEM_DISPLAY = {
         'brake': [
             { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น' },
             { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด' },
@@ -150,7 +102,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น' },
             { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น' },
             { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น' },
-            { id: 23, name: 'ปีกนก L+R', unit: 'คู่' }
+            { id: 23, name: 'ปีกนก L+R', unit: 'คู่', price: 300 }
         ],
         'motor': [
             { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น' },
@@ -405,8 +357,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     </div>
                 )}
 
+                {/* ลบส่วนของ BM และ Recondition ออก */}
                 {/* เพิ่มส่วนสำหรับ BM และ Recondition */}
-                {(jobType === 'BM' || jobType === 'Recondition') && (
+                {/* {(jobType === 'BM' || jobType === 'Recondition') && (
                     <div className="form-group">
                         <label htmlFor="job-details">รายละเอียดงาน (ไม่บังคับ)</label>
                         <textarea 
@@ -416,9 +369,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             placeholder="กรุณาระบุรายละเอียดของงานที่ต้องการซ่อม..."
                         />
                     </div>
-                )}
+                )} */}
 
-                {(jobType === 'BM' || jobType === 'Recondition') && (
+                {/* {(jobType === 'BM' || jobType === 'Recondition') && (
                     <div className="form-group">
                         <label>งานย่อยเพิ่มเติม (ไม่บังคับ)</label>
                         <div className="add-subtask-section">
@@ -460,17 +413,17 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             )}
                         </div>
                     </div>
-                )}
+                )} */}
 
                 {/* แสดงงานย่อยที่เลือกสำหรับ BM และ Recondition */}
-                {(jobType === 'BM' || jobType === 'Recondition') && subTasks.length > 0 && (
+                {/* {(jobType === 'BM' || jobType === 'Recondition') && subTasks.length > 0 && (
                     <div className="form-group">
                         <label>งานย่อยที่เลือก:</label>
                         <div className="display-box">
                             {subTasks.join(', ')}
                         </div>
                     </div>
-                )}
+                )} */}
 
                 <div className="form-group">
                     <label>รายการอะไหล่ที่เปลี่ยน</label>
@@ -621,7 +574,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         </div>
                         
                         <div className="modal-tabs">
-                            {Object.keys(PARTS_BY_SYSTEM).map(tab => (
+                            {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
                                 <button
                                     key={tab}
                                     type="button"
@@ -635,7 +588,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         
                         <div className="modal-body">
                             <div className="parts-grid">
-                                {PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM].map(part => {
+                                {PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY].map(part => {
                                     const selectedPart = selectedParts.find(p => p.id === part.id);
                                     return (
                                         <div 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Job, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_USERS } from '@/lib/data';
+import { Job, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_USERS, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './JobDetailsModal.module.css';
 
@@ -11,7 +11,30 @@ interface JobDetailsModalProps {
 }
 
 const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
-  const getPartName = (partId: number) => MOCK_PARTS.find(p => p.id === partId)?.name || 'ไม่พบอะไหล่';
+  // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
+  const getPartName = (part: { part_id: number; part_name?: string }) => {
+    // ใช้ part_name ที่บันทึกไว้เป็นหลัก
+    if (part.part_name) {
+      return part.part_name;
+    }
+    
+    // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
+    for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
+      const partInfo = system.find((p: any) => p.id === part.part_id);
+      if (partInfo) {
+        return partInfo.name;
+      }
+    }
+    
+    // สุดท้ายค้นหาจาก MOCK_PARTS
+    const mockPart = MOCK_PARTS.find(p => p.id === part.part_id);
+    if (mockPart) {
+      return mockPart.name;
+    }
+    
+    return 'ไม่พบอะไหล่';
+  };
+
   const getGolfCourseName = (courseId: number) => MOCK_GOLF_COURSES.find(c => c.id === courseId)?.name || 'ไม่พบสนาม';
   const getAssignedByName = (userId: number) => MOCK_USERS.find(u => u.id === userId)?.name || 'ไม่พบผู้มอบหมาย';
 
@@ -200,7 +223,7 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
                   <tbody>
                     {job.parts.map((part, index) => (
                       <tr key={index}>
-                        <td>{getPartName(part.part_id)}</td>
+                        <td>{getPartName(part)}</td>
                         <td>
                           <span className={styles['quantity-badge']}>
                             {part.quantity_used}

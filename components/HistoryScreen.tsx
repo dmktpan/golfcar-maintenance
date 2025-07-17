@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, Vehicle, Part, MOCK_JOBS, View } from '@/lib/data';
+import { Job, Vehicle, Part, MOCK_JOBS, View, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 
 interface HistoryScreenProps {
@@ -106,9 +106,28 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
         return searchMatch && vehicleMatch && statusMatch && dateMatch;
     });
 
-    const getPartName = (partId: number) => {
-        const part = parts.find(p => p.id === partId);
-        return part ? part.name : 'ไม่ระบุ';
+    // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
+    const getPartName = (part: { part_id: number; part_name?: string }) => {
+        // ใช้ part_name ที่บันทึกไว้เป็นหลัก
+        if (part.part_name) {
+            return part.part_name;
+        }
+        
+        // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
+        for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
+            const partInfo = system.find(p => p.id === part.part_id);
+            if (partInfo) {
+                return partInfo.name;
+            }
+        }
+        
+        // สุดท้ายค้นหาจาก parts prop
+        const partFromProps = parts.find(p => p.id === part.part_id);
+        if (partFromProps) {
+            return partFromProps.name;
+        }
+        
+        return 'ไม่ระบุ';
     };
 
     const formatDate = (dateString: string) => {
@@ -212,7 +231,7 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
                                         <ul>
                                             {job.parts.map(part => (
                                                 <li key={part.part_id}>
-                                                    {getPartName(part.part_id)} (จำนวน {part.quantity_used})
+                                                    {getPartName(part)} (จำนวน {part.quantity_used})
                                                 </li>
                                             ))}
                                         </ul>

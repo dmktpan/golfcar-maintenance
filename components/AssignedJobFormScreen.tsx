@@ -176,18 +176,18 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
         
         try {
-            // อัปเดตข้อมูลงาน
+            // อัปเดตข้อมูลงาน - ไม่บันทึกข้อมูลที่ไม่เกี่ยวข้องสำหรับ BM และ RC
             const updatedJob: Job = {
                 ...job,
                 type: jobType,
                 system: system,
-                subTasks: allSubTasks,
+                subTasks: jobType === 'PM' ? allSubTasks : [],
                 parts: selectedParts.map(part => ({
                     part_id: part.id,
                     quantity_used: part.quantity,
                     part_name: part.name
                 })),
-                partsNotes: partsNotes,
+                partsNotes: jobType === 'PM' ? partsNotes : '',
                 remarks: remarks,
                 updated_at: new Date().toISOString(),
                 status: 'pending' // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
@@ -248,6 +248,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         };
         return tabNames[tab] || tab;
     };
+
+    // Reset additionalSubTasks และ partsNotes เมื่อเปลี่ยนจาก PM เป็น BM/RC
+    useEffect(() => {
+        if (jobType !== 'PM') {
+            setAdditionalSubTasks([]);
+            setPartsNotes('');
+        }
+    }, [jobType]);
 
     return (
         <div className="card">
@@ -358,46 +366,50 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     </div>
                 )}
 
-                <div className="form-group">
-                    <label>เพิ่มงานย่อยเพิ่มเติม</label>
-                    <div className="add-subtask-section">
-                        <div className="input-with-button">
-                            <input 
-                                type="text" 
-                                value={newSubTask} 
-                                onChange={e => setNewSubTask(e.target.value)}
-                                placeholder="กรอกงานย่อยเพิ่มเติม..."
-                                onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubTask())}
-                            />
-                            <button type="button" onClick={handleAddSubTask} className="btn-add">เพิ่ม</button>
-                        </div>
-                        
-                        {additionalSubTasks.length > 0 && (
-                            <div className="additional-subtasks-list">
-                                <h5>งานย่อยเพิ่มเติม:</h5>
-                                {additionalSubTasks.map((task, index) => (
-                                    <div key={index} className="additional-subtask-item">
-                                        <span>{task}</span>
-                                        <button 
-                                            type="button" 
-                                            className="remove-subtask-btn"
-                                            onClick={() => handleRemoveAdditionalSubTask(task)}
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ))}
+                {jobType === 'PM' && (
+                    <div className="form-group">
+                        <label>เพิ่มงานย่อยเพิ่มเติม</label>
+                        <div className="add-subtask-section">
+                            <div className="input-with-button">
+                                <input 
+                                    type="text" 
+                                    value={newSubTask} 
+                                    onChange={e => setNewSubTask(e.target.value)}
+                                    placeholder="กรอกงานย่อยเพิ่มเติม..."
+                                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubTask())}
+                                />
+                                <button type="button" onClick={handleAddSubTask} className="btn-add">เพิ่ม</button>
                             </div>
-                        )}
+                            
+                            {additionalSubTasks.length > 0 && (
+                                <div className="additional-subtasks-list">
+                                    <h5>งานย่อยเพิ่มเติม:</h5>
+                                    {additionalSubTasks.map((task, index) => (
+                                        <div key={index} className="subtask-item">
+                                            <span>{task}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => handleRemoveAdditionalSubTask(task)}
+                                                className="btn-remove"
+                                            >
+                                                ลบ
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
-                <div className="form-group">
-                    <label>งานย่อยที่เลือกทั้งหมด:</label>
-                    <div className="display-box">
-                        {[...subTasks, ...additionalSubTasks].length > 0 ? [...subTasks, ...additionalSubTasks].join(', ') : 'ยังไม่ได้เลือกงานย่อย'}
+                {jobType === 'PM' && (
+                    <div className="form-group">
+                        <label>งานย่อยที่เลือกทั้งหมด:</label>
+                        <div className="display-box">
+                            {[...subTasks, ...additionalSubTasks].length > 0 ? [...subTasks, ...additionalSubTasks].join(', ') : 'ยังไม่ได้เลือกงานย่อย'}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="form-group">
                     <label>รายการอะไหล่ที่เปลี่ยน</label>
@@ -429,10 +441,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     </div>
                 </div>
 
-                <div className="form-group">
-                    <label htmlFor="parts-notes">รายการอะไหล่ที่เปลี่ยน (เพิ่มเติม)</label>
-                    <textarea id="parts-notes" value={partsNotes} onChange={e => setPartsNotes(e.target.value)} placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารี..."></textarea>
-                </div>
+                {jobType === 'PM' && (
+                    <div className="form-group">
+                        <label htmlFor="parts-notes">รายการอะไหล่ที่เปลี่ยน (เพิ่มเติม)</label>
+                        <textarea id="parts-notes" value={partsNotes} onChange={e => setPartsNotes(e.target.value)} placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารี..."></textarea>
+                    </div>
+                )}
 
                 <div className="form-group">
                     <label htmlFor="remarks">หมายเหตุ</label>
@@ -462,7 +476,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 <strong>เวลาทำงาน:</strong> {workStartTime} - {workEndTime}
                             </div>
                         )}
-                        {[...subTasks, ...additionalSubTasks].length > 0 && (
+                        {jobType === 'PM' && [...subTasks, ...additionalSubTasks].length > 0 && (
                             <div className="summary-item">
                                 <strong>งานย่อยที่เลือก:</strong>
                                 <ul className="subtasks-list">
@@ -472,7 +486,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </ul>
                             </div>
                         )}
-                        {(selectedParts.length > 0 || partsNotes.trim()) && (
+                        {(selectedParts.length > 0 || (jobType === 'PM' && partsNotes.trim())) && (
                             <div className="summary-item">
                                 <strong>อะไหล่ที่เปลี่ยน:</strong>
                                 <div className="parts-summary">
@@ -486,7 +500,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             </ul>
                                         </div>
                                     )}
-                                    {partsNotes.trim() && (
+                                    {jobType === 'PM' && partsNotes.trim() && (
                                         <div>
                                             <em>อะไหล่เพิ่มเติม:</em>
                                             <p className="parts-notes">{partsNotes}</p>
