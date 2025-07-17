@@ -10,6 +10,8 @@ interface StatusBadgeProps {
 const StatusBadge = ({ status }: StatusBadgeProps) => {
     const statusMap: Record<JobStatus, { text: string; className: string }> = {
         pending: { text: 'รอตรวจสอบ', className: 'pending' },
+        in_progress: { text: 'กำลังดำเนินการ', className: 'in_progress' },
+        completed: { text: 'เสร็จสิ้น', className: 'completed' },
         approved: { text: 'อนุมัติแล้ว', className: 'approved' },
         rejected: { text: 'ไม่อนุมัติ', className: 'rejected' },
         assigned: { text: 'มอบหมายแล้ว', className: 'assigned' },
