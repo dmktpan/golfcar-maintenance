@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, GolfCourse } from '@/lib/data';
-import { View, UserPermission } from '@/app/page';
+import { User, UserRole, GolfCourse, View } from '@/lib/data';
+import { UserPermission } from '@/app/page';
 
 interface AdminManagementScreenProps {
     setView: (view: View) => void;
