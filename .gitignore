@@ -30,3 +30,6 @@ dist-ssr
 .env.test.local
 .env.production.localgit add .
 
+# Build output
+.next/
+node_modules/
