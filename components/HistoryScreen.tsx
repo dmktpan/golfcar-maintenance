@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, Vehicle, Part, MOCK_JOBS } from '@/lib/data';
-import { View } from '@/app/page';
+import { Job, Vehicle, Part, MOCK_JOBS, View } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 
 interface HistoryScreenProps {
@@ -27,6 +26,7 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
             userName: 'สมศรี หัวหน้า', 
             vehicle_id: 103, 
             vehicle_number: 'B05', 
+            golf_course_id: 1,
             type: 'Recondition', 
             status: 'approved', 
             created_at: new Date(Date.now() - 604800000).toISOString(), // 7 days ago
@@ -45,6 +45,7 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
             userName: 'tape1408', 
             vehicle_id: 101, 
             vehicle_number: 'A01', 
+            golf_course_id: 1,
             type: 'PM', 
             status: 'rejected', 
             created_at: new Date(Date.now() - 1209600000).toISOString(), // 14 days ago
@@ -60,6 +61,7 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
             userName: 'สมศรี หัวหน้า', 
             vehicle_id: 102, 
             vehicle_number: 'A02', 
+            golf_course_id: 1,
             type: 'BM', 
             status: 'approved', 
             created_at: new Date(Date.now() - 2592000000).toISOString(), // 30 days ago
