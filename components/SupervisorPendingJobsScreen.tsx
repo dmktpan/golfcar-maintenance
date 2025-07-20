@@ -10,6 +10,7 @@ interface SupervisorPendingJobsScreenProps {
     jobs: Job[];
     setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
     setView: (view: View) => void;
+    addPartsUsageLog?: (jobId: number, partsNotes?: string, jobData?: Job) => void;
 }
 
 interface FilterState {
@@ -20,7 +21,7 @@ interface FilterState {
     status: 'all' | 'pending' | 'completed' | 'in_progress' | 'assigned';
 }
 
-const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: SupervisorPendingJobsScreenProps) => {
+const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView, addPartsUsageLog }: SupervisorPendingJobsScreenProps) => {
     const [filters, setFilters] = useState<FilterState>({
         golfCourseId: null,
         employeeId: null,
@@ -84,11 +85,21 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
 
     // ฟังก์ชันอัปเดตสถานะงาน
     const handleUpdateStatus = (jobId: number, status: JobStatus) => {
-        setJobs(prevJobs => 
-            prevJobs.map(job => 
-                job.id === jobId ? { ...job, status } : job
-            )
-        );
+        const updatedJob = jobs.find(job => job.id === jobId);
+        if (updatedJob) {
+            const newJob = { ...updatedJob, status };
+            setJobs(prevJobs => 
+                prevJobs.map(job => 
+                    job.id === jobId ? newJob : job
+                )
+            );
+            
+            // เพิ่ม Log การใช้อะไหล่เมื่อสถานะเปลี่ยนเป็น approved
+            // ส่ง newJob ที่มีสถานะ approved แล้วไปด้วย
+            if (status === 'approved' && addPartsUsageLog) {
+                addPartsUsageLog(jobId, newJob.partsNotes, newJob);
+            }
+        }
     };
 
     // ฟังก์ชันรีเซ็ตฟิลเตอร์
@@ -179,7 +190,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
                         <select 
                             className={styles.filterSelect}
                             value={filters.status}
-                            onChange={(e) => setFilters(prev => ({ 
+                            onChange={(e) => setFilters((prev: FilterState) => ({ 
                                 ...prev, 
                                 status: e.target.value as FilterState['status'] 
                             }))}
@@ -198,7 +209,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
                         <select 
                             className={styles.filterSelect}
                             value={filters.golfCourseId || ''}
-                            onChange={(e) => setFilters(prev => ({ 
+                            onChange={(e) => setFilters((prev: FilterState) => ({ 
                                 ...prev, 
                                 golfCourseId: e.target.value ? Number(e.target.value) : null 
                             }))}
@@ -218,7 +229,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
                         <select 
                             className={styles.filterSelect}
                             value={filters.employeeId || ''}
-                            onChange={(e) => setFilters(prev => ({ 
+                            onChange={(e) => setFilters((prev: FilterState) => ({ 
                                 ...prev, 
                                 employeeId: e.target.value ? Number(e.target.value) : null 
                             }))}
@@ -239,7 +250,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
                             type="date"
                             className={styles.filterInput}
                             value={filters.dateFrom}
-                            onChange={(e) => setFilters(prev => ({ 
+                            onChange={(e) => setFilters((prev: FilterState) => ({ 
                                 ...prev, 
                                 dateFrom: e.target.value 
                             }))}
@@ -253,7 +264,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView }: Superviso
                             type="date"
                             className={styles.filterInput}
                             value={filters.dateTo}
-                            onChange={(e) => setFilters(prev => ({ 
+                            onChange={(e) => setFilters((prev: FilterState) => ({ 
                                 ...prev, 
                                 dateTo: e.target.value 
                             }))}

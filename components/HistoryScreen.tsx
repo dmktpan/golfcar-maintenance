@@ -1,82 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, Vehicle, Part, MOCK_JOBS, View, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
+import { Job, Vehicle, Part, View, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 
 interface HistoryScreenProps {
     setView: (view: View) => void;
     vehicles: Vehicle[];
     parts: Part[];
+    jobs: Job[]; // เพิ่ม props สำหรับรับข้อมูลงานจากระบบ
 }
 
-const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
+const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVehicle, setFilterVehicle] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterDateFrom, setFilterDateFrom] = useState('');
     const [filterDateTo, setFilterDateTo] = useState('');
     
-    // Add more mock jobs for history demonstration
-    const extendedJobs: Job[] = [
-        ...MOCK_JOBS,
-        { 
-            id: 3, 
-            user_id: 2, 
-            userName: 'สมศรี หัวหน้า', 
-            vehicle_id: 103, 
-            vehicle_number: 'B05', 
-            golf_course_id: 1,
-            type: 'Recondition', 
-            status: 'approved', 
-            created_at: new Date(Date.now() - 604800000).toISOString(), // 7 days ago
-            parts: [
-                { part_id: 2, quantity_used: 4 },
-                { part_id: 4, quantity_used: 1 }
-            ], 
-            system: 'ช่วงล่างและพวงมาลัย (suspension)', 
-            subTasks: ['อัดจารบี', 'ตรวจสอบลูกหมาก', 'ตั้งศูนย์ล้อ'], 
-            partsNotes: 'เปลี่ยนยางทั้ง 4 เส้น และเปลี่ยนผ้าเบรค', 
-            remarks: 'ปรับปรุงสภาพรถประจำปี' 
-        },
-        { 
-            id: 4, 
-            user_id: 1, 
-            userName: 'tape1408', 
-            vehicle_id: 101, 
-            vehicle_number: 'A01', 
-            golf_course_id: 1,
-            type: 'PM', 
-            status: 'rejected', 
-            created_at: new Date(Date.now() - 1209600000).toISOString(), // 14 days ago
-            parts: [], 
-            system: 'ทั่วไป (general)', 
-            subTasks: ['ทำความสะอาด'], 
-            partsNotes: '', 
-            remarks: 'ทำความสะอาดประจำเดือน' 
-        },
-        { 
-            id: 5, 
-            user_id: 2, 
-            userName: 'สมศรี หัวหน้า', 
-            vehicle_id: 102, 
-            vehicle_number: 'A02', 
-            golf_course_id: 1,
-            type: 'BM', 
-            status: 'approved', 
-            created_at: new Date(Date.now() - 2592000000).toISOString(), // 30 days ago
-            parts: [
-                { part_id: 3, quantity_used: 1 }
-            ], 
-            system: 'ระบบขับเคลื่อน (motor)', 
-            subTasks: ['ตรวจเช็กแปรงถ่าน', 'ทำความสะอาดมอเตอร์'], 
-            partsNotes: 'เปลี่ยนชุดควบคุมมอเตอร์', 
-            remarks: 'มอเตอร์ไม่ทำงาน' 
-        }
-    ];
+    // ใช้ข้อมูลงานจากระบบแทนข้อมูล mock
+    // กรองเฉพาะงานที่เสร็จสิ้นแล้วหรืออนุมัติแล้วเพื่อแสดงในประวัติ
+    const historyJobs = jobs.filter(job => 
+        job.status === 'completed' || 
+        job.status === 'approved' || 
+        job.status === 'rejected'
+    );
 
     // Sort jobs by date (newest first)
-    const sortedJobs = [...extendedJobs].sort((a, b) => 
+    const sortedJobs = [...historyJobs].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
@@ -141,6 +92,19 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
         });
     };
 
+    // ฟังก์ชันแปลงชื่อระบบให้เป็นภาษาไทย
+    const getSystemDisplayName = (system: string) => {
+        const systemNames: Record<string, string> = {
+            'brake': 'ระบบเบรก/เพื่อห้าม',
+            'steering': 'ระบบพวงมาลัย', 
+            'motor': 'ระบบมอเตอร์/เพื่อขับ',
+            'electric': 'ระบบไฟฟ้า',
+            'general': 'ทั่วไป',
+            'suspension': 'ช่วงล่างและพวงมาลัย'
+        };
+        return systemNames[system] || system;
+    };
+
     return (
         <div className="card">
             <div className="page-header">
@@ -175,7 +139,7 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
                         <label>สถานะ:</label>
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                             <option value="">ทั้งหมด</option>
-                            <option value="pending">รอตรวจสอบ</option>
+                            <option value="completed">เสร็จสิ้น</option>
                             <option value="approved">อนุมัติแล้ว</option>
                             <option value="rejected">ไม่อนุมัติ</option>
                         </select>
@@ -203,7 +167,10 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
 
             <div className="history-list">
                 {filteredJobs.length === 0 ? (
-                    <p className="no-data">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
+                    <div className="no-data">
+                        <p>ไม่พบข้อมูลประวัติการซ่อมบำรุงที่ตรงกับเงื่อนไขการค้นหา</p>
+                        <p className="text-muted">ประวัติจะแสดงเมื่องานได้รับการอนุมัติหรือเสร็จสิ้นแล้ว</p>
+                    </div>
                 ) : (
                     filteredJobs.map(job => (
                         <div key={job.id} className="history-card">
@@ -211,6 +178,9 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
                                 <div>
                                     <h3>รถเบอร์: {job.vehicle_number}</h3>
                                     <p className="history-date">{formatDate(job.created_at)}</p>
+                                    {job.updated_at && job.updated_at !== job.created_at && (
+                                        <p className="history-updated">อัปเดต: {formatDate(job.updated_at)}</p>
+                                    )}
                                 </div>
                                 <StatusBadge status={job.status} />
                             </div>
@@ -219,18 +189,23 @@ const HistoryScreen = ({ setView, vehicles, parts }: HistoryScreenProps) => {
                                 <div className="history-details">
                                     <p><strong>ประเภท:</strong> {job.type}</p>
                                     <p><strong>ผู้ดำเนินการ:</strong> {job.userName}</p>
-                                    <p><strong>ระบบที่ซ่อม:</strong> {job.system}</p>
-                                    <p><strong>งานย่อย:</strong> {job.subTasks.join(', ')}</p>
+                                    {job.system && <p><strong>ระบบที่ซ่อม:</strong> {getSystemDisplayName(job.system)}</p>}
+                                    {job.subTasks && job.subTasks.length > 0 && (
+                                        <p><strong>งานย่อย:</strong> {job.subTasks.join(', ')}</p>
+                                    )}
                                     {job.partsNotes && <p><strong>บันทึกอะไหล่:</strong> {job.partsNotes}</p>}
                                     {job.remarks && <p><strong>หมายเหตุ:</strong> {job.remarks}</p>}
+                                    {job.assigned_by_name && (
+                                        <p><strong>มอบหมายโดย:</strong> {job.assigned_by_name}</p>
+                                    )}
                                 </div>
                                 
-                                {job.parts.length > 0 && (
+                                {job.parts && job.parts.length > 0 && (
                                     <div className="history-parts">
                                         <h4>อะไหล่ที่ใช้:</h4>
                                         <ul>
-                                            {job.parts.map(part => (
-                                                <li key={part.part_id}>
+                                            {job.parts.map((part, index) => (
+                                                <li key={`${job.id}-${part.part_id}-${index}`}>
                                                     {getPartName(part)} (จำนวน {part.quantity_used})
                                                 </li>
                                             ))}

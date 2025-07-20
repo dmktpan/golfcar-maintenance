@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart } from '@/lib/data';
+import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
 
 interface CreateJobScreenProps {
     user: User;
@@ -24,6 +24,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [newSubTask, setNewSubTask] = useState(''); // เพิ่ม state สำหรับงานย่อยใหม่
+    const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
     
     // กรองรถเฉพาะที่อยู่ในสนามเดียวกับพนักงานที่ล็อกอิน
     const userGolfCourse = golfCourses.find(gc => gc.id === user.golf_course_id);
@@ -60,6 +61,10 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         if (jobType === 'BM' || jobType === 'Recondition') {
             setRemarks('');
             setNewSubTask('');
+        }
+        // รีเซ็ต bmCause เมื่อไม่ใช่ BM
+        if (jobType !== 'BM') {
+            setBmCause('');
         }
     }, [jobType]);
 
@@ -167,6 +172,12 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             return;
         }
         
+        // เพิ่ม validation สำหรับ BM cause
+        if (jobType === 'BM' && !bmCause) {
+            alert('กรุณาเลือกสาเหตุของการเสีย');
+            return;
+        }
+        
         // แก้ไข: เฉพาะ PM เท่านั้นที่ต้องมีงานย่อย สำหรับ BM และ Recondition ไม่บังคับ
         if (jobType === 'PM' && subTasks.length === 0) {
             alert('กรุณาเพิ่มงานย่อยอย่างน้อย 1 รายการ');
@@ -205,7 +216,8 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 system: system || '',
                 subTasks,
                 partsNotes: partsNotes,
-                remarks: remarks
+                remarks: remarks,
+                ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
             onJobCreate(newJob);
@@ -309,6 +321,30 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
                     </select>
                 </div>
+
+                {jobType === 'BM' && (
+                    <div className="form-group">
+                        <label htmlFor="bm-cause">สาเหตุของการเสีย *</label>
+                        <div className="bm-cause-buttons">
+                            <button
+                                type="button"
+                                className={`cause-button ${bmCause === 'breakdown' ? 'selected' : ''}`}
+                                data-cause="breakdown"
+                                onClick={() => setBmCause('breakdown')}
+                            >
+                                ⚠️ เสีย
+                            </button>
+                            <button
+                                type="button"
+                                className={`cause-button ${bmCause === 'accident' ? 'selected' : ''}`}
+                                data-cause="accident"
+                                onClick={() => setBmCause('accident')}
+                            >
+                                💥 อุบัติเหตุ
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {jobType === 'PM' && (
                     <div className="form-group">
@@ -504,6 +540,11 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         <div className="summary-item">
                             <strong>ประเภการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
                         </div>
+                        {jobType === 'BM' && bmCause && (
+                            <div className="summary-item">
+                                <strong>สาเหตุของการเสีย:</strong> {bmCause === 'breakdown' ? 'เสีย' : 'อุบัติเหตุ'}
+                            </div>
+                        )}
                         {jobType === 'PM' && system && (
                             <div className="summary-item">
                                 <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}

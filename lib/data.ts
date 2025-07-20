@@ -3,6 +3,7 @@
 export type UserRole = 'staff' | 'supervisor' | 'admin';
 export type JobType = 'PM' | 'BM' | 'Recondition';
 export type JobStatus = 'pending' | 'in_progress' | 'completed' | 'assigned' | 'approved' | 'rejected';
+export type BMCause = 'breakdown' | 'accident'; // เพิ่ม type สำหรับสาเหตุ BM
 
 export interface User {
   id: number;
@@ -27,6 +28,7 @@ export interface Vehicle {
   golf_course_name: string; // เพิ่มชื่อสนาม
   model: string; // เพิ่มรุ่นรถ
   status?: 'active' | 'inactive' | 'parked' | 'spare'; // เพิ่มสถานะใหม่
+  transfer_date?: string; // เพิ่มวันที่ย้ายรถ
 }
 
 // แก้ไข Part interface เพื่อเพิ่มข้อมูลเพิ่มเติม
@@ -61,6 +63,7 @@ export interface Job {
   assigned_by?: number;
   assigned_by_name?: string;
   assigned_to?: number;
+  bmCause?: BMCause; // เพิ่ม field สำหรับเก็บสาเหตุ BM
 }
 
 // เพิ่ม interface สำหรับการเลือกอะไหล่พร้อมจำนวน (เอาราคาออก)
@@ -125,18 +128,18 @@ export const MOCK_USERS: User[] = [
 
 // เพิ่มรถกอล์ฟมากขึ้น
 export const MOCK_VEHICLES: Vehicle[] = [
-  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active' },
+  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active', transfer_date: '2024-01-15' },
   { id: 102, serial_number: 'GC-SN-002', vehicle_number: 'A02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO RXV', status: 'active' },
-  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha Drive2', status: 'inactive' },
+  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha Drive2', status: 'inactive', transfer_date: '2023-12-20' },
   { id: 104, serial_number: 'WL-2023-001', vehicle_number: 'A03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active' },
-  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO TXT', status: 'parked' },
+  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO TXT', status: 'parked', transfer_date: '2024-02-10' },
   { id: 106, serial_number: 'WL-2023-003', vehicle_number: 'B01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha G29', status: 'active' },
   { id: 107, serial_number: 'WL-2023-004', vehicle_number: 'B02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car DS', status: 'spare' },
-  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO Freedom', status: 'active' },
+  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO Freedom', status: 'active', transfer_date: '2024-03-05' },
   { id: 201, serial_number: 'GV-20230101', vehicle_number: 'C01', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car Precedent', status: 'active' },
-  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Yamaha Drive2', status: 'inactive' },
+  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Yamaha Drive2', status: 'inactive', transfer_date: '2024-01-25' },
   { id: 203, serial_number: 'GV-2023-003', vehicle_number: 'C03', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'E-Z-GO RXV', status: 'active' },
-  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car DS', status: 'spare' },
+  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car DS', status: 'spare', transfer_date: '2023-11-30' },
 ];
 
 // เพิ่มอะไหล่มากขึ้น
@@ -181,23 +184,38 @@ export const MOCK_SYSTEMS: Record<string, Record<string, string[]>> = {
 };
 
 export const MOCK_JOBS: Job[] = [
-    // งานที่พนักงานสร้างเอง (ไม่มี assigned_by)
-    { id: 1, user_id: 1, userName: 'tape1408', vehicle_id: 101, vehicle_number: 'A01', golf_course_id: 1, type: 'BM', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), parts: [{ part_id: 1, quantity_used: 1 }], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด' },
+    // งานที่พนักงานสร้างเอง (ไม่มี assigned_by) - มีอะไหล่
+    { id: 1, user_id: 1, userName: 'tape1408', vehicle_id: 101, vehicle_number: 'A01', golf_course_id: 1, type: 'BM', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), parts: [
+      { part_id: 1, quantity_used: 1, part_name: 'แบตเตอรี่ 12V' }
+    ], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด', bmCause: 'breakdown' },
     
-    // งานที่หัวหน้างานมอบหมาย
-    { id: 2, user_id: 1, userName: 'tape1408', vehicle_id: 102, vehicle_number: 'A02', golf_course_id: 1, type: 'PM', status: 'assigned', created_at: new Date(Date.now() - 3600000).toISOString(), parts: [], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: '', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    // งานที่หัวหน้างานมอบหมาย - มีอะไหล่
+    { id: 2, user_id: 1, userName: 'tape1408', vehicle_id: 102, vehicle_number: 'A02', golf_course_id: 1, type: 'PM', status: 'assigned', created_at: new Date(Date.now() - 3600000).toISOString(), parts: [
+      { part_id: 5, quantity_used: 2, part_name: 'น้ำมันเฟืองท้าย' }
+    ], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 2 ลิตร', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
     
-    // งานที่กำลังดำเนินการ
-    { id: 5, user_id: 5, userName: 'สมหญิง ช่างซ่อม', vehicle_id: 104, vehicle_number: 'A03', golf_course_id: 1, type: 'BM', status: 'in_progress', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: '', remarks: 'พวงมาลัยหนัก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 5 },
+    // งานที่กำลังดำเนินการ - มีอะไหล่
+    { id: 5, user_id: 5, userName: 'สมหญิง ช่างซ่อม', vehicle_id: 104, vehicle_number: 'A03', golf_course_id: 1, type: 'BM', status: 'in_progress', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [
+      { part_id: 8, quantity_used: 2, part_name: 'ลูกหมาก' },
+      { part_id: 9, quantity_used: 2, part_name: 'ยางกันฝุ่น' }
+    ], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: 'เปลี่ยนลูกหมาก 2 ชิ้น, เปลี่ยนยางกันฝุ่น 2 ชิ้น', remarks: 'พวงมาลัยหนัก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 5, bmCause: 'breakdown' },
     
-    // งานที่เสร็จสิ้นแล้ว
-    { id: 6, user_id: 1, userName: 'tape1408', vehicle_id: 105, vehicle_number: 'A04', golf_course_id: 1, type: 'PM', status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString(), parts: [{ part_id: 5, quantity_used: 1 }], system: 'motor', subTasks: ['ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 1 ลิตร', remarks: 'เช็คประจำ', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    // งานที่เสร็จสิ้นแล้ว - มีอะไหล่
+    { id: 6, user_id: 1, userName: 'tape1408', vehicle_id: 105, vehicle_number: 'A04', golf_course_id: 1, type: 'PM', status: 'completed', created_at: new Date(Date.now() - 259200000).toISOString(), parts: [
+      { part_id: 5, quantity_used: 1, part_name: 'น้ำมันเฟืองท้าย' },
+      { part_id: 3, quantity_used: 1, part_name: 'น้ำมันเครื่อง' }
+    ], system: 'motor', subTasks: ['ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 1 ลิตร, เปลี่ยนน้ำมันเครื่อง 1 ลิตร', remarks: 'เช็คประจำ', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
     
-    // งานที่เสร็จแล้ว (ประวัติ)
-    { id: 3, user_id: 1, userName: 'tape1408', vehicle_id: 103, vehicle_number: 'B05', golf_course_id: 1, type: 'BM', status: 'approved', created_at: new Date(Date.now() - 172800000).toISOString(), parts: [{ part_id: 2, quantity_used: 2 }], system: 'brake', subTasks: ['ติดตั้งผ้าเบรก'], partsNotes: 'เปลี่ยนยางล้อ 2 เส้น', remarks: 'ยางล้อหน้าแตก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
+    // งานที่เสร็จแล้ว (ประวัติ) - มีอะไหล่
+    { id: 3, user_id: 1, userName: 'tape1408', vehicle_id: 103, vehicle_number: 'B05', golf_course_id: 1, type: 'BM', status: 'approved', created_at: new Date(Date.now() - 172800000).toISOString(), parts: [
+      { part_id: 2, quantity_used: 2, part_name: 'ยางล้อ' },
+      { part_id: 6, quantity_used: 1, part_name: 'แบตเตอรี่' }
+    ], system: 'brake', subTasks: ['ติดตั้งผ้าเบรก'], partsNotes: 'เปลี่ยนยางล้อ 2 เส้น, เปลี่ยนแบตเตอรี่ใหม่', remarks: 'ยางล้อหน้าแตก', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', bmCause: 'accident' },
     
-    // งานที่พนักงานคนอื่นทำ
-    { id: 4, user_id: 4, userName: 'สมชาย พนักงาน', vehicle_id: 201, vehicle_number: 'C01', golf_course_id: 2, type: 'PM', status: 'pending', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: '', remarks: 'เช็คประจำเดือน', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
+    // งานที่พนักงานคนอื่นทำ - มีอะไหล่
+    { id: 4, user_id: 4, userName: 'สมชาย พนักงาน', vehicle_id: 201, vehicle_number: 'C01', golf_course_id: 2, type: 'PM', status: 'pending', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [
+      { part_id: 7, quantity_used: 2, part_name: 'หลอดไฟหน้า' }
+    ], system: 'steering', subTasks: ['ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย'], partsNotes: 'เปลี่ยนหลอดไฟหน้า 2 หลอด', remarks: 'เช็คประจำเดือน', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า' },
     
     // เพิ่มงานประเภท PM พร้อมอะไหล่ที่ใช้
     { id: 7, user_id: 1, userName: 'tape1408', vehicle_id: 106, vehicle_number: 'A05', golf_course_id: 1, type: 'PM', status: 'pending', created_at: new Date(Date.now() - 43200000).toISOString(), parts: [
@@ -217,12 +235,26 @@ export const MOCK_JOBS: Job[] = [
     
     // เพิ่มงานประเภท Recondition ที่เสร็จแล้ว
     { id: 9, user_id: 1, userName: 'tape1408', vehicle_id: 108, vehicle_number: 'B02', golf_course_id: 1, type: 'Recondition', status: 'completed', created_at: new Date(Date.now() - 345600000).toISOString(), parts: [
-      { part_id: 1, quantity_used: 1, part_name: 'แบตเตอรี่' },
+      { part_id: 1, quantity_used: 1, part_name: 'แบตเตอรี่ 12V' },
       { part_id: 2, quantity_used: 4, part_name: 'ยางล้อ' },
       { part_id: 5, quantity_used: 2, part_name: 'น้ำมันเฟืองท้าย' },
       { part_id: 7, quantity_used: 2, part_name: 'หลอดไฟหน้า' },
       { part_id: 8, quantity_used: 4, part_name: 'ลูกหมาก' }
     ], system: 'steering', subTasks: ['ถอดยอยออกเพื่อทำความสะอาดด้วยโซแนกส์ส้ม', 'ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย', 'ใช้น้ำมันหล่อลื่นหยอดตามกากบาทยอยและโยกให้คล่องตัว', 'เปลี่ยนยางกันฝุ่นและเติมจารบีเฟืองแร็ก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่, เปลี่ยนยางล้อทั้ง 4 เส้น, เติมน้ำมันเฟืองท้าย 2 ลิตร, เปลี่ยนหลอดไฟหน้า 2 หลอด, เปลี่ยนลูกหมาก 4 ชิ้น', remarks: 'ปรับปรุงสภาพรถกอล์ฟเก่าที่จอดทิ้งไว้นาน', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    
+    // เพิ่มงานใหม่ที่มีอะไหล่หลากหลาย
+    { id: 10, user_id: 1, userName: 'tape1408', vehicle_id: 109, vehicle_number: 'A06', golf_course_id: 1, type: 'BM', status: 'completed', created_at: new Date(Date.now() - 518400000).toISOString(), parts: [
+      { part_id: 1, quantity_used: 1, part_name: 'แบตเตอรี่ 12V' },
+      { part_id: 2, quantity_used: 2, part_name: 'ยางล้อ' },
+      { part_id: 7, quantity_used: 1, part_name: 'หลอดไฟหน้า' }
+    ], system: 'electric', subTasks: ['ตรวจเช็คระบบไฟฟ้า'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก, เปลี่ยนยางล้อหลัง 2 เส้น, เปลี่ยนหลอดไฟหน้า 1 หลอด', remarks: 'ไฟไม่ติด แบตหมด' },
+    
+    { id: 11, user_id: 5, userName: 'สมหญิง ช่างซ่อม', vehicle_id: 110, vehicle_number: 'B03', golf_course_id: 1, type: 'PM', status: 'approved', created_at: new Date(Date.now() - 604800000).toISOString(), parts: [
+      { part_id: 3, quantity_used: 2, part_name: 'น้ำมันเครื่อง' },
+      { part_id: 4, quantity_used: 1, part_name: 'กรองน้ำมันเครื่อง' },
+      { part_id: 5, quantity_used: 1, part_name: 'น้ำมันเฟืองท้าย' },
+      { part_id: 10, quantity_used: 1, part_name: 'สายเบรค' }
+    ], system: 'motor', subTasks: ['ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี', 'ตรวจเช็คการไหลลื่นของแปรงถ่านและการคลยตัวของน็อตขั้วมอเตอร์ทุกๆจุด'], partsNotes: 'เปลี่ยนน้ำมันเครื่อง 2 ลิตร, เปลี่ยนกรองน้ำมันเครื่อง 1 ชิ้น, เปลี่ยนน้ำมันเฟืองท้าย 1 ลิตร, เปลี่ยนสายเบรค 1 เส้น', remarks: 'บำรุงรักษาตามแผน 2,000 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 5 }
 ];
 
 // เพิ่ม interface สำหรับ Serial History Log
@@ -232,7 +264,8 @@ export interface SerialHistoryEntry {
   vehicle_id: number;
   vehicle_number: string;
   action_type: 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection' | 'status_change' | 'data_edit' | 'data_delete' | 'bulk_transfer' | 'bulk_upload';
-  action_date: string;
+  action_date: string; // วันที่/เวลาที่บันทึกในระบบ (เวลาจริงที่ทำงาน)
+  actual_transfer_date?: string; // วันที่ย้ายจริงตามสัญญาหรือในสถานที่จริง (เฉพาะการโอนย้าย)
   details: string;
   performed_by: string;
   performed_by_id: number;
@@ -446,7 +479,8 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
     vehicle_number: 'C01',
     action_type: 'transfer',
     action_date: '2024-06-15T10:00:00.000Z',
-    details: 'โอนย้ายรถจากสนาม กรีนวัลเลย์ ไปยัง วอเตอร์แลนด์ เนื่องจากการปรับโครงสร้างการใช้งาน',
+    actual_transfer_date: '2024-06-14T08:00:00.000Z',
+    details: 'โอนย้ายรถจากสนาม กรีนวัลเลย์ ไปยัง วอเตอร์แลนด์ เนื่องจากการปรับโครงสร้างการใช้งาน (วันที่ย้ายจริง: 14 มิ.ย. 2024)',
     performed_by: 'administrator',
     performed_by_id: 3,
     golf_course_id: 1,
@@ -454,39 +488,9 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
     is_active: true
   },
   
-  // รถที่ปลดระวาง
-  {
-    id: 13,
-    serial_number: 'OLD-CART-001',
-    vehicle_id: 999,
-    vehicle_number: 'X99',
-    action_type: 'registration',
-    action_date: '2020-01-01T08:00:00.000Z',
-    details: 'ลงทะเบียนรถกอล์ฟเก่าเข้าระบบ',
-    performed_by: 'administrator',
-    performed_by_id: 3,
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: false
-  },
-  {
-    id: 14,
-    serial_number: 'OLD-CART-001',
-    vehicle_id: 999,
-    vehicle_number: 'X99',
-    action_type: 'decommission',
-    action_date: '2024-01-15T14:00:00.000Z',
-    details: 'ปลดระวางรถออกจากระบบเนื่องจากสภาพทรุดโทรม ไม่สามารถซ่อมแซมได้อีกต่อไป',
-    performed_by: 'สมศรี หัวหน้า',
-    performed_by_id: 2,
-    golf_course_id: 1,
-    golf_course_name: 'วอเตอร์แลนด์',
-    is_active: false
-  },
-  
   // การเปลี่ยนสถานะรถ
   {
-    id: 15,
+    id: 13,
     serial_number: 'KT-20220601',
     vehicle_id: 101,
     vehicle_number: 'A01',
@@ -506,7 +510,7 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
   
   // การแก้ไขข้อมูลรถ
   {
-    id: 16,
+    id: 14,
     serial_number: 'GC-SN-002',
     vehicle_id: 102,
     vehicle_number: 'A02',
@@ -524,22 +528,196 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [
     new_data: { vehicle_number: 'A02-NEW' }
   },
   
-  // การอัปโหลดหลายคัน
+  // WL-2023-005 - การลงทะเบียนและงานซ่อมแซม
   {
-    id: 17,
-    serial_number: 'BULK-001',
-    vehicle_id: 301,
-    vehicle_number: 'D01',
-    action_type: 'bulk_upload',
-    action_date: '2024-12-05T16:00:00.000Z',
-    details: 'อัปโหลดข้อมูลรถแบบหลายคันพร้อมกัน - หมายเลขซีเรียล: BULK-001, หมายเลขรถ: D01 (รวม 5 คัน)',
+    id: 15,
+    serial_number: 'WL-2023-005',
+    vehicle_id: 108,
+    vehicle_number: 'B03',
+    action_type: 'registration',
+    action_date: '2023-05-01T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ E-Z-GO รุ่น Freedom',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true
+  },
+
+  // เพิ่ม SerialHistoryEntry สำหรับ Serial Numbers ที่ขาดหายไป
+  // GV-20230102 - การลงทะเบียนและงานซ่อมแซม
+  {
+    id: 16,
+    serial_number: 'GV-20230102',
+    vehicle_id: 202,
+    vehicle_number: 'C02',
+    action_type: 'registration',
+    action_date: '2023-01-02T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ E-Z-GO รุ่น RXV',
     performed_by: 'administrator',
     performed_by_id: 3,
     golf_course_id: 2,
     golf_course_name: 'กรีนวัลเลย์',
+    is_active: true
+  },
+  {
+    id: 17,
+    serial_number: 'GV-20230102',
+    vehicle_id: 202,
+    vehicle_number: 'C02',
+    action_type: 'maintenance',
+    action_date: '2024-11-22',
+    details: 'งานซ่อมแซม (BM) - ระบบเบรก: เปลี่ยนผ้าเบรค | อะไหล่ที่ใช้: ผ้าเบรค (1 ชุด)',
+    performed_by: 'วิชัย เทคนิค',
+    performed_by_id: 4,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
     is_active: true,
-    change_type: 'create',
-    affected_fields: ['serial_number', 'vehicle_number', 'golf_course_id', 'status']
+    related_job_id: 104,
+    job_type: 'BM',
+    system: 'brake',
+    parts_used: ['ผ้าเบรค'],
+    status: 'approved'
+  },
+
+  // WL-2023-003 - การลงทะเบียนและงานซ่อมแซม
+  {
+    id: 18,
+    serial_number: 'WL-2023-003',
+    vehicle_id: 106,
+    vehicle_number: 'B01',
+    action_type: 'registration',
+    action_date: '2023-03-01T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ Yamaha รุ่น Drive2',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true
+  },
+  {
+    id: 19,
+    serial_number: 'WL-2023-003',
+    vehicle_id: 106,
+    vehicle_number: 'B01',
+    action_type: 'maintenance',
+    action_date: '2024-12-03',
+    details: 'งานซ่อมแซม (BM) - ระบบพวงมาลัย: เปลี่ยนลูกหมาก | อะไหล่ที่ใช้: ลูกหมาก (2 ชิ้น)',
+    performed_by: 'สมหญิง ช่างซ่อม',
+    performed_by_id: 5,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true,
+    related_job_id: 107,
+    job_type: 'BM',
+    system: 'steering',
+    parts_used: ['ลูกหมาก'],
+    status: 'approved'
+  },
+
+  // GV-2023-003 - การลงทะเบียนและงานซ่อมแซม
+  {
+    id: 20,
+    serial_number: 'GV-2023-003',
+    vehicle_id: 203,
+    vehicle_number: 'C03',
+    action_type: 'registration',
+    action_date: '2023-03-15T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ Club Car รุ่น Precedent',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
+    is_active: true
+  },
+  {
+    id: 21,
+    serial_number: 'GV-2023-003',
+    vehicle_id: 203,
+    vehicle_number: 'C03',
+    action_type: 'maintenance',
+    action_date: '2024-12-04',
+    details: 'งานซ่อมแซม (BM) - ระบบพวงมาลัย: เปลี่ยนยางกันฝุ่น | อะไหล่ที่ใช้: ยางกันฝุ่น (4 ชิ้น)',
+    performed_by: 'วิชัย เทคนิค',
+    performed_by_id: 4,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
+    is_active: true,
+    related_job_id: 108,
+    job_type: 'BM',
+    system: 'steering',
+    parts_used: ['ยางกันฝุ่น'],
+    status: 'approved'
+  },
+
+  // GV-2023-004 - การลงทะเบียนและงานซ่อมแซม
+  {
+    id: 22,
+    serial_number: 'GV-2023-004',
+    vehicle_id: 204,
+    vehicle_number: 'C04',
+    action_type: 'registration',
+    action_date: '2023-04-01T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ E-Z-GO รุ่น TXT',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
+    is_active: true
+  },
+  {
+    id: 23,
+    serial_number: 'GV-2023-004',
+    vehicle_id: 204,
+    vehicle_number: 'C04',
+    action_type: 'maintenance',
+    action_date: '2024-12-05',
+    details: 'งานซ่อมแซม (BM) - ระบบเบรก: เปลี่ยนสายเบรค | อะไหล่ที่ใช้: สายเบรค (1 เส้น)',
+    performed_by: 'สมชาย พนักงาน',
+    performed_by_id: 6,
+    golf_course_id: 2,
+    golf_course_name: 'กรีนวัลเลย์',
+    is_active: true,
+    related_job_id: 109,
+    job_type: 'BM',
+    system: 'brake',
+    parts_used: ['สายเบรค'],
+    status: 'approved'
+  },
+
+  // WL-2023-004 - การลงทะเบียนและงานซ่อมแซม
+  {
+    id: 24,
+    serial_number: 'WL-2023-004',
+    vehicle_id: 107,
+    vehicle_number: 'B02',
+    action_type: 'registration',
+    action_date: '2023-04-15T08:00:00.000Z',
+    details: 'ลงทะเบียนรถกอล์ฟใหม่เข้าระบบ - รถยี่ห้อ Yamaha รุ่น G29',
+    performed_by: 'administrator',
+    performed_by_id: 3,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true
+  },
+  {
+    id: 25,
+    serial_number: 'WL-2023-004',
+    vehicle_id: 107,
+    vehicle_number: 'B02',
+    action_type: 'maintenance',
+    action_date: new Date().toISOString().split('T')[0],
+    details: 'งานซ่อมแซม (BM) - ระบบมอเตอร์: เปลี่ยนชุดควบคุมมอเตอร์ | อะไหล่ที่ใช้: ชุดควบคุมมอเตอร์ (1 ชุด)',
+    performed_by: 'สมหญิง ช่างซ่อม',
+    performed_by_id: 5,
+    golf_course_id: 1,
+    golf_course_name: 'วอเตอร์แลนด์',
+    is_active: true,
+    related_job_id: 111,
+    job_type: 'BM',
+    system: 'motor',
+    parts_used: ['ชุดควบคุมมอเตอร์'],
+    status: 'approved'
   }
 ];
 
@@ -614,7 +792,8 @@ export const logBulkTransfer = (
   vehicles: Vehicle[],
   targetGolfCourseId: number,
   targetGolfCourseName: string,
-  performedBy: string
+  performedBy: string,
+  actualTransferDate?: string // วันที่ย้ายจริงตามสัญญา
 ): SerialHistoryEntry[] => {
   return vehicles.map(vehicle => {
     const previousData = { 
@@ -631,8 +810,9 @@ export const logBulkTransfer = (
       vehicle_id: vehicle.id,
       vehicle_number: vehicle.vehicle_number,
       action_type: 'bulk_transfer',
-      action_date: new Date().toISOString(),
-      details: `โอนย้ายรถจาก ${vehicle.golf_course_name} ไปยัง ${targetGolfCourseName}`,
+      action_date: new Date().toISOString(), // วันที่/เวลาที่บันทึกในระบบ (ปัจจุบัน)
+      actual_transfer_date: actualTransferDate ? new Date(actualTransferDate).toISOString() : undefined, // วันที่ย้ายจริง
+      details: `โอนย้ายรถจาก ${vehicle.golf_course_name} ไปยัง ${targetGolfCourseName}${actualTransferDate ? ` (วันที่ย้ายจริง: ${new Date(actualTransferDate).toLocaleDateString('th-TH')})` : ''}`,
       performed_by: performedBy,
       performed_by_id: 3,
       golf_course_id: targetGolfCourseId,

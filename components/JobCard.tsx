@@ -129,6 +129,14 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
                             <span className={styles.summaryLabel}>ระบบ:</span>
                             <span className={styles.summaryValue}>{job.system}</span>
                         </div>
+                        {job.type === 'BM' && job.bmCause && (
+                            <div className={styles.summaryItem}>
+                                <span className={styles.summaryLabel}>สาเหตุ:</span>
+                                <span className={styles.summaryValue}>
+                                    {job.bmCause === 'breakdown' ? 'เสีย' : 'อุบัติเหตุ'}
+                                </span>
+                            </div>
+                        )}
                         <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>ผู้แจ้ง:</span>
                             <span className={styles.summaryValue}>{job.userName}</span>

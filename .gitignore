@@ -33,3 +33,6 @@ dist-ssr
 # Build output
 .next/
 node_modules/
+
+# Backup
+.backup/

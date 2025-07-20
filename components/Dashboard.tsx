@@ -12,14 +12,24 @@ interface DashboardProps {
     setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
     setView: (view: View) => void;
     onFillJobForm?: (job: Job) => void;
+    addPartsUsageLog?: (jobId: number, partsNotes?: string) => void;
 }
 
-const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm }: DashboardProps) => {
+const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm, addPartsUsageLog }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
     
     const onUpdateStatus = (jobId: number, status: JobStatus) => {
-        setJobs(jobs.map(job => job.id === jobId ? {...job, status} : job));
+        const updatedJob = jobs.find(job => job.id === jobId);
+        if (updatedJob) {
+            const newJob = { ...updatedJob, status };
+            setJobs(jobs.map(job => job.id === jobId ? newJob : job));
+            
+            // เพิ่ม Log การใช้อะไหล่เมื่อสถานะเปลี่ยนเป็น approved
+            if (status === 'approved' && addPartsUsageLog) {
+                addPartsUsageLog(jobId, newJob.partsNotes);
+            }
+        }
     }
 
     // กรองงานตามบทบาทของผู้ใช้
@@ -120,7 +130,7 @@ const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm }: DashboardPro
                     onClick={() => setActiveTab('history')}
                 >
                     <span className="tab-icon">📚</span>
-                    ประวัติการซ่อม
+                    ประวัตการซ่อม
                     {jobCounts.approved > 0 && (
                         <span className={styles.tabBadge}>{jobCounts.approved}</span>
                     )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart } from '@/lib/data';
+import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
 
 interface AssignedJobFormScreenProps {
     user: User;
@@ -72,6 +72,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [subTasks, setSubTasks] = useState<string[]>(job.subTasks || []);
     const [partsNotes, setPartsNotes] = useState(job.partsNotes || '');
     const [remarks, setRemarks] = useState(job.remarks || '');
+    const [bmCause, setBmCause] = useState<BMCause | ''>(job.bmCause || ''); // เพิ่ม state สำหรับสาเหตุ BM
     const [selectedParts, setSelectedParts] = useState<SelectedPart[]>(() => {
         // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น SelectedPart[]
         return job.parts?.map(part => {
@@ -88,8 +89,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     });
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
-    const [workStartTime, setWorkStartTime] = useState('');
-    const [workEndTime, setWorkEndTime] = useState('');
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
     
@@ -157,21 +156,16 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validation
-        if (!workStartTime || !workEndTime) {
-            alert('กรุณากรอกเวลาเริ่มต้นและเวลาสิ้นสุดการทำงาน');
-            return;
-        }
-        
-        if (new Date(`2000-01-01T${workEndTime}`) <= new Date(`2000-01-01T${workStartTime}`)) {
-            alert('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น');
-            return;
-        }
-
         const allSubTasks = [...subTasks, ...additionalSubTasks];
         // แก้ไข: เฉพาะ PM เท่านั้นที่ต้องมีงานย่อย สำหรับ BM และ RC ไม่บังคับ
         if (jobType === 'PM' && allSubTasks.length === 0) {
             alert('กรุณาเลือกงานย่อยอย่างน้อย 1 รายการ');
+            return;
+        }
+        
+        // เพิ่ม validation สำหรับ BM cause
+        if (jobType === 'BM' && !bmCause) {
+            alert('กรุณาเลือกสาเหตุของการเสีย');
             return;
         }
         
@@ -190,7 +184,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 partsNotes: jobType === 'PM' ? partsNotes : '',
                 remarks: remarks,
                 updated_at: new Date().toISOString(),
-                status: 'pending' // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
+                status: 'pending', // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
+                ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
             onJobUpdate(updatedJob);
@@ -296,29 +291,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     </div>
                 </div>
 
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label htmlFor="work-start-time">เวลาเริ่มงาน *</label>
-                        <input 
-                            id="work-start-time" 
-                            type="time" 
-                            value={workStartTime} 
-                            onChange={e => setWorkStartTime(e.target.value)} 
-                            required 
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="work-end-time">เวลาเสร็จงาน *</label>
-                        <input 
-                            id="work-end-time" 
-                            type="time" 
-                            value={workEndTime} 
-                            onChange={e => setWorkEndTime(e.target.value)} 
-                            required 
-                        />
-                    </div>
-                </div>
-
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภทการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)} disabled>
@@ -327,6 +299,30 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
                     </select>
                 </div>
+
+                {jobType === 'BM' && (
+                    <div className="form-group">
+                        <label>สาเหตุของการเสีย *</label>
+                        <div className="bm-cause-buttons">
+                            <button
+                                type="button"
+                                className={`cause-button ${bmCause === 'breakdown' ? 'selected' : ''}`}
+                                data-cause="breakdown"
+                                onClick={() => setBmCause('breakdown')}
+                            >
+                                ⚠️ เสีย
+                            </button>
+                            <button
+                                type="button"
+                                className={`cause-button ${bmCause === 'accident' ? 'selected' : ''}`}
+                                data-cause="accident"
+                                onClick={() => setBmCause('accident')}
+                            >
+                                💥 อุบัติเหตุ
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {jobType === 'PM' && (
                     <div className="form-group">
@@ -466,14 +462,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <div className="summary-item">
                             <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
                         </div>
+                        {jobType === 'BM' && bmCause && (
+                            <div className="summary-item">
+                                <strong>สาเหตุของการเสีย:</strong> {bmCause === 'breakdown' ? 'เสีย' : 'อุบัติเหตุ'}
+                            </div>
+                        )}
                         {jobType === 'PM' && system && (
                             <div className="summary-item">
                                 <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
-                            </div>
-                        )}
-                        {workStartTime && workEndTime && (
-                            <div className="summary-item">
-                                <strong>เวลาทำงาน:</strong> {workStartTime} - {workEndTime}
                             </div>
                         )}
                         {jobType === 'PM' && [...subTasks, ...additionalSubTasks].length > 0 && (

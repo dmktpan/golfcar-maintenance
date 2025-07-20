@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, Part, GolfCourse, Vehicle, MOCK_USERS, MOCK_JOBS, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_VEHICLES, PartsUsageLog, MOCK_PARTS_USAGE_LOG, View } from '@/lib/data';
+import { User, Job, Part, GolfCourse, Vehicle, MOCK_USERS, MOCK_JOBS, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_VEHICLES, PartsUsageLog, MOCK_PARTS_USAGE_LOG, SerialHistoryEntry, MOCK_SERIAL_HISTORY, View } from '@/lib/data';
 import LoginScreen from '@/components/LoginScreen';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
@@ -27,7 +27,7 @@ export interface UserPermission {
 }
 
 export default function HomePage() {
-  // ใช้ localStorage สำหรับเก็บข้อมูลผู้ใช้ที่ล็อกอินล่าสุด
+  // ใช้ localStorage สำหรับเก็บข้อมูลผู้ใช้ที่ล็อกอินล่าสุุด
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('currentUser');
@@ -112,6 +112,15 @@ export default function HomePage() {
     return MOCK_PARTS_USAGE_LOG;
   });
 
+  // เพิ่ม state สำหรับ Serial History
+  const [serialHistory, setSerialHistory] = useState<SerialHistoryEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedSerialHistory = localStorage.getItem('serialHistory');
+      return savedSerialHistory ? JSON.parse(savedSerialHistory) : MOCK_SERIAL_HISTORY;
+    }
+    return MOCK_SERIAL_HISTORY;
+  });
+
   // บันทึกข้อมูลลง localStorage เมื่ยนแปลง
   useEffect(() => {
     if (user) {
@@ -154,6 +163,104 @@ export default function HomePage() {
     localStorage.setItem('partsUsageLog', JSON.stringify(partsUsageLog));
   }, [partsUsageLog]);
 
+  // เพิ่ม useEffect สำหรับบันทึก Serial History
+  useEffect(() => {
+    localStorage.setItem('serialHistory', JSON.stringify(serialHistory));
+  }, [serialHistory]);
+
+  // ฟังก์ชันสำหรับบันทึก Serial History Entry
+  const addSerialHistoryEntry = (entry: Omit<SerialHistoryEntry, 'id'>): SerialHistoryEntry => {
+    const newEntry: SerialHistoryEntry = {
+      ...entry,
+      id: Date.now() // ใช้ timestamp เป็น ID
+    };
+    setSerialHistory(prev => [newEntry, ...prev]);
+    return newEntry;
+  };
+
+  // ฟังก์ชันสำหรับบันทึก Serial History เมื่อสร้างงาน
+  const logJobCreation = (job: Job) => {
+    const vehicle = vehicles.find(v => v.id === job.vehicle_id);
+    const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
+    
+    if (vehicle) {
+      addSerialHistoryEntry({
+        serial_number: vehicle.serial_number,
+        vehicle_id: job.vehicle_id,
+        vehicle_number: job.vehicle_number,
+        action_type: 'maintenance',
+        action_date: job.created_at || new Date().toISOString().split('T')[0],
+        details: `สร้างงาน${job.type} - ${job.remarks || 'ไม่มีรายละเอียด'}`,
+        performed_by: job.userName,
+        performed_by_id: job.user_id,
+        golf_course_id: job.golf_course_id,
+        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
+        is_active: vehicle.status === 'active',
+        status: 'pending',
+        job_type: job.type,
+        system: job.system
+      });
+    }
+  };
+
+  // ฟังก์ชันสำหรับบันทึก Serial History เมื่ออัปเดตงาน
+  const logJobUpdate = (updatedJob: Job, previousJob?: Job) => {
+    const vehicle = vehicles.find(v => v.id === updatedJob.vehicle_id);
+    const golfCourse = golfCourses.find(gc => gc.id === updatedJob.golf_course_id);
+    
+    if (vehicle) {
+      let actionType: SerialHistoryEntry['action_type'] = 'maintenance';
+      let details = '';
+      let status: SerialHistoryEntry['status'] = 'pending';
+
+      // กำหนด action type และ details ตามการเปลี่ยนแปลง
+      if (previousJob?.status !== updatedJob.status) {
+        switch (updatedJob.status) {
+          case 'completed':
+            actionType = 'maintenance';
+            details = `งาน${updatedJob.type}เสร็จสิ้น - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
+            status = 'completed';
+            break;
+          case 'in_progress':
+            actionType = 'maintenance';
+            details = `เริ่มดำเนินงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
+            status = 'in_progress';
+            break;
+          case 'rejected':
+            actionType = 'maintenance';
+            details = `งาน${updatedJob.type}ถูกปฏิเสธ - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
+            status = 'pending'; // ใช้ pending แทน rejected เพราะ SerialHistoryEntry ไม่มี rejected
+            break;
+          default:
+            actionType = 'maintenance';
+            details = `อัปเดตงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
+            status = 'pending';
+        }
+      } else {
+        details = `อัปเดตงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
+        status = updatedJob.status === 'completed' ? 'completed' : 
+                 updatedJob.status === 'in_progress' ? 'in_progress' : 'pending';
+      }
+
+      addSerialHistoryEntry({
+        serial_number: vehicle.serial_number,
+        vehicle_id: updatedJob.vehicle_id,
+        vehicle_number: updatedJob.vehicle_number,
+        action_type: actionType,
+        action_date: updatedJob.updated_at || new Date().toISOString().split('T')[0],
+        details: details,
+        performed_by: updatedJob.userName,
+        performed_by_id: updatedJob.user_id,
+        golf_course_id: updatedJob.golf_course_id,
+        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
+        is_active: vehicle.status === 'active',
+        status: status,
+        job_type: updatedJob.type,
+        system: updatedJob.system
+      });
+    }
+  };
+
   const handleLogin = (staffCode: string) => {
     const foundUser = users.find((u) => u.code.toLowerCase() === staffCode.toLowerCase());
     if (foundUser) {
@@ -178,6 +285,13 @@ export default function HomePage() {
   
   const handleCreateJob = (newJob: Job) => {
     setJobs(prev => [newJob, ...prev]);
+    
+    // ไม่เพิ่ม Log การใช้อะไหล่เมื่อสร้างงานใหม่ เพราะยังไม่ได้อนุมัติ
+    // addPartsUsageLog(newJob.id, newJob.partsNotes);
+    
+    // เพิ่ม Serial History Entry สำหรับการสร้างงาน
+    logJobCreation(newJob);
+    
     // Deduct stock
     newJob.parts.forEach(p => {
         setParts(currentParts => currentParts.map(part => 
@@ -202,39 +316,97 @@ export default function HomePage() {
 
   // ฟังก์ชันสำหรับอัปเดตงาน
   const handleJobUpdate = (updatedJob: Job) => {
-    // เพิ่ม Log การใช้อะไหล่ถ้ามีการบันทึก partsNotes
-    if (updatedJob.partsNotes && updatedJob.partsNotes.trim()) {
+    // หา job เดิมเพื่อเปรียบเทียบ
+    const previousJob = jobs.find(job => job.id === updatedJob.id);
+    
+    // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
+    if (updatedJob.status === 'approved') {
       addPartsUsageLog(updatedJob.id, updatedJob.partsNotes);
     }
+    
+    // เพิ่ม Serial History Entry สำหรับการอัปเดตงาน
+    logJobUpdate(updatedJob, previousJob);
     
     setJobs(prev => prev.map(job => job.id === updatedJob.id ? updatedJob : job));
     setSelectedJobForForm(null);
   };
 
   // ฟังก์ชันสำหรับเพิ่ม Log การใช้อะไหล่
-  const addPartsUsageLog = (jobId: number, partsNotes: string) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (!job) return;
-
+  const addPartsUsageLog = (jobId: number, partsNotes?: string, jobData?: Job) => {
+    console.log('🔧 addPartsUsageLog called with:', { jobId, partsNotes, jobData });
+    
+    // ใช้ jobData ที่ส่งมาหรือค้นหาจาก jobs state
+    const job = jobData || jobs.find(j => j.id === jobId);
+    if (!job) {
+      console.log('❌ Job not found for ID:', jobId);
+      return;
+    }
+  
+    console.log('📋 Job found:', job);
+    console.log('📊 Job status:', job.status);
+  
+    // ตรวจสอบว่างานได้รับการอนุมัติแล้วหรือไม่
+    if (job.status !== 'approved') {
+      console.log('⚠️ Job not approved, status:', job.status);
+      return;
+    }
+  
     const vehicle = vehicles.find(v => v.id === job.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
-
-    const newLog: PartsUsageLog = {
-      id: Date.now(), // ใช้ timestamp เป็น ID ชั่วคราว
-      jobId: jobId,
-      partName: partsNotes,
-      partId: `PART-${Date.now()}`,
-      quantity: 1, // ค่าเริ่มต้น
-      usedDate: new Date().toISOString().split('T')[0],
-      userName: job.userName,
-      vehicleNumber: job.vehicle_number,
-      serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
-      golfCourseName: golfCourse?.name || 'ไม่ระบุ',
-      jobType: job.type,
-      system: job.system
-    };
-
-    setPartsUsageLog(prev => [newLog, ...prev]);
+  
+    console.log('🚗 Vehicle found:', vehicle);
+    console.log('🏌️ Golf course found:', golfCourse);
+    console.log('🔩 Job parts:', job.parts);
+  
+    // บันทึกข้อมูลอะไหล่จาก job.parts (อะไหล่ที่เลือกจริงๆ)
+    if (job.parts && job.parts.length > 0) {
+      console.log('✅ Processing job parts, count:', job.parts.length);
+      job.parts.forEach((part, index) => {
+        const newLog: PartsUsageLog = {
+          id: Date.now() + index, // ใช้ timestamp + index เป็น ID เพื่อไม่ให้ซ้ำ
+          jobId: jobId,
+          partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
+          partId: `PART-${part.part_id}`,
+          quantity: part.quantity_used,
+          usedDate: new Date().toISOString().split('T')[0],
+          userName: job.userName,
+          vehicleNumber: job.vehicle_number,
+          serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
+          golfCourseName: golfCourse?.name || 'ไม่ระบุ',
+          jobType: job.type,
+          system: job.system || 'ไม่ระบุ'
+        };
+  
+        console.log('📝 Creating new log:', newLog);
+        setPartsUsageLog(prev => {
+          const updated = [newLog, ...prev];
+          console.log('📊 Updated partsUsageLog, total count:', updated.length);
+          return updated;
+        });
+      });
+    } else {
+      console.log('⚠️ No parts found in job');
+    }
+  
+    // บันทึกข้อมูลจาก partsNotes (ถ้ามี) สำหรับข้อมูลเพิ่มเติม
+    if (partsNotes && partsNotes.trim()) {
+      const newLog: PartsUsageLog = {
+        id: Date.now() + 1000, // เพิ่ม offset เพื่อไม่ให้ซ้ำกับ parts
+        jobId: jobId,
+        partName: partsNotes,
+        partId: `NOTES-${Date.now()}`,
+        quantity: 1,
+        usedDate: new Date().toISOString().split('T')[0],
+        userName: job.userName,
+        vehicleNumber: job.vehicle_number,
+        serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
+        golfCourseName: golfCourse?.name || 'ไม่ระบุ',
+        jobType: job.type,
+        system: job.system || 'ไม่ระบุ'
+      };
+  
+      setPartsUsageLog(prev => [newLog, ...prev]);
+    }
   };
 
   // ฟังก์ชันสำหรับจัดการสิทธิ์ผู้ใช้
@@ -271,6 +443,7 @@ export default function HomePage() {
             setJobs={setJobs} 
             setView={handleSetView}
             onFillJobForm={handleFillJobForm}
+            addPartsUsageLog={addPartsUsageLog}
           />
         )}
         {view === 'create_job' && (
@@ -289,6 +462,8 @@ export default function HomePage() {
             setParts={setParts} 
             setView={handleSetView}
             partsUsageLog={partsUsageLog}
+            setPartsUsageLog={setPartsUsageLog}
+            addPartsUsageLog={addPartsUsageLog}
             vehicles={vehicles}
             golfCourses={golfCourses}
           />
@@ -309,6 +484,7 @@ export default function HomePage() {
             setView={handleSetView}
             vehicles={vehicles}
             parts={parts}
+            jobs={jobs}
           />
         )}
         {view === 'multi_assign' && (
@@ -326,6 +502,9 @@ export default function HomePage() {
           <SerialHistoryScreen 
             user={user}
             setView={handleSetView}
+            jobs={jobs}
+            vehicles={vehicles}
+            serialHistory={serialHistory}
           />
         )}
         {view === 'admin_management' && (
@@ -346,6 +525,8 @@ export default function HomePage() {
             setGolfCourses={setGolfCourses}
             vehicles={vehicles}
             setVehicles={setVehicles}
+            serialHistory={serialHistory}
+            addSerialHistoryEntry={addSerialHistoryEntry}
           />
         )}
         {view === 'assigned_job_form' && selectedJobForForm && (
@@ -369,9 +550,11 @@ export default function HomePage() {
             jobs={jobs}
             setJobs={setJobs}
             setView={handleSetView}
+            addPartsUsageLog={addPartsUsageLog}
           />
         )}
       </main>
     </div>
   );
 }
+

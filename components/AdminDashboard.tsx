@@ -79,6 +79,13 @@ const AdminDashboard = ({ setView }: AdminDashboardProps) => {
                     buttonText="ดูประวัติ"
                     onClick={() => setView('serial_history')}
                 />
+                <AdminDashboardCard 
+                    icon={<GearsIcon />} 
+                    title="จัดการอะไหล่"
+                    description="ดู Log การใช้อะไหล่และจัดการสต็อกอะไหล่"
+                    buttonText="จัดการอะไหล่"
+                    onClick={() => setView('parts_management')}
+                />
             </div>
         </div>
     );

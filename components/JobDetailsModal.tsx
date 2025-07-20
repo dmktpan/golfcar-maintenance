@@ -146,6 +146,15 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
                 </label>
                 <span>{getSystemLabel(job.system)}</span>
               </div>
+              {job.type === 'BM' && job.bmCause && (
+                <div className={styles['info-item']}>
+                  <label>
+                    <span className={styles['label-icon']}>⚠️</span>
+                    สาเหตุของการเสีย:
+                  </label>
+                  <span>{job.bmCause === 'breakdown' ? 'เสีย' : 'อุบัติเหตุ'}</span>
+                </div>
+              )}
               <div className={styles['info-item']}>
                 <label>
                   <span className={styles['label-icon']}>👤</span>
