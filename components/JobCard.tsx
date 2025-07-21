@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, JobStatus, User, MOCK_PARTS } from '@/lib/data';
+import { Job, JobStatus, User, MOCK_PARTS, MOCK_VEHICLES } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
 import styles from './JobCard.module.css';
@@ -16,6 +16,9 @@ interface JobCardProps {
 
 const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
+    
+    // ดึงข้อมูลรถจาก MOCK_VEHICLES
+    const vehicleInfo = MOCK_VEHICLES.find(v => v.id === job.vehicle_id);
     
     // แปลงวันที่ให้อยู่ในรูปแบบที่อ่านง่าย
     const formatDate = (dateString: string) => {
@@ -125,6 +128,10 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
 
                 <div className={styles.jobCardBody}>
                     <div className={styles.jobSummary}>
+                        <div className={styles.summaryItem}>
+                            <span className={styles.summaryLabel}>ซีเรียลแบต:</span>
+                            <span className={styles.summaryValue}>{job.battery_serial || vehicleInfo?.battery_serial || '-'}</span>
+                        </div>
                         <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>ระบบ:</span>
                             <span className={styles.summaryValue}>{job.system}</span>

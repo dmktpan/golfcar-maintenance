@@ -23,8 +23,10 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
+    const [partsSearchTerm, setPartsSearchTerm] = useState('');
     const [newSubTask, setNewSubTask] = useState(''); // เพิ่ม state สำหรับงานย่อยใหม่
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
+    const [batterySerial, setBatterySerial] = useState('');
     
     // กรองรถเฉพาะที่อยู่ในสนามเดียวกับพนักงานที่ล็อกอิน
     const userGolfCourse = golfCourses.find(gc => gc.id === user.golf_course_id);
@@ -157,6 +159,20 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             ));
         }
     };
+
+    // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
+    const getFilteredParts = (parts: { id: number; name: string; unit: string }[]) => {
+        if (!partsSearchTerm.trim()) {
+            return parts;
+        }
+        
+        // ถ้ามีคำค้นหา ให้ค้นหาจากทุก category
+        const allParts = Object.values(PARTS_BY_SYSTEM_DISPLAY).flat();
+        const searchTerm = partsSearchTerm.toLowerCase().trim();
+        return allParts.filter(part => 
+            part.name.toLowerCase().includes(searchTerm)
+        );
+    };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -217,6 +233,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 subTasks,
                 partsNotes: partsNotes,
                 remarks: remarks,
+                battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
@@ -286,6 +303,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 <p><strong>สนาม:</strong> {jobInfo.courseName}</p>
                 <p><strong>Serial Number:</strong> {jobInfo.serialNumber}</p>
                 <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
+                <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -306,6 +324,17 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     <div className="form-group">
                         <label htmlFor="vehicle-number">เบอร์รถ *</label>
                         <input id="vehicle-number" type="text" value={jobInfo.vehicleNumber} disabled />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="battery-serial">ซีเรียลแบต *</label>
+                        <input 
+                            id="battery-serial" 
+                            type="text" 
+                            value={batterySerial} 
+                            onChange={e => setBatterySerial(e.target.value)}
+                            placeholder="กรอกซีเรียลแบต หรือ 'ไม่มีสติ๊กเกอร์' หรือ 'หลุด'"
+                            required
+                        />
                     </div>
                     <div className="form-group">
                         <label htmlFor="staff-name">ชื่อพนักงาน *</label>
@@ -627,9 +656,31 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             ))}
                         </div>
                         
+                        {/* Search Input */}
+                        <div className="parts-search-section">
+                            <div className="search-input-container">
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหาอะไหล่..."
+                                    value={partsSearchTerm}
+                                    onChange={(e) => setPartsSearchTerm(e.target.value)}
+                                    className="parts-search-input"
+                                />
+                                {partsSearchTerm && (
+                                    <button
+                                        type="button"
+                                        className="clear-search-btn"
+                                        onClick={() => setPartsSearchTerm('')}
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        
                         <div className="modal-body">
                             <div className="parts-grid">
-                                {PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY].map(part => {
+                                {getFilteredParts(PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY]).map(part => {
                                     const selectedPart = selectedParts.find(p => p.id === part.id);
                                     return (
                                         <div 
@@ -649,6 +700,14 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                         </div>
                                     );
                                 })}
+                                
+                                {/* แสดงข้อความเมื่อไม่พบผลลัพธ์ */}
+                                {getFilteredParts(PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY]).length === 0 && (
+                                    <div className="no-parts-found">
+                                        <p>ไม่พบอะไหล่ที่ค้นหา "{partsSearchTerm}"</p>
+                                        <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         

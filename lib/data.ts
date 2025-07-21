@@ -27,6 +27,7 @@ export interface Vehicle {
   golf_course_id: number;
   golf_course_name: string; // เพิ่มชื่อสนาม
   model: string; // เพิ่มรุ่นรถ
+  battery_serial?: string; // เพิ่มซีเรียลแบตเตอรี่
   status?: 'active' | 'inactive' | 'parked' | 'spare'; // เพิ่มสถานะใหม่
   transfer_date?: string; // เพิ่มวันที่ย้ายรถ
 }
@@ -64,6 +65,7 @@ export interface Job {
   assigned_by_name?: string;
   assigned_to?: number;
   bmCause?: BMCause; // เพิ่ม field สำหรับเก็บสาเหตุ BM
+  battery_serial?: string; // เพิ่มฟิลด์สำหรับเก็บซีเรียลแบตที่พนักงานกรอกด้วยตนเอง
 }
 
 // เพิ่ม interface สำหรับการเลือกอะไหล่พร้อมจำนวน (เอาราคาออก)
@@ -128,18 +130,18 @@ export const MOCK_USERS: User[] = [
 
 // เพิ่มรถกอล์ฟมากขึ้น
 export const MOCK_VEHICLES: Vehicle[] = [
-  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active', transfer_date: '2024-01-15' },
-  { id: 102, serial_number: 'GC-SN-002', vehicle_number: 'A02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO RXV', status: 'active' },
-  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha Drive2', status: 'inactive', transfer_date: '2023-12-20' },
-  { id: 104, serial_number: 'WL-2023-001', vehicle_number: 'A03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', status: 'active' },
-  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO TXT', status: 'parked', transfer_date: '2024-02-10' },
-  { id: 106, serial_number: 'WL-2023-003', vehicle_number: 'B01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha G29', status: 'active' },
-  { id: 107, serial_number: 'WL-2023-004', vehicle_number: 'B02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car DS', status: 'spare' },
-  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO Freedom', status: 'active', transfer_date: '2024-03-05' },
-  { id: 201, serial_number: 'GV-20230101', vehicle_number: 'C01', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car Precedent', status: 'active' },
-  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Yamaha Drive2', status: 'inactive', transfer_date: '2024-01-25' },
-  { id: 203, serial_number: 'GV-2023-003', vehicle_number: 'C03', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'E-Z-GO RXV', status: 'active' },
-  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car DS', status: 'spare', transfer_date: '2023-11-30' },
+  { id: 101, serial_number: 'KT-20220601', vehicle_number: 'A01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', battery_serial: 'BAT-2024-001', status: 'active', transfer_date: '2024-01-15' },
+  { id: 102, serial_number: 'GC-SN-002', vehicle_number: 'A02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO RXV', battery_serial: 'BAT-2024-002', status: 'active' },
+  { id: 103, serial_number: 'GC-SN-003', vehicle_number: 'B05', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha Drive2', battery_serial: 'BAT-2023-015', status: 'inactive', transfer_date: '2023-12-20' },
+  { id: 104, serial_number: 'WL-2023-001', vehicle_number: 'A03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car Precedent', battery_serial: 'BAT-2024-003', status: 'active' },
+  { id: 105, serial_number: 'WL-2023-002', vehicle_number: 'A04', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO TXT', battery_serial: 'BAT-2024-004', status: 'parked', transfer_date: '2024-02-10' },
+  { id: 106, serial_number: 'WL-2023-003', vehicle_number: 'B01', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Yamaha G29', battery_serial: 'BAT-2024-005', status: 'active' },
+  { id: 107, serial_number: 'WL-2023-004', vehicle_number: 'B02', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'Club Car DS', battery_serial: 'BAT-2023-020', status: 'spare' },
+  { id: 108, serial_number: 'WL-2023-005', vehicle_number: 'B03', golf_course_id: 1, golf_course_name: 'วอเตอร์แลนด์', model: 'E-Z-GO Freedom', battery_serial: 'BAT-2024-006', status: 'active', transfer_date: '2024-03-05' },
+  { id: 201, serial_number: 'GV-20230101', vehicle_number: 'C01', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car Precedent', battery_serial: 'BAT-2024-007', status: 'active' },
+  { id: 202, serial_number: 'GV-20230102', vehicle_number: 'C02', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Yamaha Drive2', battery_serial: 'BAT-2023-025', status: 'inactive', transfer_date: '2024-01-25' },
+  { id: 203, serial_number: 'GV-2023-003', vehicle_number: 'C03', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'E-Z-GO RXV', battery_serial: 'BAT-2024-008', status: 'active' },
+  { id: 204, serial_number: 'GV-2023-004', vehicle_number: 'C04', golf_course_id: 2, golf_course_name: 'กรีนวัลเลย์', model: 'Club Car DS', battery_serial: 'BAT-2023-030', status: 'spare', transfer_date: '2023-11-30' },
 ];
 
 // เพิ่มอะไหล่มากขึ้น
@@ -187,12 +189,12 @@ export const MOCK_JOBS: Job[] = [
     // งานที่พนักงานสร้างเอง (ไม่มี assigned_by) - มีอะไหล่
     { id: 1, user_id: 1, userName: 'tape1408', vehicle_id: 101, vehicle_number: 'A01', golf_course_id: 1, type: 'BM', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString(), parts: [
       { part_id: 1, quantity_used: 1, part_name: 'แบตเตอรี่ 12V' }
-    ], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด', bmCause: 'breakdown' },
+    ], system: 'brake', subTasks: ['การทำงานกลไกเบรก'], partsNotes: 'เปลี่ยนแบตเตอรี่ใหม่ 1 ลูก', remarks: 'สตาร์ทไม่ติด', bmCause: 'breakdown', battery_serial: 'หลุด' },
     
     // งานที่หัวหน้างานมอบหมาย - มีอะไหล่
     { id: 2, user_id: 1, userName: 'tape1408', vehicle_id: 102, vehicle_number: 'A02', golf_course_id: 1, type: 'PM', status: 'assigned', created_at: new Date(Date.now() - 3600000).toISOString(), parts: [
       { part_id: 5, quantity_used: 2, part_name: 'น้ำมันเฟืองท้าย' }
-    ], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 2 ลิตร', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1 },
+    ], system: 'motor', subTasks: ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน', 'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี'], partsNotes: 'เปลี่ยนน้ำมันเฟืองท้าย 2 ลิตร', remarks: 'เช็คระยะ 500 ชั่วโมง', assigned_by: 2, assigned_by_name: 'สมศรี หัวหน้า', assigned_to: 1, battery_serial: 'ไม่มีสติ๊กเกอร์' },
     
     // งานที่กำลังดำเนินการ - มีอะไหล่
     { id: 5, user_id: 5, userName: 'สมหญิง ช่างซ่อม', vehicle_id: 104, vehicle_number: 'A03', golf_course_id: 1, type: 'BM', status: 'in_progress', created_at: new Date(Date.now() - 7200000).toISOString(), parts: [
@@ -277,6 +279,7 @@ export interface SerialHistoryEntry {
   system?: string;
   parts_used?: string[];
   status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned';
+  battery_serial?: string; // เพิ่มฟิลด์สำหรับเก็บซีเรียลแบตที่พนักงานกรอก
   // เพิ่มฟิลด์สำหรับบันทึกการเปลี่ยนแปลง
   previous_data?: any;
   new_data?: any;

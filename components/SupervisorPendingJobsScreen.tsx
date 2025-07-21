@@ -313,9 +313,14 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView, addPartsUsa
                                             <div className={styles.vehicleInfo}>
                                                 <span className={styles.vehicleNumber}>รถเบอร์: {job.vehicle_number}</span>
                                                 {vehicleInfo && (
-                                                    <span className={styles.serialNumber}>
-                                                        Serial: {vehicleInfo.serial_number}
-                                                    </span>
+                                                    <>
+                                                        <span className={styles.serialNumber}>
+                                                            Serial: {vehicleInfo.serial_number}
+                                                        </span>
+                                                        <span className={styles.batterySerial}>
+                                                            ซีเรียลแบต: {job.battery_serial || vehicleInfo.battery_serial || '-'}
+                                                        </span>
+                                                    </>
                                                 )}
                                             </div>
                                             <div className={styles.jobMeta}>
@@ -362,9 +367,29 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView, addPartsUsa
                                                 </div>
                                             )}
 
+                                            {job.parts && job.parts.length > 0 && (
+                                                <div className={styles.jobDetailItem}>
+                                                    <span className={styles.detailLabel}>รายการอะไหล่ที่ใช้:</span>
+                                                    <div className={styles.detailValue}>
+                                                        <div className={styles.partsList}>
+                                                            {job.parts.map((part, index) => (
+                                                                <div key={index} className={styles.partItem}>
+                                                                    <span className={styles.partName}>
+                                                                        🔧 {part.part_name || `อะไหล่ ID: ${part.part_id}`}
+                                                                    </span>
+                                                                    <span className={styles.partQuantity}>
+                                                                        จำนวน: {part.quantity_used}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {job.partsNotes && (
                                                 <div className={styles.jobDetailItem}>
-                                                    <span className={styles.detailLabel}>อะไหล่ที่เปลี่ยน:</span>
+                                                    <span className={styles.detailLabel}>หมายเหตุอะไหล่:</span>
                                                     <span className={`${styles.detailValue} ${styles.partsNotes}`}>{job.partsNotes}</span>
                                                 </div>
                                             )}

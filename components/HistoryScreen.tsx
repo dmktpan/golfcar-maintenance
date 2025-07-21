@@ -177,6 +177,8 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
                             <div className="history-card-header">
                                 <div>
                                     <h3>รถเบอร์: {job.vehicle_number}</h3>
+                                    <p className="vehicle-serial">Serial: {vehicles.find(v => v.id === job.vehicle_id)?.serial_number || '-'}</p>
+                                    <p className="battery-serial">ซีเรียลแบต: {job.battery_serial || vehicles.find(v => v.id === job.vehicle_id)?.battery_serial || '-'}</p>
                                     <p className="history-date">{formatDate(job.created_at)}</p>
                                     {job.updated_at && job.updated_at !== job.created_at && (
                                         <p className="history-updated">อัปเดต: {formatDate(job.updated_at)}</p>

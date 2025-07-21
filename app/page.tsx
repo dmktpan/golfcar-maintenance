@@ -198,7 +198,8 @@ export default function HomePage() {
         is_active: vehicle.status === 'active',
         status: 'pending',
         job_type: job.type,
-        system: job.system
+        system: job.system,
+        battery_serial: job.battery_serial // เก็บซีเรียลแบตที่พนักงานกรอก
       });
     }
   };
@@ -256,7 +257,8 @@ export default function HomePage() {
         is_active: vehicle.status === 'active',
         status: status,
         job_type: updatedJob.type,
-        system: updatedJob.system
+        system: updatedJob.system,
+        battery_serial: updatedJob.battery_serial // เก็บซีเรียลแบตที่พนักงานกรอก
       });
     }
   };

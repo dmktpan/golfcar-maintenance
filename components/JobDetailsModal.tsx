@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Job, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_USERS, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
+import { Job, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_USERS, MOCK_VEHICLES, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './JobDetailsModal.module.css';
 
@@ -35,8 +35,21 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
     return 'ไม่พบอะไหล่';
   };
 
-  const getGolfCourseName = (courseId: number) => MOCK_GOLF_COURSES.find(c => c.id === courseId)?.name || 'ไม่พบสนาม';
-  const getAssignedByName = (userId: number) => MOCK_USERS.find(u => u.id === userId)?.name || 'ไม่พบผู้มอบหมาย';
+  const getGolfCourseName = (courseId: number) => {
+    const course = MOCK_GOLF_COURSES.find(c => c.id === courseId);
+    return course ? course.name : 'ไม่ระบุ';
+  };
+
+  const getAssignedByName = (userId: number) => {
+    const user = MOCK_USERS.find(u => u.id === userId);
+    return user ? user.name : 'ไม่ระบุ';
+  };
+
+  const getVehicleInfo = (vehicleId: number) => {
+    return MOCK_VEHICLES.find(v => v.id === vehicleId);
+  };
+
+  const vehicleInfo = getVehicleInfo(job.vehicle_id);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -131,6 +144,13 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
                   หมายเลขรถ:
                 </label>
                 <span>{job.vehicle_number}</span>
+              </div>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>🔋</span>
+                  ซีเรียลแบต:
+                </label>
+                <span>{job.battery_serial || vehicleInfo?.battery_serial || '-'}</span>
               </div>
               <div className={styles['info-item']}>
                 <label>

@@ -495,6 +495,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
                   <th>📅 วันที่/เวลา</th>
                   <th>🏷️ หมายเลขซีเรียล</th>
                   <th>🚗 หมายเลขรถ</th>
+                  <th>🔋 ซีเรียลแบต</th>
                   <th>⚙️ ประเภท</th>
                   <th>📝 รายละเอียด</th>
                   <th>👤 ผู้ดำเนินการ</th>
@@ -525,6 +526,11 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
                     </td>
                     <td className="vehicle-col">
                       <span className="vehicle-badge">{entry.vehicle_number}</span>
+                    </td>
+                    <td className="battery-col">
+                      <span className="battery-badge">
+                        {entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-'}
+                      </span>
                     </td>
                     <td className="action-col">
                       <span className={`action-badge ${getActionTypeColorClass(entry.action_type)}`}>

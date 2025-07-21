@@ -66,13 +66,18 @@ const PARTS_BY_SYSTEM = {
 };
 
 const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golfCourses }: AssignedJobFormScreenProps) => {
+    // ข้อมูลรถและสนามจาก job ที่ได้รับมอบหมาย
+    const assignedVehicle = vehicles.find(v => v.id === job.vehicle_id);
+    const golfCourse = golfCourses.find(gc => gc.id === assignedVehicle?.golf_course_id);
+    
     // ใช้ข้อมูลจาก job ที่ได้รับมอบหมาย
     const [jobType, setJobType] = useState<JobType>(job.type);
     const [system, setSystem] = useState(job.system);
     const [subTasks, setSubTasks] = useState<string[]>(job.subTasks || []);
     const [partsNotes, setPartsNotes] = useState(job.partsNotes || '');
     const [remarks, setRemarks] = useState(job.remarks || '');
-    const [bmCause, setBmCause] = useState<BMCause | ''>(job.bmCause || ''); // เพิ่ม state สำหรับสาเหตุ BM
+    const [bmCause, setBmCause] = useState<BMCause | ''>(job.bmCause || '');
+    const [batterySerial, setBatterySerial] = useState(job.battery_serial || assignedVehicle?.battery_serial || ''); // ใช้ค่าจาก job หรือ vehicle
     const [selectedParts, setSelectedParts] = useState<SelectedPart[]>(() => {
         // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น SelectedPart[]
         return job.parts?.map(part => {
@@ -89,12 +94,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     });
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
+    const [partsSearchTerm, setPartsSearchTerm] = useState(''); // เพิ่ม state สำหรับค้นหาอะไหล่
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
-    
-    // ข้อมูลรถและสนามจาก job ที่ได้รับมอบหมาย
-    const assignedVehicle = vehicles.find(v => v.id === job.vehicle_id);
-    const golfCourse = golfCourses.find(gc => gc.id === assignedVehicle?.golf_course_id);
     
     // Get available subtasks for selected system
     const getAvailableSubTasks = () => {
@@ -110,6 +112,20 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     };
     
     const availableSubTasks = getAvailableSubTasks();
+
+    // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
+    const getFilteredParts = () => {
+        const currentParts = PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM];
+        if (!partsSearchTerm.trim()) {
+            return currentParts;
+        }
+        
+        // ถ้ามีคำค้นหา ให้ค้นหาจากทุก category
+        const allParts = Object.values(PARTS_BY_SYSTEM).flat();
+        return allParts.filter(part => 
+            part.name.toLowerCase().includes(partsSearchTerm.toLowerCase())
+        );
+    };
 
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
@@ -183,6 +199,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 })),
                 partsNotes: jobType === 'PM' ? partsNotes : '',
                 remarks: remarks,
+                battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
                 updated_at: new Date().toISOString(),
                 status: 'pending', // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
                 ...(jobType === 'BM' && bmCause && { bmCause })
@@ -244,7 +261,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         return tabNames[tab] || tab;
     };
 
-    // Reset additionalSubTasks และ partsNotes เมื่อเปลี่ยนจาก PM เป็น BM/RC
+    // Reset additionalSubTasks และ partsNotes เมื่ยกคำค้นหา PM เป็น BM/RC
     useEffect(() => {
         if (jobType !== 'PM') {
             setAdditionalSubTasks([]);
@@ -266,6 +283,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <p><strong>สนาม:</strong> {jobInfo.courseName}</p>
                 <p><strong>Serial Number:</strong> {jobInfo.serialNumber}</p>
                 <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
+                <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
                 <p><strong>มอบหมายโดย:</strong> {jobInfo.assignedBy}</p>
                 <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}</p>
                 {system && <p><strong>ระบบที่ต้องซ่อม:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}</p>}
@@ -284,6 +302,17 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <div className="form-group">
                         <label htmlFor="vehicle-number">เบอร์รถ *</label>
                         <input id="vehicle-number" type="text" value={jobInfo.vehicleNumber} disabled />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="battery-serial">ซีเรียลแบต *</label>
+                        <input 
+                            id="battery-serial" 
+                            type="text" 
+                            value={batterySerial} 
+                            onChange={e => setBatterySerial(e.target.value)}
+                            placeholder="กรอกซีเรียลแบต หรือ 'ไม่มีสติ๊กเกอร์' หรือ 'หลุด'"
+                            required
+                        />
                     </div>
                     <div className="form-group">
                         <label htmlFor="staff-name">ชื่อพนักงาน *</label>
@@ -547,20 +576,58 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                             ))}
                         </div>
                         
+                        {/* เพิ่มส่วนค้นหาอะไหล่ */}
+                        <div className="parts-search-section">
+                            <div className="search-input-container">
+                                <input
+                                    type="text"
+                                    className="parts-search-input"
+                                    placeholder="ค้นหาอะไหล่..."
+                                    value={partsSearchTerm}
+                                    onChange={(e) => setPartsSearchTerm(e.target.value)}
+                                />
+                                {partsSearchTerm && (
+                                    <button
+                                        type="button"
+                                        className="clear-search-btn"
+                                        onClick={() => setPartsSearchTerm('')}
+                                        title="ล้างคำค้นหา"
+                                    >
+                                        ×
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        
                         <div className="modal-body">
                             <div className="parts-grid">
-                                {PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM].map(part => (
-                                    <div key={part.id} className="part-item">
-                                        <span>{part.name} ({part.unit})</span>
-                                        <button 
-                                            type="button" 
-                                            className="btn-select-part"
-                                            onClick={() => handlePartSelection(part)}
-                                        >
-                                            เลือก
-                                        </button>
+                                {getFilteredParts().length > 0 ? (
+                                    getFilteredParts().map(part => {
+                                        const selectedPart = selectedParts.find(p => p.id === part.id);
+                                        return (
+                                            <div key={part.id} className="part-item">
+                                                <div className="part-name">{part.name}</div>
+                                                <div className="part-details">({part.unit})</div>
+                                                {selectedPart && (
+                                                    <div className="selected-quantity">
+                                                        เลือกแล้ว: {selectedPart.quantity} {part.unit}
+                                                    </div>
+                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    className="btn-select-part"
+                                                    onClick={() => handlePartSelection(part)}
+                                                >
+                                                    เลือก
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="no-parts-found">
+                                        ไม่พบอะไหล่ที่ค้นหา "{partsSearchTerm}"
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                         
