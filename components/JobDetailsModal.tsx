@@ -295,14 +295,34 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
           )}
 
           {/* รูปภาพ */}
-          {job.imageUrl && (
+          {((job.images && job.images.length > 0) || job.imageUrl) && (
             <div className={styles['job-info-section']}>
               <h3>
                 <span className={styles['section-icon']}>📷</span>
                 รูปภาพ
               </h3>
-              <div className={styles['image-container']}>
-                <img src={job.imageUrl} alt="รูปภาพงาน" className={styles['job-image']} />
+              <div className={styles['image-gallery']}>
+                {job.images && job.images.length > 0 ? (
+                  job.images.map((image, index) => (
+                    <div key={index} className={styles['image-item']}>
+                      <img 
+                        src={image} 
+                        alt={`รูปภาพงาน ${index + 1}`} 
+                        className={styles['job-image']}
+                        onClick={() => window.open(image, '_blank')}
+                      />
+                    </div>
+                  ))
+                ) : job.imageUrl ? (
+                  <div className={styles['image-item']}>
+                    <img 
+                      src={job.imageUrl} 
+                      alt="รูปภาพงาน" 
+                      className={styles['job-image']}
+                      onClick={() => window.open(job.imageUrl, '_blank')}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           )}

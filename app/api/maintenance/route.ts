@@ -1,45 +1,70 @@
 // app/api/maintenance/route.ts
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/db/connect'; // ใช้ alias @/ หรือปรับ path ตามจริง
-import MaintenanceItem from '@/models/MaintenanceItem'; // ใช้ alias @/ หรือปรับ path ตามจริง
+import { prisma } from '@/lib/db/prisma';
+import { validateMaintenanceInput } from '@/lib/validation/maintenance';
+import { MaintenanceService } from '@/lib/services/maintenanceService';
+import type { MaintenanceRequest, MaintenanceResponse, ApiResponse } from '@/types/maintenance';
 
-export async function POST(request: Request) {
-  await connectDB();
-
+// --- ฟังก์ชัน POST (สำหรับสร้างข้อมูล Maintenance ใหม่) ---
+export async function POST(request: Request): Promise<NextResponse<ApiResponse<MaintenanceResponse>>> {
   try {
     const body = await request.json();
-    const { description, date, cost, notes } = body;
+    
+    // Validate input data
+    const validation = validateMaintenanceInput(body);
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid input data',
+        error: validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
+      }, { status: 400 });
+    }
 
-    const newItem = new MaintenanceItem({
-      description,
-      date: new Date(date),
-      cost,
-      notes,
-    });
+    // Use service layer to create maintenance
+    const maintenanceResponse = await MaintenanceService.createMaintenance(validation.data);
 
-    await newItem.save();
-    return NextResponse.json({ message: 'Maintenance item added successfully', item: newItem }, { status: 201 });
-  } catch (error: unknown) { // ระบุ type เป็น unknown
+    return NextResponse.json({ 
+      success: true,
+      message: 'Maintenance item added successfully', 
+      data: maintenanceResponse 
+    }, { status: 201 });
+
+  } catch (error: unknown) {
     console.error('Error adding maintenance item:', error);
     let errorMessage = 'An unknown error occurred.';
-    if (error instanceof Error) { // ตรวจสอบว่า error เป็น instance ของ Error
+    if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return NextResponse.json({ message: 'Failed to add maintenance item', error: errorMessage }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      message: 'Failed to add maintenance item', 
+      error: errorMessage 
+    }, { status: 500 });
   }
 }
 
-export async function GET() {
-  await connectDB();
+// --- ฟังก์ชัน GET (สำหรับดึงข้อมูล Maintenance ทั้งหมด) ---
+export async function GET(): Promise<NextResponse<ApiResponse<MaintenanceResponse[]>>> {
   try {
-    const items = await MaintenanceItem.find({});
-    return NextResponse.json(items, { status: 200 });
-  } catch (error: unknown) { // ระบุ type เป็น unknown
+    // Use service layer to get all maintenance items
+    const maintenanceItems = await MaintenanceService.getAllMaintenance();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Maintenance items retrieved successfully',
+      data: maintenanceItems
+    }, { status: 200 });
+
+  } catch (error: unknown) {
     console.error('Error fetching maintenance items:', error);
     let errorMessage = 'An unknown error occurred.';
-    if (error instanceof Error) { // ตรวจสอบว่า error เป็น instance ของ Error
+    if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return NextResponse.json({ message: 'Failed to fetch maintenance items', error: errorMessage }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      message: 'Failed to fetch maintenance items', 
+      error: errorMessage 
+    }, { status: 500 });
   }
 }

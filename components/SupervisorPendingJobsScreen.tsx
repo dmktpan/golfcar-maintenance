@@ -400,6 +400,26 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView, addPartsUsa
                                                     <span className={styles.detailValue}>{job.remarks}</span>
                                                 </div>
                                             )}
+
+                                            {job.images && job.images.length > 0 && (
+                                                <div className={styles.jobDetailItem}>
+                                                    <span className={styles.detailLabel}>รูปภาพ:</span>
+                                                    <div className={styles.detailValue}>
+                                                        <div className={styles.imageGallery}>
+                                                            {job.images.map((image, index) => (
+                                                                <div key={index} className={styles.imageItem}>
+                                                                    <img 
+                                                                        src={image} 
+                                                                        alt={`รูปภาพงาน ${index + 1}`}
+                                                                        className={styles.jobImage}
+                                                                        onClick={() => window.open(image, '_blank')}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

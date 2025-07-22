@@ -200,6 +200,23 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
                                     {job.assigned_by_name && (
                                         <p><strong>มอบหมายโดย:</strong> {job.assigned_by_name}</p>
                                     )}
+                                    {job.images && job.images.length > 0 && (
+                                        <div className="history-images">
+                                            <p><strong>รูปภาพ:</strong></p>
+                                            <div className="image-gallery">
+                                                {job.images.map((image, index) => (
+                                                    <div key={index} className="image-item">
+                                                        <img 
+                                                            src={image} 
+                                                            alt={`รูปภาพงาน ${index + 1}`}
+                                                            className="job-image"
+                                                            onClick={() => window.open(image, '_blank')}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 
                                 {job.parts && job.parts.length > 0 && (

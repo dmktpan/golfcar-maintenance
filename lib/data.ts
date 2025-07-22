@@ -61,6 +61,7 @@ export interface Job {
   partsNotes: string;
   remarks: string;
   imageUrl?: string;
+  images?: string[]; // เพิ่ม field สำหรับเก็บรูปภาพหลายรูป
   assigned_by?: number;
   assigned_by_name?: string;
   assigned_to?: number;

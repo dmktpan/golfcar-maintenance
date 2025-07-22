@@ -1,3 +1,16 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/check-migration/route": "app/api/check-migration/route.js",
+  "/api/seed/route": "app/api/seed/route.js",
+  "/add-maintenance/page": "app/add-maintenance/page.js",
+  "/api/test-prisma/golf-courses/route": "app/api/test-prisma/golf-courses/route.js",
+  "/api/test-prisma/crud/route": "app/api/test-prisma/crud/route.js",
+  "/api/maintenance/route": "app/api/maintenance/route.js",
+  "/api/test-prisma/parts/route": "app/api/test-prisma/parts/route.js",
+  "/api/test-prisma/vehicles/route": "app/api/test-prisma/vehicles/route.js",
+  "/api/test-prisma/users/route": "app/api/test-prisma/users/route.js",
+  "/api/upload/maintenance/route": "app/api/upload/maintenance/route.js",
+  "/api/test-prisma/jobs/route": "app/api/test-prisma/jobs/route.js",
+  "/api/migrate/route": "app/api/migrate/route.js",
   "/page": "app/page.js"
 }

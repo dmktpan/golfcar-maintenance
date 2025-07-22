@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
+import ImageUpload from './ImageUpload';
 
 interface CreateJobScreenProps {
     user: User;
@@ -27,6 +28,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [newSubTask, setNewSubTask] = useState(''); // เพิ่ม state สำหรับงานย่อยใหม่
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
     const [batterySerial, setBatterySerial] = useState('');
+    const [images, setImages] = useState<string[]>([]);
     
     // กรองรถเฉพาะที่อยู่ในสนามเดียวกับพนักงานที่ล็อกอิน
     const userGolfCourse = golfCourses.find(gc => gc.id === user.golf_course_id);
@@ -234,6 +236,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 partsNotes: partsNotes,
                 remarks: remarks,
                 battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
+                images: images, // เพิ่มรูปภาพ
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
@@ -557,9 +560,12 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="photo">รูปภาพ</label>
-                  <input type="file" id="photo" accept="image/jpeg, image/png" />
-                  <small>รองรับไฟล์ .jpg, .jpeg, .png ขนาดไม่เกิน 5MB</small>
+                    <label>รูปภาพ</label>
+                    <ImageUpload 
+                        images={images}
+                        onImagesChange={setImages}
+                        maxImages={5}
+                    />
                 </div>
 
                 {/* Summary Section */}

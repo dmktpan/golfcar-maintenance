@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
+import ImageUpload from './ImageUpload';
 
 interface AssignedJobFormScreenProps {
     user: User;
@@ -92,6 +93,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             };
         }) || [];
     });
+    const [images, setImages] = useState<string[]>(job.images || []);
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [partsSearchTerm, setPartsSearchTerm] = useState(''); // เพิ่ม state สำหรับค้นหาอะไหล่
@@ -200,6 +202,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 partsNotes: jobType === 'PM' ? partsNotes : '',
                 remarks: remarks,
                 battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
+                images: images, // เพิ่มรูปภาพ
                 updated_at: new Date().toISOString(),
                 status: 'pending', // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
                 ...(jobType === 'BM' && bmCause && { bmCause })
@@ -479,9 +482,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="photo">รูปภาพ</label>
-                  <input type="file" id="photo" accept="image/jpeg, image/png" />
-                  <small>รองรับไฟล์ .jpg, .jpeg, .png ขนาดไม่เกิน 5MB</small>
+                    <label>รูปภาพ</label>
+                    <ImageUpload 
+                        images={images}
+                        onImagesChange={setImages}
+                        maxImages={5}
+                    />
                 </div>
 
                 {/* Summary Section */}
