@@ -162,11 +162,19 @@ export async function GET() {
 
     // Test 5: Delete operations (cleanup)
     try {
-      await prisma.partsUsageLog.deleteMany({
+      // แก้ไขจาก deleteMany เป็น individual delete เพื่อรองรับ MongoDB standalone
+      const partsUsageLogs = await prisma.partsUsageLog.findMany({
         where: {
           jobId: parseInt(testData.testJob.id)
         }
       })
+      
+      for (const log of partsUsageLogs) {
+        await prisma.partsUsageLog.delete({
+          where: { id: log.id }
+        })
+      }
+      operations.push('Delete PartsUsageLog - ✅')
 
       await prisma.job.delete({
         where: { id: testData.testJob.id }
