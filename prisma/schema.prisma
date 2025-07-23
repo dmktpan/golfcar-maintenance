@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -13,136 +9,200 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model
-model User {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  code                  String   @unique
-  name                  String
-  role                  String   // 'staff' | 'supervisor' | 'admin'
-  golf_course_id        Int
-  managed_golf_courses  Int[]    @default([])
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+// --- Models ---
 
-  @@map("users")
-}
-
-// Golf Course model
 model GolfCourse {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String    @unique
+  location  String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  @@map("golf_courses")
+  // Relations
+  users     User[]
+  vehicles  Vehicle[]
+  jobs      Job[]
+  parts     Part[]
 }
 
-// Vehicle model
-model Vehicle {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  serial_number    String   @unique
-  vehicle_number   String
-  golf_course_id   Int
-  golf_course_name String
-  model            String
-  battery_serial   String?
-  status           String   // 'active' | 'inactive' | 'spare' | 'parked'
-  transfer_date    String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@map("vehicles")
-}
-
-// Job model
-model Job {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  type             String   // 'PM' | 'BM' | 'Recondition'
-  status           String   // 'pending' | 'in_progress' | 'completed' | 'assigned' | 'approved' | 'rejected'
-  vehicle_id       Int
-  vehicle_number   String
-  golf_course_id   Int
-  user_id          Int
-  userName         String
-  system           String?
-  subTasks         String[] @default([])
-  parts            Json[]   @default([])
-  partsNotes       String?
-  remarks          String?
-  bmCause          String?  // 'breakdown' | 'accident'
-  battery_serial   String?
-  assigned_by      Int?
-  assigned_by_name String?
-  assigned_to      Int?
-  created_at       String?
-  updated_at       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@map("jobs")
-}
-
-// Parts model
-model Part {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  unit        String
-  stock_qty   Int
-  min_qty     Int
-  max_qty     Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("parts")
-}
-
-// Serial History Entry model
-model SerialHistoryEntry {
+model User {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
-  serial_number        String
-  vehicle_id           Int
-  vehicle_number       String
-  action_type          String   // 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection' | 'status_change' | 'data_edit' | 'data_delete' | 'bulk_transfer' | 'bulk_upload'
-  action_date          String
-  actual_transfer_date String?
-  details              String
-  performed_by         String
-  performed_by_id      Int
-  golf_course_id       Int
-  golf_course_name     String
-  is_active            Boolean
-  related_job_id       Int?
-  job_type             String?  // 'PM' | 'BM' | 'Recondition'
-  system               String?
-  parts_used           String[] @default([])
-  status               String?  // 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned'
-  battery_serial       String?
-  previous_data        Json?
-  new_data             Json?
-  change_type          String?  // 'create' | 'update' | 'delete' | 'transfer' | 'status_change'
-  affected_fields      String[] @default([])
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  code                 String   @unique
+  username             String   @unique
+  name                 String
+  role                 UserRole
+  managed_golf_courses Int[]
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  @@map("serial_history")
+  // Relations
+  golfCourse     GolfCourse @relation(fields: [golf_course_id], references: [id])
+  golf_course_id   String     @db.ObjectId
+  golf_course_name String // Denormalized field for convenience
+
+  createdJobs  Job[]      @relation("CreatedBy")
+  assignedJobs Job[]      @relation("AssignedTo")
+  historyLogs  SerialHistoryEntry[] @relation("PerformedByUser")
 }
 
-// Parts Usage Log model
-model PartsUsageLog {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  jobId           Int
-  partName        String
-  partId          String
-  quantity        Int
-  usedDate        String
-  userName        String
-  vehicleNumber   String
-  serialNumber    String
-  golfCourseName  String
-  jobType         String
-  system          String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model Vehicle {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  vehicle_number   String        @unique
+  serial_number    String        @unique
+  brand            String?
+  model            String?
+  year             Int?
+  battery_serial   String?
+  status           VehicleStatus @default(active)
+  transfer_date    DateTime?
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  @@map("parts_usage_logs")
+  // Relations
+  golfCourse       GolfCourse @relation(fields: [golf_course_id], references: [id])
+  golf_course_id   String     @db.ObjectId
+  golf_course_name String // Denormalized field for convenience
+
+  jobs             Job[]
+  historyLogs      SerialHistoryEntry[]
+}
+
+model Job {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  type               JobType
+  status             JobStatus
+  system             String?
+  subTasks           String[]
+  remarks            String?
+  cost               Float?
+  notes              String?
+  bmCause            BMCause?
+  battery_serial     String?
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // Denormalized fields for convenience
+  userName           String?
+  vehicle_number     String?
+
+  // Relations
+  golfCourse         GolfCourse @relation(fields: [golf_course_id], references: [id])
+  golf_course_id     String     @db.ObjectId
+
+  vehicle            Vehicle   @relation(fields: [vehicle_id], references: [id])
+  vehicle_id         String    @db.ObjectId
+
+  author             User      @relation("CreatedBy", fields: [user_id], references: [id])
+  user_id            String    @db.ObjectId
+
+  assignee           User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
+  assigned_to        String?   @db.ObjectId
+  
+  parts              PartsUsageLog[]
+  historyLog         SerialHistoryEntry?
+}
+
+model Part {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String   @unique
+  part_number    String?
+  category       String?
+  unit           String
+  stock_qty      Int
+  min_qty        Int?
+  max_qty        Int?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  golfCourse     GolfCourse? @relation(fields: [golf_course_id], references: [id])
+  golf_course_id String?     @db.ObjectId
+  usageLogs      PartsUsageLog[]
+}
+
+model PartsUsageLog {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  quantity       Int
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  job            Job      @relation(fields: [jobId], references: [id])
+  jobId          String   @db.ObjectId
+
+  part           Part     @relation(fields: [partId], references: [id])
+  partId         String   @db.ObjectId
+}
+
+model SerialHistoryEntry {
+  id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  action_type          ActionType
+  action_date          DateTime   @default(now())
+  actual_transfer_date DateTime?
+  details              String
+  is_active            Boolean
+  
+  // Relations
+  vehicle              Vehicle    @relation(fields: [vehicle_id], references: [id])
+  vehicle_id           String     @db.ObjectId
+  
+  performed_by         User       @relation("PerformedByUser", fields: [performed_by_id], references: [id])
+  performed_by_id      String     @db.ObjectId
+
+  related_job          Job?       @relation(fields: [related_job_id], references: [id])
+  related_job_id       String?    @unique @db.ObjectId
+}
+
+
+// --- Enums ---
+
+enum UserRole {
+  admin
+  supervisor
+  staff
+  technician
+  viewer
+}
+
+enum JobType {
+  PM
+  BM
+  Recondition
+}
+
+enum JobStatus {
+  pending
+  assigned
+  in_progress
+  completed
+  approved
+  rejected
+}
+
+enum VehicleStatus {
+  active
+  maintenance
+  retired
+  parked
+  spare
+  inactive
+}
+
+enum BMCause {
+  breakdown
+  accident
+  wear
+  other
+}
+
+enum ActionType {
+  registration
+  transfer
+  maintenance
+  decommission
+  inspection
+  status_change
+  data_edit
+  data_delete
+  bulk_transfer
+  bulk_upload
 }
