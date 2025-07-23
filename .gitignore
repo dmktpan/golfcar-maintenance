@@ -159,3 +159,66 @@ tmp/
 
 # Local development
 *.local
+
+# Production specific
+.env.production
+.env.staging
+ecosystem.config.js
+
+# PM2 logs and configs
+pm2.log
+pm2-error.log
+pm2-out.log
+.pm2/
+
+# MongoDB dumps and backups
+*.dump
+*.archive
+mongodb-backup/
+db-backup/
+
+# SSL certificates and keys
+ssl/
+certificates/
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Deployment scripts with sensitive data
+deploy-config.sh
+production-secrets.sh
+
+# Application logs
+app.log
+error.log
+access.log
+combined.log
+
+# Monitoring and metrics
+metrics/
+monitoring/
+
+# Docker (if used later)
+Dockerfile.prod
+docker-compose.prod.yml
+.dockerignore
+
+# Kubernetes (if used later)
+k8s/
+kubernetes/
+
+# Terraform (if used later)
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Ansible (if used later)
+inventory/
+group_vars/
+host_vars/
+
+# Backup and restore scripts with credentials
+backup-with-credentials.sh
+restore-with-credentials.sh
