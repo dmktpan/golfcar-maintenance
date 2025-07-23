@@ -295,11 +295,22 @@ export default function HomePage() {
     logJobCreation(newJob);
     
     // Deduct stock
-    newJob.parts.forEach(p => {
-        setParts(currentParts => currentParts.map(part => 
-            part.id === p.part_id ? {...part, stock_qty: part.stock_qty - p.quantity_used} : part
-        ))
-    })
+    if (newJob.parts && newJob.parts.length > 0) {
+        newJob.parts.forEach(p => {
+            setParts(currentParts => currentParts.map(part => {
+                if (part.id === p.part_id) {
+                    // ใช้ stock_quantity ถ้า stock_qty ไม่มี
+                    const currentStock = part.stock_qty !== undefined ? part.stock_qty : part.stock_quantity;
+                    // ตรวจสอบว่า currentStock มีค่าหรือไม่
+                    if (currentStock !== undefined) {
+                        return {...part, stock_qty: currentStock - p.quantity_used};
+                    }
+                    return part; // ไม่เปลี่ยนแปลงถ้า currentStock ไม่มีค่า
+                }
+                return part;
+            }))
+        })
+    }
 
     const targetView = user?.role === 'staff' ? 'dashboard' : 'admin_dashboard';
     setView(targetView);

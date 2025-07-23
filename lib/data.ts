@@ -1,6 +1,6 @@
 
 // Types
-export type UserRole = 'admin' | 'supervisor' | 'technician' | 'viewer';
+export type UserRole = 'admin' | 'supervisor' | 'technician' | 'viewer' | 'staff';
 
 export type View = 
   | 'dashboard'
@@ -17,7 +17,7 @@ export type View =
   | 'view_assigned_jobs'
   | 'supervisor_pending_jobs';
 export type JobType = 'PM' | 'BM' | 'Recondition';
-export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved';
+export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
 
 // Interfaces
@@ -25,6 +25,7 @@ export interface User {
   id: number;
   username: string;
   name: string;
+  code: string;
   role: UserRole;
   golf_course_id: number;
   golf_course_name: string;
@@ -54,14 +55,19 @@ export interface Vehicle {
 export interface Part {
   id: number;
   name: string;
-  part_number: string;
-  category: string;
+  part_number?: string;
+  category?: string;
   unit: string;
-  stock_quantity: number;
-  min_stock: number;
-  golf_course_id: number;
-  golf_course_name: string;
-  created_at: string;
+  stock_quantity?: number; // For backward compatibility
+  stock_qty: number; // Primary field matching Prisma schema
+  min_qty: number; // Primary field matching Prisma schema
+  max_qty: number; // Primary field matching Prisma schema
+  min_stock?: number; // For backward compatibility
+  golf_course_id?: number;
+  golf_course_name?: string;
+  created_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Job {
@@ -74,6 +80,8 @@ export interface Job {
   type: JobType;
   status: JobStatus;
   created_at: string;
+  updated_at?: string;
+  battery_serial?: string;
   parts?: SelectedPart[];
   system?: string;
   subTasks?: string[];
@@ -83,7 +91,6 @@ export interface Job {
   assigned_by_name?: string;
   assigned_to?: number;
   bmCause?: BMCause;
-  battery_serial?: string;
 }
 
 export interface SelectedPart {
