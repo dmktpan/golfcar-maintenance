@@ -83,6 +83,7 @@ export interface Job {
   assigned_by_name?: string;
   assigned_to?: number;
   bmCause?: BMCause;
+  battery_serial?: string;
 }
 
 export interface SelectedPart {
