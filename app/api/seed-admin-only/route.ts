@@ -12,7 +12,7 @@ const ADMIN_USER = {
 
 // สนามกอล์ฟเริ่มต้น 1 สนาม สำหรับ admin
 const DEFAULT_GOLF_COURSE = {
-  name: 'สนามกอล์ฟหลัก'
+  name: 'สำนักงานใหญ่'
 };
 
 // POST - Seed เฉพาะ Administrator Account และสนามกอล์ฟเริ่มต้น
