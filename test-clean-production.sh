@@ -3,7 +3,7 @@
 # Clean Production API Testing Script
 # ใช้สำหรับทดสอบ API endpoints ในระบบ production ที่ clean
 
-BASE_URL="http://localhost:8080/api"
+BASE_URL="http://localhost:3000/api"
 
 echo "🚀 Testing Clean Production Golf Cart Maintenance System"
 echo "======================================================="
