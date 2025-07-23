@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  code                  String   @unique
+  name                  String
+  role                  String   // 'staff' | 'supervisor' | 'admin'
+  golf_course_id        Int
+  managed_golf_courses  Int[]    @default([])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("users")
+}
+
+// Golf Course model
+model GolfCourse {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("golf_courses")
+}
+
+// Vehicle model
+model Vehicle {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  serial_number    String   @unique
+  vehicle_number   String
+  golf_course_id   Int
+  golf_course_name String
+  model            String
+  battery_serial   String?
+  status           String   // 'active' | 'inactive' | 'spare' | 'parked'
+  transfer_date    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("vehicles")
+}
+
+// Job model
+model Job {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  type             String   // 'PM' | 'BM' | 'Recondition'
+  status           String   // 'pending' | 'in_progress' | 'completed' | 'assigned' | 'approved' | 'rejected'
+  vehicle_id       Int
+  vehicle_number   String
+  golf_course_id   Int
+  user_id          Int
+  userName         String
+  system           String?
+  subTasks         String[] @default([])
+  parts            Json[]   @default([])
+  partsNotes       String?
+  remarks          String?
+  bmCause          String?  // 'breakdown' | 'accident'
+  battery_serial   String?
+  assigned_by      Int?
+  assigned_by_name String?
+  assigned_to      Int?
+  created_at       String?
+  updated_at       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("jobs")
+}
+
+// Parts model
+model Part {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  unit        String
+  stock_qty   Int
+  min_qty     Int
+  max_qty     Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("parts")
+}
+
+// Serial History Entry model
+model SerialHistoryEntry {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  serial_number        String
+  vehicle_id           Int
+  vehicle_number       String
+  action_type          String   // 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection' | 'status_change' | 'data_edit' | 'data_delete' | 'bulk_transfer' | 'bulk_upload'
+  action_date          String
+  actual_transfer_date String?
+  details              String
+  performed_by         String
+  performed_by_id      Int
+  golf_course_id       Int
+  golf_course_name     String
+  is_active            Boolean
+  related_job_id       Int?
+  job_type             String?  // 'PM' | 'BM' | 'Recondition'
+  system               String?
+  parts_used           String[] @default([])
+  status               String?  // 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned'
+  battery_serial       String?
+  previous_data        Json?
+  new_data             Json?
+  change_type          String?  // 'create' | 'update' | 'delete' | 'transfer' | 'status_change'
+  affected_fields      String[] @default([])
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("serial_history")
+}
+
+// Parts Usage Log model
+model PartsUsageLog {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId           Int
+  partName        String
+  partId          String
+  quantity        Int
+  usedDate        String
+  userName        String
+  vehicleNumber   String
+  serialNumber    String
+  golfCourseName  String
+  jobType         String
+  system          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("parts_usage_logs")
+}
