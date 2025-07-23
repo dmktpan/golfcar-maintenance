@@ -1,6 +1,21 @@
 
 // Types
 export type UserRole = 'admin' | 'supervisor' | 'technician' | 'viewer';
+
+export type View = 
+  | 'dashboard'
+  | 'create_job'
+  | 'parts_management'
+  | 'admin_dashboard'
+  | 'manage_users'
+  | 'history'
+  | 'multi_assign'
+  | 'serial_history'
+  | 'admin_management'
+  | 'golf_course_management'
+  | 'assigned_job_form'
+  | 'view_assigned_jobs'
+  | 'supervisor_pending_jobs';
 export type JobType = 'PM' | 'BM' | 'Recondition';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
