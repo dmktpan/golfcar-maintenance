@@ -6,7 +6,7 @@ const ADMIN_USER = {
   code: 'admin000',
   username: 'admin000',
   name: 'administrator',
-  role: 'admin',
+  role: 'admin' as const,
   password: '123456', // รหัสผ่านเริ่มต้น
   managed_golf_courses: []
 };
