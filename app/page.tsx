@@ -263,24 +263,37 @@ export default function HomePage() {
     }
   };
 
-  const handleLogin = (staffCode: string, password: string) => {
-    const foundUser = users.find((u) => u.code.toLowerCase() === staffCode.toLowerCase());
-    if (foundUser) {
-      // ตรวจสอบรหัสผ่าน (ใช้รหัสพนักงานเป็นรหัสผ่านเริ่มต้น)
-      if (password === foundUser.code || password === 'admin000') {
+  const handleLogin = (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
+    if (loginType === 'staff') {
+      // Staff login - ใช้รหัสพนักงานเท่านั้น
+      const foundUser = users.find((u) => u.code.toLowerCase() === identifier.toLowerCase() && u.role === 'staff');
+      if (foundUser) {
         setUser(foundUser);
         setLoginError('');
-        if (foundUser.role === 'admin' || foundUser.role === 'supervisor') {
-            setView('admin_dashboard');
-            setShowWelcome(true);
-        } else {
-            setView('dashboard');
-        }
+        setView('dashboard');
       } else {
-        setLoginError('รหัสผ่านไม่ถูกต้อง');
+        setLoginError('ไม่พบรหัสพนักงานในระบบ');
       }
     } else {
-      setLoginError('รหัสพนักงานไม่ถูกต้อง');
+      // Admin/Supervisor login - ใช้ username และ password
+      const foundUser = users.find((u) => 
+        (u.code.toLowerCase() === identifier.toLowerCase() || u.username?.toLowerCase() === identifier.toLowerCase()) &&
+        (u.role === 'admin' || u.role === 'supervisor')
+      );
+      
+      if (foundUser) {
+        // ตรวจสอบรหัสผ่าน
+        if (password === foundUser.code || password === 'admin000') {
+          setUser(foundUser);
+          setLoginError('');
+          setView('admin_dashboard');
+          setShowWelcome(true);
+        } else {
+          setLoginError('รหัสผ่านไม่ถูกต้อง');
+        }
+      } else {
+        setLoginError('ไม่พบชื่อผู้ใช้ในระบบผู้ดูแล');
+      }
     }
   };
 
