@@ -127,7 +127,7 @@ export async function GET() {
       operations.push('Group By query - ✅')
 
       // ทดสอบ transaction
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         await tx.part.update({
           where: { id: testData.testPart.id },
           data: { stock_qty: { decrement: 1 } }
@@ -135,8 +135,8 @@ export async function GET() {
         
         await tx.partsUsageLog.create({
           data: {
-            jobId: testData.testJob.id,
-            partId: testData.testPart.id,
+            jobId: testData.testJob.id.toString(),
+            partId: testData.testPart.id.toString(),
             quantity: 1
           }
         })
@@ -152,7 +152,7 @@ export async function GET() {
       // แก้ไขจาก deleteMany เป็น individual delete เพื่อรองรับ MongoDB standalone
       const partsUsageLogs = await prisma.partsUsageLog.findMany({
         where: {
-          jobId: parseInt(testData.testJob.id)
+          jobId: testData.testJob.id.toString()
         }
       })
       
