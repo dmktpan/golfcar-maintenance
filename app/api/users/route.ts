@@ -104,11 +104,9 @@ export async function POST(request: Request) {
         insert: 'users',
         documents: [{
           code: code.trim(),
-          username: username.trim(),
           name: name.trim(),
           role,
           golf_course_id: golf_course_id,
-          golf_course_name: golf_course_name.trim(),
           managed_golf_courses: managed_golf_courses || [],
           createdAt: currentTime,
           updatedAt: currentTime
@@ -118,11 +116,9 @@ export async function POST(request: Request) {
       if (result.n && result.n > 0) {
         user = {
           code: code.trim(),
-          username: username.trim(),
           name: name.trim(),
           role,
           golf_course_id: golf_course_id,
-          golf_course_name: golf_course_name.trim(),
           managed_golf_courses: managed_golf_courses || [],
           createdAt: currentTime,
           updatedAt: currentTime

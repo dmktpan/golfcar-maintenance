@@ -111,7 +111,7 @@ export async function POST() {
             model: vehicle.model,
             battery_serial: vehicle.battery_serial,
             status: vehicle.status,
-            transfer_date: vehicle.transfer_date && vehicle.transfer_date !== '' ? new Date(vehicle.transfer_date) : null,
+            transfer_date: vehicle.transfer_date ? new Date(vehicle.transfer_date) : null,
             updatedAt: vehicle.updatedAt || new Date(),
           },
           create: {
@@ -122,7 +122,7 @@ export async function POST() {
             model: vehicle.model,
             battery_serial: vehicle.battery_serial,
             status: vehicle.status,
-            transfer_date: vehicle.transfer_date && vehicle.transfer_date !== '' ? new Date(vehicle.transfer_date) : null,
+            transfer_date: vehicle.transfer_date ? new Date(vehicle.transfer_date) : null,
             createdAt: vehicle.createdAt || new Date(),
             updatedAt: vehicle.updatedAt || new Date(),
           }

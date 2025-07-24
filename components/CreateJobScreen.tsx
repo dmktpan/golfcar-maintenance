@@ -261,14 +261,18 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
     // Group subtasks by category for better UI
     const getSubTasksByCategory = () => {
-        if (!system) return {};
-        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
-        if (!systemData || !systemData.tasks) return {};
+        if (!system || !MOCK_SYSTEMS[system]) return {};
+        const systemData = MOCK_SYSTEMS[system];
+        const categories: Record<string, string[]> = {};
         
-        // For now, return all tasks under a single category
-        return {
-            'tasks': systemData.tasks
-        };
+        Object.entries(systemData).forEach(([category, tasks]) => {
+            const validTasks = tasks.filter(task => task !== 'blank');
+            if (validTasks.length > 0) {
+                categories[category] = validTasks;
+            }
+        });
+        
+        return categories;
     };
     
     const subTaskCategories = getSubTasksByCategory();
@@ -398,7 +402,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 <div key={category} className="category-section">
                                     <h4 className="category-title">{getCategoryDisplayName(category)}</h4>
                                     <div className="task-buttons">
-                                        {(tasks as string[]).map((task: string) => (
+                                        {tasks.map(task => (
                                             <button
                                                 key={task}
                                                 type="button"

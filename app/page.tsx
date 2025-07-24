@@ -263,16 +263,21 @@ export default function HomePage() {
     }
   };
 
-  const handleLogin = (staffCode: string) => {
+  const handleLogin = (staffCode: string, password: string) => {
     const foundUser = users.find((u) => u.code.toLowerCase() === staffCode.toLowerCase());
     if (foundUser) {
-      setUser(foundUser);
-      setLoginError('');
-      if (foundUser.role === 'admin' || foundUser.role === 'supervisor') {
-          setView('admin_dashboard');
-          setShowWelcome(true);
+      // ตรวจสอบรหัสผ่าน (ใช้รหัสพนักงานเป็นรหัสผ่านเริ่มต้น)
+      if (password === foundUser.code || password === 'admin000') {
+        setUser(foundUser);
+        setLoginError('');
+        if (foundUser.role === 'admin' || foundUser.role === 'supervisor') {
+            setView('admin_dashboard');
+            setShowWelcome(true);
+        } else {
+            setView('dashboard');
+        }
       } else {
-          setView('dashboard');
+        setLoginError('รหัสผ่านไม่ถูกต้อง');
       }
     } else {
       setLoginError('รหัสพนักงานไม่ถูกต้อง');

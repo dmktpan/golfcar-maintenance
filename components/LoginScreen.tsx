@@ -5,16 +5,17 @@ import React, { useState } from 'react';
 import { GolfCartIcon } from './icons';
 
 interface LoginScreenProps {
-  onLogin: (staffCode: string) => void;
+  onLogin: (staffCode: string, password: string) => void;
   error: string;
 }
 
 const LoginScreen = ({ onLogin, error }: LoginScreenProps) => {
   const [staffCode, setStaffCode] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onLogin(staffCode);
+    onLogin(staffCode, password);
   };
 
   return (
@@ -34,6 +35,17 @@ const LoginScreen = ({ onLogin, error }: LoginScreenProps) => {
               value={staffCode}
               onChange={(e) => setStaffCode(e.target.value)}
               placeholder="เช่น staff123 หรือ admin000"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">รหัสผ่าน</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="รหัสผ่าน"
               required
             />
           </div>
