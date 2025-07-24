@@ -263,37 +263,36 @@ export default function HomePage() {
     }
   };
 
-  const handleLogin = (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
-    if (loginType === 'staff') {
-      // Staff login - ใช้รหัสพนักงานเท่านั้น
-      const foundUser = users.find((u) => u.code.toLowerCase() === identifier.toLowerCase() && u.role === 'staff');
-      if (foundUser) {
-        setUser(foundUser);
+  const handleLogin = async (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identifier,
+          password,
+          loginType
+        })
+      });
+  
+      const result = await response.json();
+  
+      if (result.success) {
+        setUser(result.data);
         setLoginError('');
-        setView('dashboard');
-      } else {
-        setLoginError('ไม่พบรหัสพนักงานในระบบ');
-      }
-    } else {
-      // Admin/Supervisor login - ใช้ username และ password
-      const foundUser = users.find((u) => 
-        (u.code.toLowerCase() === identifier.toLowerCase() || u.username?.toLowerCase() === identifier.toLowerCase()) &&
-        (u.role === 'admin' || u.role === 'supervisor')
-      );
-      
-      if (foundUser) {
-        // ตรวจสอบรหัสผ่าน
-        if (password === foundUser.code || password === 'admin000') {
-          setUser(foundUser);
-          setLoginError('');
-          setView('admin_dashboard');
+        const targetView = result.data.role === 'staff' ? 'dashboard' : 'admin_dashboard';
+        setView(targetView);
+        if (result.data.role !== 'staff') {
           setShowWelcome(true);
-        } else {
-          setLoginError('รหัสผ่านไม่ถูกต้อง');
         }
       } else {
-        setLoginError('ไม่พบชื่อผู้ใช้ในระบบผู้ดูแล');
+        setLoginError(result.message);
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     }
   };
 
