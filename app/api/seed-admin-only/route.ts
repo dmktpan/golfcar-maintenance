@@ -4,9 +4,10 @@ import { prisma } from '@/lib/db/prisma';
 // ข้อมูล Administrator เริ่มต้นเท่านั้น
 const ADMIN_USER = {
   code: 'admin000',
+  username: 'admin000',
   name: 'administrator',
   role: 'admin',
-  golf_course_id: 1,
+  password: '123456', // รหัสผ่านเริ่มต้น
   managed_golf_courses: []
 };
 
@@ -55,45 +56,44 @@ export async function POST() {
       errors: [] as string[]
     };
 
-    const currentTime = new Date();
+    // Seed Default Golf Course first
+    let golfCourseId: string | null = null;
+    try {
+      const golfCourse = await prisma.golfCourse.create({
+        data: {
+          name: DEFAULT_GOLF_COURSE.name,
+          location: 'สำนักงานใหญ่'
+        }
+      });
+      golfCourseId = golfCourse.id;
+      results.golfCourses = 1;
+      console.log(`Successfully created golf course with ID: ${golfCourseId}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error creating golf course:', error);
+      results.errors.push(`Failed to create golf course: ${errorMessage}`);
+    }
 
-    // Helper function สำหรับการสร้างข้อมูลด้วย raw MongoDB operations
-    const createWithRawMongoDB = async (collectionName: string, data: any[]): Promise<{ successCount: number; errors: string[] }> => {
-      const errors: string[] = [];
-      let successCount = 0;
-
+    // Seed Administrator User with golf course reference
+    if (golfCourseId) {
       try {
-        const documentsWithTimestamps = data.map(item => ({
-          ...item,
-          createdAt: currentTime,
-          updatedAt: currentTime
-        }));
-
-        const result = await prisma.$runCommandRaw({
-          insert: collectionName,
-          documents: documentsWithTimestamps
-        }) as { n?: number };
-        
-        successCount = typeof result.n === 'number' ? result.n : 0;
-        console.log(`Successfully inserted ${successCount} ${collectionName} records`);
+        const adminUser = await prisma.user.create({
+          data: {
+            ...ADMIN_USER,
+            golf_course_id: golfCourseId,
+            golf_course_name: DEFAULT_GOLF_COURSE.name
+          }
+        });
+        results.users = 1;
+        console.log(`Successfully created admin user: ${adminUser.code}`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`Error inserting ${collectionName}:`, error);
-        errors.push(`Failed to insert ${collectionName}: ${errorMessage}`);
+        console.error('Error creating admin user:', error);
+        results.errors.push(`Failed to create admin user: ${errorMessage}`);
       }
-
-      return { successCount, errors };
-    };
-
-    // Seed Default Golf Course
-    const golfCourseResult = await createWithRawMongoDB('golf_courses', [DEFAULT_GOLF_COURSE]);
-    results.golfCourses = golfCourseResult.successCount;
-    results.errors.push(...golfCourseResult.errors);
-
-    // Seed Administrator User
-    const userResult = await createWithRawMongoDB('users', [ADMIN_USER]);
-    results.users = userResult.successCount;
-    results.errors.push(...userResult.errors);
+    } else {
+      results.errors.push('Cannot create admin user: Golf course creation failed');
+    }
 
     // ตรวจสอบผลลัพธ์
     const totalExpected = 2; // 1 golf course + 1 admin user
@@ -112,8 +112,11 @@ export async function POST() {
       },
       adminAccount: {
         code: ADMIN_USER.code,
+        username: ADMIN_USER.username,
         name: ADMIN_USER.name,
-        role: ADMIN_USER.role
+        role: ADMIN_USER.role,
+        password: ADMIN_USER.password,
+        loginInstructions: 'ใช้ username: admin000 และ password: 123456 สำหรับล็อกอิน'
       },
       ...(results.errors.length > 0 && { errors: results.errors })
     };
