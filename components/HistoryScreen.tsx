@@ -37,7 +37,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
         const searchMatch = searchTerm === '' || 
             job.vehicle_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             job.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            job.remarks.toLowerCase().includes(searchTerm.toLowerCase());
+            (job.remarks?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
         
         // Vehicle filter
         const vehicleMatch = filterVehicle === '' || job.vehicle_id.toString() === filterVehicle;

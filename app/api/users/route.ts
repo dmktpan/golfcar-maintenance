@@ -63,13 +63,13 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, role, golf_course_id, managed_golf_courses } = body;
+    const { code, username, name, role, golf_course_id, golf_course_name, managed_golf_courses } = body;
 
     // Validation
-    if (!code || !name || !role || !golf_course_id) {
+    if (!code || !username || !name || !role || !golf_course_id || !golf_course_name) {
       return NextResponse.json({
         success: false,
-        message: 'Code, name, role, and golf_course_id are required'
+        message: 'Code, username, name, role, golf_course_id, and golf_course_name are required'
       }, { status: 400 });
     }
 
@@ -88,9 +88,11 @@ export async function POST(request: Request) {
       user = await prisma.user.create({
         data: {
           code: code.trim(),
+          username: username.trim(),
           name: name.trim(),
           role,
-          golf_course_id: parseInt(golf_course_id),
+          golf_course_id: golf_course_id,
+          golf_course_name: golf_course_name.trim(),
           managed_golf_courses: managed_golf_courses || []
         }
       });
@@ -102,9 +104,11 @@ export async function POST(request: Request) {
         insert: 'users',
         documents: [{
           code: code.trim(),
+          username: username.trim(),
           name: name.trim(),
           role,
-          golf_course_id: parseInt(golf_course_id),
+          golf_course_id: golf_course_id,
+          golf_course_name: golf_course_name.trim(),
           managed_golf_courses: managed_golf_courses || [],
           createdAt: currentTime,
           updatedAt: currentTime
@@ -114,9 +118,11 @@ export async function POST(request: Request) {
       if (result.n && result.n > 0) {
         user = {
           code: code.trim(),
+          username: username.trim(),
           name: name.trim(),
           role,
-          golf_course_id: parseInt(golf_course_id),
+          golf_course_id: golf_course_id,
+          golf_course_name: golf_course_name.trim(),
           managed_golf_courses: managed_golf_courses || [],
           createdAt: currentTime,
           updatedAt: currentTime

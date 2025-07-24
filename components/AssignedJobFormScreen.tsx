@@ -4,6 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
 import ImageUpload from './ImageUpload';
 
+// Interface สำหรับ local state ของอะไหล่ที่เลือก
+interface LocalSelectedPart {
+    id: number;
+    name: string;
+    quantity: number;
+    unit: string;
+}
+
 interface AssignedJobFormScreenProps {
     user: User;
     job: Job;
@@ -79,8 +87,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [remarks, setRemarks] = useState(job.remarks || '');
     const [bmCause, setBmCause] = useState<BMCause | ''>(job.bmCause || '');
     const [batterySerial, setBatterySerial] = useState(job.battery_serial || assignedVehicle?.battery_serial || ''); // ใช้ค่าจาก job หรือ vehicle
-    const [selectedParts, setSelectedParts] = useState<SelectedPart[]>(() => {
-        // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น SelectedPart[]
+    const [selectedParts, setSelectedParts] = useState<LocalSelectedPart[]>(() => {
+        // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น LocalSelectedPart[]
         return job.parts?.map(part => {
             // หาข้อมูลอะไหล่จาก PARTS_BY_SYSTEM
             const allParts = Object.values(PARTS_BY_SYSTEM).flat();
@@ -102,15 +110,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     
     // Get available subtasks for selected system
     const getAvailableSubTasks = () => {
-        if (!system || !MOCK_SYSTEMS[system]) return [];
-        const systemData = MOCK_SYSTEMS[system];
-        const allTasks: string[] = [];
-        
-        Object.values(systemData).forEach(tasks => {
-            allTasks.push(...tasks.filter(task => task !== 'blank'));
-        });
-        
-        return allTasks;
+        if (!system) return [];
+        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
+        if (!systemData) return [];
+        return systemData.tasks || [];
     };
     
     const availableSubTasks = getAvailableSubTasks();
@@ -227,18 +230,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
     // Group subtasks by category for better UI
     const getSubTasksByCategory = () => {
-        if (!system || !MOCK_SYSTEMS[system]) return {};
-        const systemData = MOCK_SYSTEMS[system];
-        const categories: Record<string, string[]> = {};
+        if (!system) return {};
+        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
+        if (!systemData || !systemData.tasks) return {};
         
-        Object.entries(systemData).forEach(([category, tasks]) => {
-            const validTasks = tasks.filter(task => task !== 'blank');
-            if (validTasks.length > 0) {
-                categories[category] = validTasks;
-            }
-        });
-        
-        return categories;
+        // For now, return all tasks under a single category
+        return {
+            'tasks': systemData.tasks
+        };
     };
     
     const subTaskCategories = getSubTasksByCategory();
@@ -377,7 +376,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 <div key={category} className="category-section">
                                     <h4 className="category-title">{getCategoryDisplayName(category)}</h4>
                                     <div className="task-buttons">
-                                        {tasks.map(task => (
+                                        {(tasks as string[]).map((task: string) => (
                                             <button
                                                 key={task}
                                                 type="button"

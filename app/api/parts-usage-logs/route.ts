@@ -72,17 +72,9 @@ export async function POST(request: Request) {
 
     const partsUsageLog = await prisma.partsUsageLog.create({
       data: {
-        jobId: parseInt(jobId),
-        partName: partName.trim(),
+        jobId: jobId.trim(),
         partId: partId.trim(),
         quantity: parseInt(quantity),
-        usedDate: usedDate.trim(),
-        userName: userName.trim(),
-        vehicleNumber: vehicleNumber.trim(),
-        serialNumber: serialNumber.trim(),
-        golfCourseName: golfCourseName.trim(),
-        jobType,
-        system: system.trim()
       }
     });
 

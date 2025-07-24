@@ -15,7 +15,8 @@ export type View =
   | 'golf_course_management'
   | 'assigned_job_form'
   | 'view_assigned_jobs'
-  | 'supervisor_pending_jobs';
+  | 'supervisor_pending_jobs'
+  | 'profile';
 export type JobType = 'PM' | 'BM' | 'Recondition';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
@@ -30,6 +31,7 @@ export interface User {
   golf_course_id: number;
   golf_course_name: string;
   created_at: string;
+  managed_golf_courses?: number[];
 }
 
 export interface GolfCourse {
@@ -46,6 +48,7 @@ export interface Vehicle {
   brand: string;
   model: string;
   year: number;
+  battery_serial?: string; // เพิ่มฟิลด์สำหรับซีเรียลแบตเตอรี่
   golf_course_id: number;
   golf_course_name: string;
   status: 'active' | 'maintenance' | 'retired' | 'parked';
@@ -91,6 +94,7 @@ export interface Job {
   assigned_by_name?: string;
   assigned_to?: number;
   bmCause?: BMCause;
+  images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
 }
 
 export interface SelectedPart {

@@ -26,9 +26,12 @@ export async function GET() {
       testData.testUser = await prisma.user.create({
         data: {
           code: `TEST${Date.now()}`,
+          username: `testuser${Date.now()}`,
           name: 'Test User',
           role: 'staff',
-          golf_course_id: 1
+          golf_course_id: testData.testGolfCourse.id,
+          golf_course_name: testData.testGolfCourse.name,
+          managed_golf_courses: []
         }
       })
       operations.push('Create User - ✅')
@@ -38,8 +41,8 @@ export async function GET() {
         data: {
           serial_number: `TEST${Date.now()}`,
           vehicle_number: `V${Date.now()}`,
-          golf_course_id: 1,
-          golf_course_name: 'Test Golf Course',
+          golf_course_id: testData.testGolfCourse.id,
+          golf_course_name: testData.testGolfCourse.name,
           model: 'Test Model',
           status: 'active'
         }
@@ -63,21 +66,13 @@ export async function GET() {
         data: {
           type: 'PM',
           status: 'pending',
-          vehicle_id: 1,
+          vehicle_id: testData.testVehicle.id,
           vehicle_number: testData.testVehicle.vehicle_number,
-          golf_course_id: 1,
-          user_id: 1,
+          golf_course_id: testData.testGolfCourse.id,
+          user_id: testData.testUser.id,
           userName: testData.testUser.name,
           system: 'Engine',
-          subTasks: ['Check oil', 'Check battery'],
-          parts: [
-            {
-              id: testData.testPart.id,
-              name: testData.testPart.name,
-              quantity: 2,
-              unit: testData.testPart.unit
-            }
-          ]
+          subTasks: ['Check oil', 'Check battery']
         }
       })
       operations.push('Create Job - ✅')
@@ -132,7 +127,7 @@ export async function GET() {
       operations.push('Group By query - ✅')
 
       // ทดสอบ transaction
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         await tx.part.update({
           where: { id: testData.testPart.id },
           data: { stock_qty: { decrement: 1 } }
@@ -140,17 +135,9 @@ export async function GET() {
         
         await tx.partsUsageLog.create({
           data: {
-            jobId: parseInt(testData.testJob.id),
-            partName: testData.testPart.name,
+            jobId: testData.testJob.id,
             partId: testData.testPart.id,
-            quantity: 1,
-            usedDate: new Date().toISOString(),
-            userName: testData.testUser.name,
-            vehicleNumber: testData.testVehicle.vehicle_number,
-            serialNumber: testData.testVehicle.serial_number,
-            golfCourseName: testData.testGolfCourse.name,
-            jobType: 'PM',
-            system: 'Engine'
+            quantity: 1
           }
         })
       })
@@ -165,7 +152,7 @@ export async function GET() {
       // แก้ไขจาก deleteMany เป็น individual delete เพื่อรองรับ MongoDB standalone
       const partsUsageLogs = await prisma.partsUsageLog.findMany({
         where: {
-          jobId: parseInt(testData.testJob.id)
+          jobId: testData.testJob.id
         }
       })
       

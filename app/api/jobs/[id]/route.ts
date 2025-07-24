@@ -98,23 +98,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       data: {
         type,
         status,
-        vehicle_id: parseInt(vehicle_id),
-        vehicle_number: vehicle_number.trim(),
-        golf_course_id: parseInt(golf_course_id),
-        user_id: parseInt(user_id),
-        userName: userName.trim(),
+        vehicle_id: vehicle_id,
+        vehicle_number: vehicle_number?.trim(),
+        golf_course_id: golf_course_id,
+        user_id: user_id,
+        userName: userName?.trim(),
         system: system?.trim(),
         subTasks: subTasks || [],
-        parts: parts || [],
-        partsNotes: partsNotes?.trim(),
         remarks: remarks?.trim(),
         bmCause: bmCause,
         battery_serial: battery_serial?.trim(),
-        assigned_by: assigned_by ? parseInt(assigned_by) : null,
-        assigned_by_name: assigned_by_name?.trim(),
-        assigned_to: assigned_to ? parseInt(assigned_to) : null,
-        created_at: created_at?.trim(),
-        updated_at: updated_at?.trim()
+        assigned_to: assigned_to || null
       }
     });
 

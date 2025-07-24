@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       data: {
         serial_number: serial_number.trim(),
         vehicle_number: vehicle_number.trim(),
-        golf_course_id: parseInt(golf_course_id),
+        golf_course_id: golf_course_id,
         golf_course_name: golf_course_name.trim(),
         model: model.trim(),
         battery_serial: battery_serial?.trim(),

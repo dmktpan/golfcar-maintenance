@@ -5,6 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
 import ImageUpload from './ImageUpload';
 
+// Local interface for selected parts in this component
+interface LocalSelectedPart {
+    id: number;
+    name: string;
+    unit: string;
+    quantity: number;
+}
+
 interface CreateJobScreenProps {
     user: User;
     onJobCreate: (newJob: Job) => void;
@@ -21,7 +29,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [subTasks, setSubTasks] = useState<string[]>([]);
     const [partsNotes, setPartsNotes] = useState('');
     const [remarks, setRemarks] = useState('');
-    const [selectedParts, setSelectedParts] = useState<SelectedPart[]>([]);
+    const [selectedParts, setSelectedParts] = useState<LocalSelectedPart[]>([]);
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [partsSearchTerm, setPartsSearchTerm] = useState('');
@@ -38,15 +46,10 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     
     // Get available subtasks for selected system
     const getAvailableSubTasks = () => {
-        if (!system || !MOCK_SYSTEMS[system]) return [];
-        const systemData = MOCK_SYSTEMS[system];
-        const allTasks: string[] = [];
-        
-        Object.values(systemData).forEach(tasks => {
-            allTasks.push(...tasks.filter(task => task !== 'blank'));
-        });
-        
-        return allTasks;
+        if (!system) return [];
+        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
+        if (!systemData) return [];
+        return systemData.tasks || [];
     };
     
     const availableSubTasks = getAvailableSubTasks();
@@ -258,18 +261,14 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
     // Group subtasks by category for better UI
     const getSubTasksByCategory = () => {
-        if (!system || !MOCK_SYSTEMS[system]) return {};
-        const systemData = MOCK_SYSTEMS[system];
-        const categories: Record<string, string[]> = {};
+        if (!system) return {};
+        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
+        if (!systemData || !systemData.tasks) return {};
         
-        Object.entries(systemData).forEach(([category, tasks]) => {
-            const validTasks = tasks.filter(task => task !== 'blank');
-            if (validTasks.length > 0) {
-                categories[category] = validTasks;
-            }
-        });
-        
-        return categories;
+        // For now, return all tasks under a single category
+        return {
+            'tasks': systemData.tasks
+        };
     };
     
     const subTaskCategories = getSubTasksByCategory();
@@ -399,7 +398,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 <div key={category} className="category-section">
                                     <h4 className="category-title">{getCategoryDisplayName(category)}</h4>
                                     <div className="task-buttons">
-                                        {tasks.map(task => (
+                                        {(tasks as string[]).map((task: string) => (
                                             <button
                                                 key={task}
                                                 type="button"

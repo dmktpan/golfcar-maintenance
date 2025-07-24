@@ -71,7 +71,8 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
     return typeLabels[type] || type;
   };
 
-  const getSystemLabel = (system: string) => {
+  const getSystemLabel = (system?: string) => {
+    if (!system) return 'ไม่ระบุ';
     const systemLabels: Record<string, string> = {
       'brake': 'ระบบเบรก',
       'steering': 'ระบบพวงมาลัย',
@@ -81,7 +82,8 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
     return systemLabels[system] || system;
   };
 
-  const getSystemIcon = (system: string) => {
+  const getSystemIcon = (system?: string) => {
+    if (!system) return '🔧';
     const systemIcons: Record<string, string> = {
       'brake': '🛑',
       'steering': '🎯',
@@ -295,34 +297,23 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
           )}
 
           {/* รูปภาพ */}
-          {((job.images && job.images.length > 0) || job.imageUrl) && (
+          {job.images && job.images.length > 0 && (
             <div className={styles['job-info-section']}>
               <h3>
                 <span className={styles['section-icon']}>📷</span>
                 รูปภาพ
               </h3>
               <div className={styles['image-gallery']}>
-                {job.images && job.images.length > 0 ? (
-                  job.images.map((image, index) => (
-                    <div key={index} className={styles['image-item']}>
-                      <img 
-                        src={image} 
-                        alt={`รูปภาพงาน ${index + 1}`} 
-                        className={styles['job-image']}
-                        onClick={() => window.open(image, '_blank')}
-                      />
-                    </div>
-                  ))
-                ) : job.imageUrl ? (
-                  <div className={styles['image-item']}>
+                {job.images.map((image, index) => (
+                  <div key={index} className={styles['image-item']}>
                     <img 
-                      src={job.imageUrl} 
-                      alt="รูปภาพงาน" 
+                      src={image} 
+                      alt={`รูปภาพงาน ${index + 1}`} 
                       className={styles['job-image']}
-                      onClick={() => window.open(job.imageUrl, '_blank')}
+                      onClick={() => window.open(image, '_blank')}
                     />
                   </div>
-                ) : null}
+                ))}
               </div>
             </div>
           )}

@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const serialHistory = await prisma.serialHistoryEntry.findMany({
       orderBy: {
-        createdAt: 'desc'
+        action_date: 'desc'
       }
     });
 
@@ -98,28 +98,14 @@ export async function POST(request: Request) {
 
     const serialHistoryEntry = await prisma.serialHistoryEntry.create({
       data: {
-        serial_number: serial_number.trim(),
-        vehicle_id: parseInt(vehicle_id),
-        vehicle_number: vehicle_number.trim(),
         action_type,
-        action_date: action_date.trim(),
-        actual_transfer_date: actual_transfer_date?.trim(),
+        action_date: action_date ? new Date(action_date) : new Date(),
+        actual_transfer_date: actual_transfer_date ? new Date(actual_transfer_date) : null,
         details: details.trim(),
-        performed_by: performed_by.trim(),
-        performed_by_id: parseInt(performed_by_id),
-        golf_course_id: parseInt(golf_course_id),
-        golf_course_name: golf_course_name.trim(),
         is_active: Boolean(is_active),
-        related_job_id: related_job_id ? parseInt(related_job_id) : null,
-        job_type: job_type,
-        system: system?.trim(),
-        parts_used: parts_used || [],
-        status: status,
-        battery_serial: battery_serial?.trim(),
-        previous_data: previous_data,
-        new_data: new_data,
-        change_type: change_type,
-        affected_fields: affected_fields || []
+        vehicle_id: vehicle_id.toString(),
+        performed_by_id: performed_by_id.toString(),
+        related_job_id: related_job_id ? related_job_id.toString() : null,
       }
     });
 

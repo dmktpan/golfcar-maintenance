@@ -70,7 +70,14 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         } else {
             // Add new user
             const newId = Math.max(...users.map(u => u.id), 0) + 1;
-            setUsers([...users, { id: newId, ...userData }]);
+            const golfCourseName = getGolfCourseName(userData.golf_course_id);
+            setUsers([...users, { 
+                id: newId, 
+                username: userData.code, // ใช้รหัสพนักงานเป็น username
+                golf_course_name: golfCourseName,
+                created_at: new Date().toISOString(),
+                ...userData 
+            }]);
         }
         
         // Reset form
@@ -116,7 +123,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         }
         
         return user.managed_golf_courses
-            .map(id => getGolfCourseName(id))
+            .map((id: number) => getGolfCourseName(id))
             .join(', ');
     };
 

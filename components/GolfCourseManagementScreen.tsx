@@ -105,7 +105,11 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleAddCourse = () => {
     if (newCourse.name && newCourse.location) {
       const newId = Math.max(...golfCourses.map(c => c.id), 0) + 1;
-      setGolfCourses([...golfCourses, { id: newId, ...newCourse }]);
+      setGolfCourses([...golfCourses, { 
+        id: newId, 
+        ...newCourse, 
+        created_at: new Date().toISOString() 
+      }]);
       setNewCourse({ name: '', location: '' });
       setShowAddCourseForm(false);
     }
@@ -156,8 +160,11 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         vehicle_number: newVehicle.vehicle_number,
         golf_course_id: newVehicle.golf_course_id,
         golf_course_name: golfCourse?.name ?? '',
+        brand: 'ไม่ระบุ',
         model: 'ไม่ระบุ',
-        status: 'active' as const
+        year: new Date().getFullYear(),
+        status: 'active' as const,
+        created_at: new Date().toISOString()
       };
       
       setVehicles([...vehicles, vehicleToAdd]);
@@ -362,8 +369,11 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         vehicle_number: data.vehicle_number,
         golf_course_id: data.golf_course_id,
         golf_course_name: golfCourse?.name ?? '',
+        brand: 'ไม่ระบุ',
         model: 'ไม่ระบุ',
-        status: 'active' as const
+        year: new Date().getFullYear(),
+        status: 'active' as const,
+        created_at: new Date().toISOString()
       };
     });
 
@@ -405,8 +415,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         ? { 
             ...vehicle, 
             golf_course_id: transferToCourse as number, 
-            golf_course_name: targetCourse.name,
-            transfer_date: transferDate // อัปเดตวันที่ย้าย
+            golf_course_name: targetCourse.name
           }
         : vehicle
     ));
@@ -774,14 +783,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                             value={editingVehicle.status || 'active'}
                             onChange={(e) => setEditingVehicle({
                               ...editingVehicle, 
-                              status: e.target.value as 'active' | 'inactive' | 'parked' | 'spare'
+                              status: e.target.value as 'active' | 'maintenance' | 'retired' | 'parked'
                             })}
                             className="status-select"
                           >
                             <option value="active">ใช้งาน</option>
-                            <option value="inactive">ไม่ใช้งาน</option>
+                            <option value="maintenance">ซ่อมบำรุง</option>
+                            <option value="retired">เกษียณ</option>
                             <option value="parked">ฝากจอด</option>
-                            <option value="spare">สแปร์</option>
                           </select>
                         ) : (
                           <span className={`status-badge ${vehicle.status || 'active'}`}>
@@ -800,24 +809,6 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                             <button onClick={() => setEditingVehicle(vehicle)} className="edit-button">แก้ไข</button>
                             <button onClick={() => handleDeleteVehicle(vehicle.id)} className="delete-button">ลบ</button>
                           </>
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <input
-                            type="date"
-                            value={editingVehicle.transfer_date || ''}
-                            onChange={(e) => setEditingVehicle({...editingVehicle, transfer_date: e.target.value})}
-                            className="date-input"
-                          />
-                        ) : (
-                          vehicle.transfer_date ? (
-                            <span className="transfer-date">
-                              {new Date(vehicle.transfer_date).toLocaleDateString('th-TH')}
-                            </span>
-                          ) : (
-                            <span className="no-transfer-date">-</span>
-                          )
                         )}
                       </td>
                     </tr>

@@ -354,7 +354,7 @@ const SupervisorPendingJobsScreen = ({ user, jobs, setJobs, setView, addPartsUsa
                                         </div>
 
                                         <div className={styles.jobDetails}>
-                                            {job.subTasks.length > 0 && (
+                                            {job.subTasks && job.subTasks.length > 0 && (
                                                 <div className={styles.jobDetailItem}>
                                                     <span className={styles.detailLabel}>งานย่อย:</span>
                                                     <div className={styles.detailValue}>

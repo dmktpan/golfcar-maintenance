@@ -122,17 +122,21 @@ async function migrateData() {
       await prisma.user.upsert({
         where: { code: user.code },
         update: {
+          username: user.username || user.code,
           name: user.name,
           role: user.role,
           golf_course_id: user.golf_course_id,
+          golf_course_name: user.golf_course_name || 'Unknown',
           managed_golf_courses: user.managed_golf_courses || [],
           updatedAt: user.updatedAt || new Date(),
         },
         create: {
           code: user.code,
+          username: user.username || user.code, // ใช้ code เป็น username หากไม่มี
           name: user.name,
           role: user.role,
           golf_course_id: user.golf_course_id,
+          golf_course_name: user.golf_course_name || 'Unknown', // ใส่ค่า default
           managed_golf_courses: user.managed_golf_courses || [],
           createdAt: user.createdAt || new Date(),
           updatedAt: user.updatedAt || new Date(),
@@ -202,16 +206,10 @@ async function migrateData() {
           userName: job.userName,
           system: job.system,
           subTasks: job.subTasks || [],
-          parts: job.parts || [],
-          partsNotes: job.partsNotes,
           remarks: job.remarks,
           bmCause: job.bmCause,
           battery_serial: job.battery_serial,
-          assigned_by: job.assigned_by,
-          assigned_by_name: job.assigned_by_name,
           assigned_to: job.assigned_to,
-          created_at: job.created_at,
-          updated_at: job.updated_at,
           createdAt: job.createdAt || new Date(),
           updatedAt: job.updatedAt || new Date(),
         }
@@ -243,30 +241,14 @@ async function migrateData() {
     for (const entry of mongoSerialHistory) {
       await prisma.serialHistoryEntry.create({
         data: {
-          serial_number: entry.serial_number,
-          vehicle_id: entry.vehicle_id,
-          vehicle_number: entry.vehicle_number,
           action_type: entry.action_type,
-          action_date: entry.action_date,
+          action_date: entry.action_date || new Date(),
           actual_transfer_date: entry.actual_transfer_date,
           details: entry.details,
-          performed_by: entry.performed_by,
-          performed_by_id: entry.performed_by_id,
-          golf_course_id: entry.golf_course_id,
-          golf_course_name: entry.golf_course_name,
           is_active: entry.is_active,
+          vehicle_id: entry.vehicle_id,
+          performed_by_id: entry.performed_by_id,
           related_job_id: entry.related_job_id,
-          job_type: entry.job_type,
-          system: entry.system,
-          parts_used: entry.parts_used || [],
-          status: entry.status,
-          battery_serial: entry.battery_serial,
-          previous_data: entry.previous_data,
-          new_data: entry.new_data,
-          change_type: entry.change_type,
-          affected_fields: entry.affected_fields || [],
-          createdAt: entry.createdAt || new Date(),
-          updatedAt: entry.updatedAt || new Date(),
         }
       })
     }
@@ -279,18 +261,9 @@ async function migrateData() {
       await prisma.partsUsageLog.create({
         data: {
           jobId: log.jobId,
-          partName: log.partName,
           partId: log.partId,
           quantity: log.quantity,
-          usedDate: log.usedDate,
-          userName: log.userName,
-          vehicleNumber: log.vehicleNumber,
-          serialNumber: log.serialNumber,
-          golfCourseName: log.golfCourseName,
-          jobType: log.jobType,
-          system: log.system,
           createdAt: log.createdAt || new Date(),
-          updatedAt: log.updatedAt || new Date(),
         }
       })
     }
