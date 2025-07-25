@@ -8,7 +8,7 @@ const ADMIN_USER = {
   name: 'administrator',
   role: 'admin' as const,
   password: '123456', // รหัสผ่านเริ่มต้น
-  managed_golf_courses: []
+  managed_golf_courses: [] as number[] // แก้ไขให้เป็น number array ที่ชัดเจน
 };
 
 // สนามกอล์ฟเริ่มต้น 1 สนาม สำหรับ admin
@@ -79,7 +79,12 @@ export async function POST() {
       try {
         const adminUser = await prisma.user.create({
           data: {
-            ...ADMIN_USER,
+            code: ADMIN_USER.code,
+            username: ADMIN_USER.username,
+            name: ADMIN_USER.name,
+            role: ADMIN_USER.role,
+            password: ADMIN_USER.password,
+            managed_golf_courses: [], // ส่งเป็น empty array ของ numbers
             golf_course_id: golfCourseId,
             golf_course_name: DEFAULT_GOLF_COURSE.name
           }
