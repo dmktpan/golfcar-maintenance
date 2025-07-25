@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, JobStatus, User, MOCK_PARTS, MOCK_VEHICLES } from '@/lib/data';
+import { Job, JobStatus, User, Vehicle, GolfCourse } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
 import styles from './JobCard.module.css';
@@ -9,16 +9,19 @@ import styles from './JobCard.module.css';
 interface JobCardProps {
   job: Job;
   user: User;
+  vehicles: Vehicle[];
+  golfCourses: GolfCourse[];
+  users: User[];
   onUpdateStatus: (jobId: number, status: JobStatus) => void;
   onFillJobForm?: (job: Job) => void;
   isHistory?: boolean;
 }
 
-const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }: JobCardProps) => {
+const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFillJobForm, isHistory = false }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
     
-    // ดึงข้อมูลรถจาก MOCK_VEHICLES
-    const vehicleInfo = MOCK_VEHICLES.find(v => v.id === job.vehicle_id);
+    // ดึงข้อมูลรถจาก vehicles prop แทน MOCK_VEHICLES
+    const vehicleInfo = vehicles.find(v => v.id === job.vehicle_id);
     
     // แปลงวันที่ให้อยู่ในรูปแบบที่อ่านง่าย
     const formatDate = (dateString: string) => {
@@ -169,6 +172,9 @@ const JobCard = ({ job, user, onUpdateStatus, onFillJobForm, isHistory = false }
             {showDetails && (
                 <JobDetailsModal 
                     job={job} 
+                    golfCourses={golfCourses}
+                    users={users}
+                    vehicles={vehicles}
                     onClose={() => setShowDetails(false)} 
                 />
             )}

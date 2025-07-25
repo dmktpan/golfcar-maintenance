@@ -1,24 +1,25 @@
 'use client';
 
 import React from 'react';
-import { Job, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_USERS, MOCK_VEHICLES, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
+import { Job, GolfCourse, User, Vehicle, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './JobDetailsModal.module.css';
 
 interface JobDetailsModalProps {
   job: Job;
+  golfCourses: GolfCourse[]; // เพิ่ม props
+  users: User[];
+  vehicles: Vehicle[];
   onClose: () => void;
 }
 
-const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
+const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDetailsModalProps) => {
   // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
   const getPartName = (part: { part_id: number; part_name?: string }) => {
-    // ใช้ part_name ที่บันทึกไว้เป็นหลัก
     if (part.part_name) {
       return part.part_name;
     }
     
-    // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
     for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
       const partInfo = system.find((p: any) => p.id === part.part_id);
       if (partInfo) {
@@ -26,27 +27,21 @@ const JobDetailsModal = ({ job, onClose }: JobDetailsModalProps) => {
       }
     }
     
-    // สุดท้ายค้นหาจาก MOCK_PARTS
-    const mockPart = MOCK_PARTS.find(p => p.id === part.part_id);
-    if (mockPart) {
-      return mockPart.name;
-    }
-    
-    return 'ไม่พบอะไหล่';
+    return `อะไหล่ ID: ${part.part_id}`;
   };
 
   const getGolfCourseName = (courseId: number) => {
-    const course = MOCK_GOLF_COURSES.find(c => c.id === courseId);
+    const course = golfCourses.find(c => c.id === courseId);
     return course ? course.name : 'ไม่ระบุ';
   };
 
   const getAssignedByName = (userId: number) => {
-    const user = MOCK_USERS.find(u => u.id === userId);
+    const user = users.find(u => u.id === userId);
     return user ? user.name : 'ไม่ระบุ';
   };
 
   const getVehicleInfo = (vehicleId: number) => {
-    return MOCK_VEHICLES.find(v => v.id === vehicleId);
+    return vehicles.find(v => v.id === vehicleId);
   };
 
   const vehicleInfo = getVehicleInfo(job.vehicle_id);

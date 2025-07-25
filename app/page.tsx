@@ -2,7 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, Part, GolfCourse, Vehicle, MOCK_USERS, MOCK_JOBS, MOCK_PARTS, MOCK_GOLF_COURSES, MOCK_VEHICLES, PartsUsageLog, MOCK_PARTS_USAGE_LOG, SerialHistoryEntry, MOCK_SERIAL_HISTORY, View } from '@/lib/data';
+import { User, Job, Part, GolfCourse, Vehicle, PartsUsageLog, SerialHistoryEntry, View, JobStatus } from '@/lib/data';
+import { golfCoursesApi, usersApi, vehiclesApi, partsApi, jobsApi, partsUsageLogsApi, serialHistoryApi, authApi } from '@/lib/api';
 import LoginScreen from '@/components/LoginScreen';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
@@ -27,101 +28,80 @@ export interface UserPermission {
 }
 
 export default function HomePage() {
-  // ใช้ localStorage สำหรับเก็บข้อมูลผู้ใช้ที่ล็อกอินล่าสุุด
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('currentUser');
-      return savedUser ? JSON.parse(savedUser) : null;
-    }
-    return null;
-  });
-  
+  // State สำหรับข้อมูลต่างๆ
+  const [user, setUser] = useState<User | null>(null);
   const [loginError, setLoginError] = useState('');
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลงาน
-  const [jobs, setJobs] = useState<Job[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedJobs = localStorage.getItem('jobs');
-      return savedJobs ? JSON.parse(savedJobs) : MOCK_JOBS;
-    }
-    return MOCK_JOBS;
-  });
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลอะไหล่
-  const [parts, setParts] = useState<Part[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedParts = localStorage.getItem('parts');
-      return savedParts ? JSON.parse(savedParts) : MOCK_PARTS;
-    }
-    return MOCK_PARTS;
-  });
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลสนามกอล์ฟ
-  const [golfCourses, setGolfCourses] = useState<GolfCourse[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedGolfCourses = localStorage.getItem('golfCourses');
-      return savedGolfCourses ? JSON.parse(savedGolfCourses) : MOCK_GOLF_COURSES;
-    }
-    return MOCK_GOLF_COURSES;
-  });
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลรถกอล์ฟ
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedVehicles = localStorage.getItem('vehicles');
-      return savedVehicles ? JSON.parse(savedVehicles) : MOCK_VEHICLES;
-    }
-    return MOCK_VEHICLES;
-  });
-  
-  const [view, setView] = useState<View>(() => {
-    if (typeof window !== 'undefined') {
-      const savedView = localStorage.getItem('currentView');
-      return (savedView as View) || 'dashboard';
-    }
-    return 'dashboard';
-  });
-  
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [parts, setParts] = useState<Part[]>([]);
+  const [golfCourses, setGolfCourses] = useState<GolfCourse[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
+  const [partsUsageLog, setPartsUsageLog] = useState<PartsUsageLog[]>([]);
+  const [serialHistory, setSerialHistory] = useState<SerialHistoryEntry[]>([]);
+  const [view, setView] = useState<View>('dashboard');
   const [showWelcome, setShowWelcome] = useState(false);
   const [selectedJobForForm, setSelectedJobForForm] = useState<Job | null>(null);
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลผู้ใช้ทั้งหมด
-  const [users, setUsers] = useState<User[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedUsers = localStorage.getItem('users');
-      return savedUsers ? JSON.parse(savedUsers) : MOCK_USERS;
-    }
-    return MOCK_USERS;
-  });
-  
-  // ใช้ localStorage สำหรับเก็บข้อมูลสิทธิ์ของผู้ใช้
-  const [userPermissions, setUserPermissions] = useState<UserPermission[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedPermissions = localStorage.getItem('userPermissions');
-      return savedPermissions ? JSON.parse(savedPermissions) : [];
-    }
-    return [];
-  });
+  const [loading, setLoading] = useState(true);
 
-  // เพิ่ม state สำหรับ Log การใช้อะไหล่
-  const [partsUsageLog, setPartsUsageLog] = useState<PartsUsageLog[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedLog = localStorage.getItem('partsUsageLog');
-      return savedLog ? JSON.parse(savedLog) : MOCK_PARTS_USAGE_LOG;
-    }
-    return MOCK_PARTS_USAGE_LOG;
-  });
+  // โหลดข้อมูลเริ่มต้นจาก API
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        
+        // โหลดข้อมูลพื้นฐานทั้งหมดพร้อมกัน
+        const [
+          golfCoursesResult,
+          usersResult,
+          vehiclesResult,
+          partsResult,
+          jobsResult,
+          partsUsageLogResult,
+          serialHistoryResult
+        ] = await Promise.all([
+          golfCoursesApi.getAll(),
+          usersApi.getAll(),
+          vehiclesApi.getAll(),
+          partsApi.getAll(),
+          jobsApi.getAll(),
+          partsUsageLogsApi.getAll(),
+          serialHistoryApi.getAll()
+        ]);
 
-  // เพิ่ม state สำหรับ Serial History
-  const [serialHistory, setSerialHistory] = useState<SerialHistoryEntry[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedSerialHistory = localStorage.getItem('serialHistory');
-      return savedSerialHistory ? JSON.parse(savedSerialHistory) : MOCK_SERIAL_HISTORY;
-    }
-    return MOCK_SERIAL_HISTORY;
-  });
+        // ตั้งค่าข้อมูลที่โหลดได้
+        if (golfCoursesResult.success) setGolfCourses(golfCoursesResult.data as GolfCourse[]);
+        if (usersResult.success) setUsers(usersResult.data as User[]);
+        if (vehiclesResult.success) setVehicles(vehiclesResult.data as Vehicle[]);
+        if (partsResult.success) setParts(partsResult.data as Part[]);
+        if (jobsResult.success) setJobs(jobsResult.data as Job[]);
+        if (partsUsageLogResult.success) setPartsUsageLog(partsUsageLogResult.data as PartsUsageLog[]);
+        if (serialHistoryResult.success) setSerialHistory(serialHistoryResult.data as SerialHistoryEntry[]);
 
-  // บันทึกข้อมูลลง localStorage เมื่ยนแปลง
+        // โหลดข้อมูลผู้ใช้ที่ล็อกอินจาก localStorage
+        if (typeof window !== 'undefined') {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          }
+          
+          const savedView = localStorage.getItem('currentView');
+          if (savedView) {
+            setView(savedView as View);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // บันทึกข้อมูลผู้ใช้และ view ลง localStorage
   useEffect(() => {
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -131,60 +111,31 @@ export default function HomePage() {
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('jobs', JSON.stringify(jobs));
-  }, [jobs]);
-
-  useEffect(() => {
-    localStorage.setItem('parts', JSON.stringify(parts));
-  }, [parts]);
-
-  useEffect(() => {
-    localStorage.setItem('users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem('userPermissions', JSON.stringify(userPermissions));
-  }, [userPermissions]);
-
-  useEffect(() => {
-    localStorage.setItem('golfCourses', JSON.stringify(golfCourses));
-  }, [golfCourses]);
-
-  useEffect(() => {
-    localStorage.setItem('vehicles', JSON.stringify(vehicles));
-  }, [vehicles]);
-
-  useEffect(() => {
     localStorage.setItem('currentView', view);
   }, [view]);
 
-  // เพิ่ม useEffect สำหรับบันทึก Parts Usage Log
-  useEffect(() => {
-    localStorage.setItem('partsUsageLog', JSON.stringify(partsUsageLog));
-  }, [partsUsageLog]);
-
-  // เพิ่ม useEffect สำหรับบันทึก Serial History
-  useEffect(() => {
-    localStorage.setItem('serialHistory', JSON.stringify(serialHistory));
-  }, [serialHistory]);
-
   // ฟังก์ชันสำหรับบันทึก Serial History Entry
-  const addSerialHistoryEntry = (entry: Omit<SerialHistoryEntry, 'id'>): SerialHistoryEntry => {
-    const newEntry: SerialHistoryEntry = {
-      ...entry,
-      id: Date.now() // ใช้ timestamp เป็น ID
-    };
-    setSerialHistory(prev => [newEntry, ...prev]);
-    return newEntry;
+  const addSerialHistoryEntry = async (entry: Omit<SerialHistoryEntry, 'id'>): Promise<SerialHistoryEntry | null> => {
+    try {
+      const result = await serialHistoryApi.create(entry);
+      if (result.success) {
+        const newEntry = result.data as SerialHistoryEntry;
+        setSerialHistory(prev => [newEntry, ...prev]);
+        return newEntry;
+      }
+    } catch (error) {
+      console.error('Error adding serial history entry:', error);
+    }
+    return null;
   };
 
   // ฟังก์ชันสำหรับบันทึก Serial History เมื่อสร้างงาน
-  const logJobCreation = (job: Job) => {
+  const logJobCreation = async (job: Job) => {
     const vehicle = vehicles.find(v => v.id === job.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
     
     if (vehicle) {
-      addSerialHistoryEntry({
+      await addSerialHistoryEntry({
         serial_number: vehicle.serial_number,
         vehicle_id: job.vehicle_id,
         vehicle_number: job.vehicle_number,
@@ -199,13 +150,13 @@ export default function HomePage() {
         status: 'pending',
         job_type: job.type,
         system: job.system,
-        battery_serial: job.battery_serial // เก็บซีเรียลแบตที่พนักงานกรอก
+        battery_serial: job.battery_serial
       });
     }
   };
 
   // ฟังก์ชันสำหรับบันทึก Serial History เมื่ออัปเดตงาน
-  const logJobUpdate = (updatedJob: Job, previousJob?: Job) => {
+  const logJobUpdate = async (updatedJob: Job, previousJob?: Job) => {
     const vehicle = vehicles.find(v => v.id === updatedJob.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === updatedJob.golf_course_id);
     
@@ -214,7 +165,6 @@ export default function HomePage() {
       let details = '';
       let status: SerialHistoryEntry['status'] = 'pending';
 
-      // กำหนด action type และ details ตามการเปลี่ยนแปลง
       if (previousJob?.status !== updatedJob.status) {
         switch (updatedJob.status) {
           case 'completed':
@@ -230,7 +180,7 @@ export default function HomePage() {
           case 'rejected':
             actionType = 'maintenance';
             details = `งาน${updatedJob.type}ถูกปฏิเสธ - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-            status = 'pending'; // ใช้ pending แทน rejected เพราะ SerialHistoryEntry ไม่มี rejected
+            status = 'pending';
             break;
           default:
             actionType = 'maintenance';
@@ -243,7 +193,7 @@ export default function HomePage() {
                  updatedJob.status === 'in_progress' ? 'in_progress' : 'pending';
       }
 
-      addSerialHistoryEntry({
+      await addSerialHistoryEntry({
         serial_number: vehicle.serial_number,
         vehicle_id: updatedJob.vehicle_id,
         vehicle_number: updatedJob.vehicle_number,
@@ -258,7 +208,7 @@ export default function HomePage() {
         status: status,
         job_type: updatedJob.type,
         system: updatedJob.system,
-        battery_serial: updatedJob.battery_serial // เก็บซีเรียลแบตที่พนักงานกรอก
+        battery_serial: updatedJob.battery_serial
       });
     }
   };
@@ -299,163 +249,163 @@ export default function HomePage() {
   const handleLogout = () => {
     setUser(null);
     setShowWelcome(false);
-    // ไม่ต้องลบข้อมูลอื่นๆ ออกจาก localStorage เพื่อให้ข้อมูลยังคงอยู่เมื่อล็อกอินกลับเข้ามา
+    localStorage.removeItem('currentUser');
   };
   
-  const handleCreateJob = (newJob: Job) => {
-    setJobs(prev => [newJob, ...prev]);
-    
-    // ไม่เพิ่ม Log การใช้อะไหล่เมื่อสร้างงานใหม่ เพราะยังไม่ได้อนุมัติ
-    // addPartsUsageLog(newJob.id, newJob.partsNotes);
-    
-    // เพิ่ม Serial History Entry สำหรับการสร้างงาน
-    logJobCreation(newJob);
-    
-    // Deduct stock
-    if (newJob.parts && newJob.parts.length > 0) {
-        newJob.parts.forEach(p => {
-            setParts(currentParts => currentParts.map(part => {
-                if (part.id === p.part_id) {
-                    // ใช้ stock_quantity ถ้า stock_qty ไม่มี
-                    const currentStock = part.stock_qty !== undefined ? part.stock_qty : part.stock_quantity;
-                    // ตรวจสอบว่า currentStock มีค่าหรือไม่
-                    if (currentStock !== undefined) {
-                        return {...part, stock_qty: currentStock - p.quantity_used};
-                    }
-                    return part; // ไม่เปลี่ยนแปลงถ้า currentStock ไม่มีค่า
+  const handleCreateJob = async (newJob: Job) => {
+    try {
+      // สร้างงานใหม่ผ่าน API
+      const result = await jobsApi.create(newJob);
+      if (result.success) {
+        const createdJob = result.data as Job;
+        setJobs(prev => [createdJob, ...prev]);
+        
+        // บันทึก Serial History
+        await logJobCreation(createdJob);
+        
+        // อัปเดต stock ของอะไหล่ถ้ามี
+        if (createdJob.parts && createdJob.parts.length > 0) {
+          for (const part of createdJob.parts) {
+            try {
+              const currentPart = parts.find(p => p.id === part.part_id);
+              if (currentPart) {
+                const currentStock = currentPart.stock_qty !== undefined ? currentPart.stock_qty : currentPart.stock_quantity;
+                if (currentStock !== undefined) {
+                  const updatedPart = { ...currentPart, stock_qty: currentStock - part.quantity_used };
+                  await partsApi.update(part.part_id, updatedPart);
+                  setParts(prev => prev.map(p => p.id === part.part_id ? updatedPart : p));
                 }
-                return part;
-            }))
-        })
-    }
+              }
+            } catch (error) {
+              console.error('Error updating part stock:', error);
+            }
+          }
+        }
 
-    const targetView = user?.role === 'staff' ? 'dashboard' : 'admin_dashboard';
-    setView(targetView);
-  }
+        const targetView = user?.role === 'staff' ? 'dashboard' : 'admin_dashboard';
+        setView(targetView);
+      }
+    } catch (error) {
+      console.error('Error creating job:', error);
+    }
+  };
   
   const handleSetView = (newView: View) => {
-      // Any logic before changing view can go here
-      setView(newView);
-  }
+    setView(newView);
+  };
 
-  // ฟังก์ชันสำหรับเปิดฟอร์มงานที่ได้รับมอบหมาย
   const handleFillJobForm = (job: Job) => {
     setSelectedJobForForm(job);
     setView('assigned_job_form');
   };
 
-  // ฟังก์ชันสำหรับอัปเดตงาน
-  const handleJobUpdate = (updatedJob: Job) => {
-    // หา job เดิมเพื่อเปรียบเทียบ
-    const previousJob = jobs.find(job => job.id === updatedJob.id);
-    
-    // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
-    if (updatedJob.status === 'approved') {
-      addPartsUsageLog(updatedJob.id, updatedJob.partsNotes);
+  const handleJobUpdate = async (updatedJob: Job) => {
+    try {
+      const previousJob = jobs.find(job => job.id === updatedJob.id);
+      
+      // อัปเดตงานผ่าน API
+      const result = await jobsApi.update(updatedJob.id, updatedJob);
+      if (result.success) {
+        const updated = result.data as Job;
+        
+        // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
+        if (updated.status === 'approved') {
+          await addPartsUsageLog(updated.id, updated.partsNotes, updated);
+        }
+        
+        // บันทึก Serial History
+        await logJobUpdate(updated, previousJob);
+        
+        setJobs(prev => prev.map(job => job.id === updated.id ? updated : job));
+        setSelectedJobForForm(null);
+      }
+    } catch (error) {
+      console.error('Error updating job:', error);
     }
-    
-    // เพิ่ม Serial History Entry สำหรับการอัปเดตงาน
-    logJobUpdate(updatedJob, previousJob);
-    
-    setJobs(prev => prev.map(job => job.id === updatedJob.id ? updatedJob : job));
-    setSelectedJobForForm(null);
   };
 
-  // ฟังก์ชันสำหรับเพิ่ม Log การใช้อะไหล่
-  const addPartsUsageLog = (jobId: number, partsNotes?: string, jobData?: Job) => {
-    console.log('🔧 addPartsUsageLog called with:', { jobId, partsNotes, jobData });
-    
-    // ใช้ jobData ที่ส่งมาหรือค้นหาจาก jobs state
-    const job = jobData || jobs.find(j => j.id === jobId);
-    if (!job) {
-      console.log('❌ Job not found for ID:', jobId);
-      return;
+  const addPartsUsageLog = async (jobId: number, partsNotes?: string, jobData?: Job) => {
+    try {
+      const job = jobData || jobs.find(j => j.id === jobId);
+      if (!job || job.status !== 'approved') {
+        return;
+      }
+
+      const vehicle = vehicles.find(v => v.id === job.vehicle_id);
+      const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
+
+      if (job.parts && job.parts.length > 0) {
+        for (const [index, part] of Array.from(job.parts.entries())) {
+          const logData = {
+            jobId: jobId,
+            partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
+            partId: `PART-${part.part_id}`,
+            quantityUsed: part.quantity_used,
+            vehicleNumber: job.vehicle_number,
+            vehicleSerial: vehicle?.serial_number || 'ไม่ระบุ',
+            golfCourseName: golfCourse?.name || 'ไม่ระบุ',
+            usedBy: job.userName,
+            usedDate: new Date().toISOString().split('T')[0],
+            notes: partsNotes || job.remarks || 'ไม่มีหมายเหตุ',
+            jobType: job.type,
+            system: job.system || 'ไม่ระบุ'
+          };
+
+          const result = await partsUsageLogsApi.create(logData);
+          if (result.success) {
+            setPartsUsageLog(prev => [result.data as PartsUsageLog, ...prev]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error adding parts usage log:', error);
     }
-  
-    console.log('📋 Job found:', job);
-    console.log('📊 Job status:', job.status);
-  
-    // ตรวจสอบว่างานได้รับการอนุมัติแล้วหรือไม่
-    if (job.status !== 'approved') {
-      console.log('⚠️ Job not approved, status:', job.status);
-      return;
-    }
-  
-    const vehicle = vehicles.find(v => v.id === job.vehicle_id);
-    const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
-  
-    console.log('🚗 Vehicle found:', vehicle);
-    console.log('🏌️ Golf course found:', golfCourse);
-    console.log('🔩 Job parts:', job.parts);
-  
-    // บันทึกข้อมูลอะไหล่จาก job.parts (อะไหล่ที่เลือกจริงๆ)
-    if (job.parts && job.parts.length > 0) {
-      console.log('✅ Processing job parts, count:', job.parts.length);
-      job.parts.forEach((part, index) => {
-        const newLog: PartsUsageLog = {
-          id: Date.now() + index, // ใช้ timestamp + index เป็น ID เพื่อไม่ให้ซ้ำ
-          jobId: jobId,
-          partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
-          partId: `PART-${part.part_id}`,
-          quantity: part.quantity_used,
-          usedDate: new Date().toISOString().split('T')[0],
-          userName: job.userName,
-          vehicleNumber: job.vehicle_number,
-          serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
-          golfCourseName: golfCourse?.name || 'ไม่ระบุ',
-          jobType: job.type,
-          system: job.system || 'ไม่ระบุ'
-        };
-  
-        console.log('📝 Creating new log:', newLog);
-        setPartsUsageLog(prev => {
-          const updated = [newLog, ...prev];
-          console.log('📊 Updated partsUsageLog, total count:', updated.length);
-          return updated;
-        });
-      });
-    } else {
-      console.log('⚠️ No parts found in job');
-    }
-  
-    // บันทึกข้อมูลจาก partsNotes (ถ้ามี) สำหรับข้อมูลเพิ่มเติม
-    if (partsNotes && partsNotes.trim()) {
-      const newLog: PartsUsageLog = {
-        id: Date.now() + 1000, // เพิ่ม offset เพื่อไม่ให้ซ้ำกับ parts
-        jobId: jobId,
-        partName: partsNotes,
-        partId: `NOTES-${Date.now()}`,
-        quantity: 1,
-        usedDate: new Date().toISOString().split('T')[0],
-        userName: job.userName,
-        vehicleNumber: job.vehicle_number,
-        serialNumber: vehicle?.serial_number || 'ไม่ระบุ',
-        golfCourseName: golfCourse?.name || 'ไม่ระบุ',
-        jobType: job.type,
-        system: job.system || 'ไม่ระบุ'
-      };
-  
-      setPartsUsageLog(prev => [newLog, ...prev]);
+  };
+
+  // ฟังก์ชันสำหรับอัปเดตสถานะงาน
+  const onUpdateStatus = (jobId: number, status: JobStatus) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (job) {
+      const updatedJob = { ...job, status };
+      handleJobUpdate(updatedJob);
     }
   };
 
   // ฟังก์ชันสำหรับจัดการสิทธิ์ผู้ใช้
+  const getUserPermissions = (userId: number): string[] => {
+    const userPermission = userPermissions.find(up => up.userId === userId);
+    return userPermission ? userPermission.permissions : [];
+  };
+
   const updateUserPermissions = (userId: number, permissions: string[]) => {
     setUserPermissions(prev => {
-      const existing = prev.find(p => p.userId === userId);
-      if (existing) {
-        return prev.map(p => p.userId === userId ? { ...p, permissions } : p);
+      const existingIndex = prev.findIndex(up => up.userId === userId);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = { userId, permissions };
+        return updated;
       } else {
         return [...prev, { userId, permissions }];
       }
     });
   };
 
-  const getUserPermissions = (userId: number): string[] => {
-    const userPerm = userPermissions.find(p => p.userId === userId);
-    return userPerm ? userPerm.permissions : [];
-  };
+  // แสดง loading screen ขณะโหลดข้อมูล
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
 
+  // แสดง login screen ถ้ายังไม่ได้ล็อกอิน
   if (!user) {
     return <LoginScreen onLogin={handleLogin} error={loginError} />;
   }
@@ -474,6 +424,9 @@ export default function HomePage() {
             setView={handleSetView}
             onFillJobForm={handleFillJobForm}
             addPartsUsageLog={addPartsUsageLog}
+            vehicles={vehicles}
+            golfCourses={golfCourses}
+            users={users}
           />
         )}
         {view === 'create_job' && (
@@ -572,15 +525,21 @@ export default function HomePage() {
         {view === 'view_assigned_jobs' && (
           <ViewAssignedJobsScreen 
             currentUser={user}
+            jobs={jobs}
+            golfCourses={golfCourses}
+            users={users}
+            vehicles={vehicles}
+            onUpdateStatus={onUpdateStatus}
           />
         )}
         {view === 'supervisor_pending_jobs' && (
           <SupervisorPendingJobsScreen 
-            user={user}
+            user={user} 
             jobs={jobs}
-            setJobs={setJobs}
-            setView={handleSetView}
-            addPartsUsageLog={addPartsUsageLog}
+            golfCourses={golfCourses}
+            users={users}
+            vehicles={vehicles}
+            onUpdateStatus={onUpdateStatus}
           />
         )}
       </main>

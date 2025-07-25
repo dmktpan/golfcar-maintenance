@@ -2,20 +2,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Job, JobStatus, User, View } from '@/lib/data';
+import { Job, JobStatus, User, View, Vehicle, GolfCourse } from '@/lib/data';
 import JobCard from './JobCard';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {
     user: User;
     jobs: Job[];
+    vehicles: Vehicle[];
+    golfCourses: GolfCourse[];
+    users: User[];
     setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
     setView: (view: View) => void;
     onFillJobForm?: (job: Job) => void;
     addPartsUsageLog?: (jobId: number, partsNotes?: string) => void;
 }
 
-const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm, addPartsUsageLog }: DashboardProps) => {
+const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView, onFillJobForm, addPartsUsageLog }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
     
@@ -208,7 +211,10 @@ const Dashboard = ({ user, jobs, setJobs, setView, onFillJobForm, addPartsUsageL
                         <JobCard 
                             key={job.id} 
                             job={job} 
-                            user={user} 
+                            user={user}
+                            vehicles={vehicles}
+                            golfCourses={golfCourses}
+                            users={users}
                             onUpdateStatus={onUpdateStatus}
                             onFillJobForm={onFillJobForm}
                             isHistory={activeTab === 'history'}

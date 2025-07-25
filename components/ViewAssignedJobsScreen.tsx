@@ -1,120 +1,149 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Job, JobStatus, GolfCourse, User, MOCK_GOLF_COURSES, MOCK_USERS, MOCK_JOBS } from '@/lib/data';
+import { Job, JobStatus, GolfCourse, User, Vehicle } from '@/lib/data';
 import JobCard from './JobCard';
 
 interface ViewAssignedJobsScreenProps {
   currentUser: User;
+  jobs: Job[]; // เพิ่ม props
+  golfCourses: GolfCourse[];
+  users: User[];
+  vehicles: Vehicle[];
+  onUpdateStatus: (jobId: number, status: JobStatus) => void;
+  onFillJobForm?: (job: Job) => void;
 }
 
-function ViewAssignedJobsScreen({ currentUser }: ViewAssignedJobsScreenProps) {
+function ViewAssignedJobsScreen({ 
+  currentUser, 
+  jobs, 
+  golfCourses, 
+  users, 
+  vehicles,
+  onUpdateStatus,
+  onFillJobForm 
+}: ViewAssignedJobsScreenProps) {
     const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-    const [jobs, setJobs] = useState<Job[]>([]);
+    const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
 
     // Filter jobs based on selected filters
     useEffect(() => {
-        let filteredJobs = MOCK_JOBS.filter(job => 
+        let filtered = jobs.filter(job => 
             job.status === 'assigned' || 
             job.status === 'in_progress' || 
             job.status === 'completed'
         );
-        
-        if (selectedCourseId) {
-            filteredJobs = filteredJobs.filter(job => job.golf_course_id === selectedCourseId);
-        }
-        
-        if (selectedEmployeeId) {
-            filteredJobs = filteredJobs.filter(job => job.assigned_to === selectedEmployeeId);
-        }
-        
-        setJobs(filteredJobs);
-    }, [selectedCourseId, selectedEmployeeId]);
 
-    const handleUpdateStatus = (jobId: number, status: JobStatus) => {
-        setJobs(prevJobs => 
-            prevJobs.map(job => 
-                job.id === jobId ? { ...job, status } : job
-            )
-        );
+        if (selectedCourseId) {
+            filtered = filtered.filter(job => job.golf_course_id === selectedCourseId);
+        }
+
+        if (selectedEmployeeId) {
+            filtered = filtered.filter(job => job.assigned_to === selectedEmployeeId);
+        }
+
+        setFilteredJobs(filtered);
+    }, [jobs, selectedCourseId, selectedEmployeeId]);
+
+    // ฟังก์ชันหาข้อมูลรถ
+    const getVehicleInfo = (vehicleId: number) => {
+        return vehicles.find(v => v.id === vehicleId);
     };
 
-    // Get employees (staff only)
-    const employees = MOCK_USERS.filter(user => user.role === 'staff');
+    // ฟังก์ชันหาชื่อสนาม
+    const getGolfCourseName = (golfCourseId: number) => {
+        return golfCourses.find(gc => gc.id === golfCourseId)?.name || 'ไม่ระบุ';
+    };
 
     return (
-        <div className="container">
-            <div className="page-header">
-                <h1>ดูงานที่ถูกมอบหมาย</h1>
-                <p>จัดการและติดตามงานที่ถูกมอบหมายให้พนักงาน</p>
+        <div style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>งานที่ได้รับมอบหมาย</h2>
             </div>
-            
-            <div className="card">
-                <div className="card-header">
-                    <h2>ตัวกรองข้อมูล</h2>
+
+            {/* Filter Controls */}
+            <div style={{ 
+                display: 'flex', 
+                gap: '15px', 
+                marginBottom: '20px',
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px'
+            }}>
+                <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                        กรองตามสนาม:
+                    </label>
+                    <select 
+                        value={selectedCourseId || ''} 
+                        onChange={(e) => setSelectedCourseId(e.target.value ? parseInt(e.target.value) : null)}
+                        style={{ 
+                            padding: '8px 12px', 
+                            borderRadius: '4px', 
+                            border: '1px solid #ddd',
+                            minWidth: '150px'
+                        }}
+                    >
+                        <option value="">ทุกสนาม</option>
+                        {golfCourses.map(course => (
+                            <option key={course.id} value={course.id}>
+                                {course.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-                <div className="card-body">
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label htmlFor="golf-course">สนามกอล์ฟ:</label>
-                            <select 
-                                id="golf-course"
-                                value={selectedCourseId || ''}
-                                onChange={(e) => setSelectedCourseId(e.target.value ? Number(e.target.value) : null)}
-                                className="form-control"
-                            >
-                                <option value="">ทุกสนาม</option>
-                                {MOCK_GOLF_COURSES.map(course => (
-                                    <option key={course.id} value={course.id}>
-                                        {course.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        
-                        <div className="form-group">
-                            <label htmlFor="employee">พนักงาน:</label>
-                            <select 
-                                id="employee"
-                                value={selectedEmployeeId || ''}
-                                onChange={(e) => setSelectedEmployeeId(e.target.value ? Number(e.target.value) : null)}
-                                className="form-control"
-                            >
-                                <option value="">ทุกคน</option>
-                                {employees.map(employee => (
-                                    <option key={employee.id} value={employee.id}>
-                                        {employee.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+
+                <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                        กรองตามพนักงาน:
+                    </label>
+                    <select 
+                        value={selectedEmployeeId || ''} 
+                        onChange={(e) => setSelectedEmployeeId(e.target.value ? parseInt(e.target.value) : null)}
+                        style={{ 
+                            padding: '8px 12px', 
+                            borderRadius: '4px', 
+                            border: '1px solid #ddd',
+                            minWidth: '150px'
+                        }}
+                    >
+                        <option value="">ทุกคน</option>
+                        {users.filter(user => user.role === 'staff').map(user => (
+                            <option key={user.id} value={user.id}>
+                                {user.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
-            <div className="card">
-                <div className="card-header">
-                    <h2>รายการงานที่ถูกมอบหมาย ({jobs.length} งาน)</h2>
-                </div>
-                <div className="card-body">
-                    {jobs.length === 0 ? (
-                        <div className="empty-state">
-                            <p>ไม่พบงานที่ถูกมอบหมายตามเงื่อนไขที่เลือก</p>
-                        </div>
-                    ) : (
-                        <div className="job-list">
-                            {jobs.map(job => (
-                                <JobCard
-                                    key={job.id}
-                                    job={job}
-                                    user={currentUser}
-                                    onUpdateStatus={handleUpdateStatus}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
+            {/* Jobs List */}
+            <div style={{ display: 'grid', gap: '15px' }}>
+                {filteredJobs.length === 0 ? (
+                    <div style={{ 
+                        textAlign: 'center', 
+                        padding: '40px', 
+                        color: '#666',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px'
+                    }}>
+                        ไม่มีงานที่ได้รับมอบหมาย
+                    </div>
+                ) : (
+                    filteredJobs.map(job => (
+                        <JobCard 
+                            key={job.id} 
+                            job={job} 
+                            user={currentUser}
+                            golfCourses={golfCourses}
+                            users={users}
+                            vehicles={vehicles}
+                            onUpdateStatus={onUpdateStatus}
+                            onFillJobForm={onFillJobForm}
+                        />
+                    ))
+                )}
             </div>
         </div>
     );

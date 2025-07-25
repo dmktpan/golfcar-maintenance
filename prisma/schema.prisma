@@ -79,6 +79,8 @@ model Job {
   notes              String?
   bmCause            BMCause?
   battery_serial     String?
+  partsNotes         String?
+  parts              JobPart[]
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -99,7 +101,6 @@ model Job {
   assignee           User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
   assigned_to        String?   @db.ObjectId
   
-  parts              PartsUsageLog[]
   historyLog         SerialHistoryEntry?
 }
 
@@ -118,20 +119,35 @@ model Part {
   // Relations
   golfCourse     GolfCourse? @relation(fields: [golf_course_id], references: [id])
   golf_course_id String?     @db.ObjectId
-  usageLogs      PartsUsageLog[]
+}
+
+model JobPart {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  part_id        Int
+  part_name      String
+  quantity_used  Int
+  
+  // Relations
+  job            Job    @relation(fields: [jobId], references: [id])
+  jobId          String @db.ObjectId
 }
 
 model PartsUsageLog {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  quantity       Int
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  // Relations
-  job            Job      @relation(fields: [jobId], references: [id])
-  jobId          String   @db.ObjectId
-
-  part           Part     @relation(fields: [partId], references: [id])
-  partId         String   @db.ObjectId
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId            Int
+  partName         String
+  partId           String
+  quantityUsed     Int
+  vehicleNumber    String
+  vehicleSerial    String
+  golfCourseName   String
+  usedBy           String
+  usedDate         String
+  notes            String
+  jobType          String
+  system           String
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 }
 
 model SerialHistoryEntry {
