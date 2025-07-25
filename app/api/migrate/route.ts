@@ -60,7 +60,7 @@ export async function POST() {
     await mongoose.connect(process.env.MONGODB_URI as string)
     console.log('Connected to MongoDB via Mongoose')
 
-    let migratedCounts = {
+    const migratedCounts = {
       users: 0,
       vehicles: 0,
       jobs: 0

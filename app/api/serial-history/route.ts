@@ -49,14 +49,8 @@ export async function POST(request: Request) {
       is_active, 
       related_job_id, 
       job_type, 
-      system, 
-      parts_used, 
       status, 
-      battery_serial, 
-      previous_data, 
-      new_data, 
-      change_type, 
-      affected_fields 
+      change_type
     } = body;
 
     // Validation

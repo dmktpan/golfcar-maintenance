@@ -44,16 +44,10 @@ export async function POST(request: Request) {
       userName, 
       system, 
       subTasks, 
-      parts, 
-      partsNotes, 
       remarks, 
       bmCause, 
       battery_serial, 
-      assigned_by, 
-      assigned_by_name, 
-      assigned_to, 
-      created_at, 
-      updated_at 
+      assigned_to
     } = body;
 
     // Validation

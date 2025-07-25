@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import ImageUpload from '@/components/ImageUpload';
 import styles from './page.module.css';
 
@@ -143,10 +144,13 @@ const AddMaintenancePage: React.FC = () => {
               <div className={styles.imageGrid}>
                 {images.map((imagePath, index) => (
                   <div key={index} className={styles.imageItem}>
-                    <img
+                    <Image
                       src={imagePath}
                       alt={`Uploaded ${index + 1}`}
                       className={styles.uploadedImage}
+                      width={150}
+                      height={150}
+                      style={{ objectFit: 'cover' }}
                     />
                     <button
                       type="button"

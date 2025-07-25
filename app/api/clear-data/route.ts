@@ -6,7 +6,7 @@ export async function POST() {
     console.log('🗑️ Starting data cleanup...')
     
     // ลบข้อมูลทั้งหมดแบบทีละ collection (เพื่อหลีกเลี่ยง deleteMany ที่ต้องการ replica set)
-    let deletedCounts = {
+    const deletedCounts = {
       jobs: 0,
       partsUsageLogs: 0,
       parts: 0,
@@ -24,7 +24,7 @@ export async function POST() {
         deletedCounts.jobs++
       }
       console.log(`✅ Deleted ${deletedCounts.jobs} jobs`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No jobs to delete') 
     }
 
@@ -36,7 +36,7 @@ export async function POST() {
         deletedCounts.partsUsageLogs++
       }
       console.log(`✅ Deleted ${deletedCounts.partsUsageLogs} parts usage logs`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No parts usage logs to delete') 
     }
 
@@ -48,7 +48,7 @@ export async function POST() {
         deletedCounts.parts++
       }
       console.log(`✅ Deleted ${deletedCounts.parts} parts`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No parts to delete') 
     }
 
@@ -60,7 +60,7 @@ export async function POST() {
         deletedCounts.serialHistories++
       }
       console.log(`✅ Deleted ${deletedCounts.serialHistories} serial histories`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No histories to delete') 
     }
 
@@ -72,7 +72,7 @@ export async function POST() {
         deletedCounts.vehicles++
       }
       console.log(`✅ Deleted ${deletedCounts.vehicles} vehicles`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No vehicles to delete') 
     }
 
@@ -84,7 +84,7 @@ export async function POST() {
         deletedCounts.golfCourses++
       }
       console.log(`✅ Deleted ${deletedCounts.golfCourses} golf courses`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No golf courses to delete') 
     }
 
@@ -96,7 +96,7 @@ export async function POST() {
         deletedCounts.users++
       }
       console.log(`✅ Deleted ${deletedCounts.users} users`)
-    } catch (e) { 
+    } catch {
       console.log('ℹ️ No users to delete') 
     }
 

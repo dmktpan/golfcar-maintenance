@@ -1,9 +1,8 @@
 // app/api/maintenance/route.ts
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { validateMaintenanceInput } from '@/lib/validation/maintenance';
 import { MaintenanceService } from '@/lib/services/maintenanceService';
-import type { MaintenanceRequest, MaintenanceResponse, ApiResponse } from '@/types/maintenance';
+import type { MaintenanceResponse, ApiResponse } from '@/types/maintenance';
 
 // --- ฟังก์ชัน POST (สำหรับสร้างข้อมูล Maintenance ใหม่) ---
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<MaintenanceResponse>>> {
