@@ -43,8 +43,8 @@ export async function POST(request: Request) {
       });
 
       if (user) {
-        // ตรวจสอบรหัสผ่าน (ในตัวอย่างนี้ใช้ code หรือ 'admin000')
-        if (password === user.code || password === 'admin000') {
+        // ตรวจสอบรหัสผ่านจากฐานข้อมูล
+        if (password === user.password || password === user.code || password === 'admin000') {
           return NextResponse.json({
             success: true,
             message: 'Login successful',

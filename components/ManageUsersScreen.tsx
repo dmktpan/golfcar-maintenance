@@ -44,7 +44,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         }));
     };
 
-    const handleAddUser = (e: React.FormEvent) => {
+    const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         
         // ตั้งค่า managed_golf_courses ตามบทบาท
@@ -60,24 +60,51 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
             managed_golf_courses: finalManagedCourses.length > 0 ? finalManagedCourses : undefined
         };
 
-        if (editMode && editUserId !== null) {
-            // Update existing user
-            setUsers(users.map(user => 
-                user.id === editUserId ? { ...user, ...userData } : user
-            ));
-            setEditMode(false);
-            setEditUserId(null);
-        } else {
-            // Add new user
-            const newId = Math.max(...users.map(u => u.id), 0) + 1;
-            const golfCourseName = getGolfCourseName(userData.golf_course_id);
-            setUsers([...users, { 
-                id: newId, 
-                username: userData.code, // ใช้รหัสพนักงานเป็น username
-                golf_course_name: golfCourseName,
-                created_at: new Date().toISOString(),
-                ...userData 
-            }]);
+        try {
+            if (editMode && editUserId !== null) {
+                // Update existing user
+                const response = await fetch(`/api/users/${editUserId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    setUsers(users.map(user => 
+                        user.id === editUserId ? result.data : user
+                    ));
+                    alert('อัปเดตข้อมูลผู้ใช้สำเร็จ');
+                } else {
+                    const error = await response.json();
+                    alert(`เกิดข้อผิดพลาด: ${error.message}`);
+                }
+                setEditMode(false);
+                setEditUserId(null);
+            } else {
+                // Add new user
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    setUsers([...users, result.data]);
+                    alert('เพิ่มผู้ใช้สำเร็จ');
+                } else {
+                    const error = await response.json();
+                    alert(`เกิดข้อผิดพลาด: ${error.message}`);
+                }
+            }
+        } catch (error) {
+            console.error('Error saving user:', error);
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
         }
         
         // Reset form
@@ -102,9 +129,24 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         setEditUserId(user.id);
     };
 
-    const handleDeleteUser = (userId: number) => {
+    const handleDeleteUser = async (userId: number) => {
         if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
-            setUsers(users.filter(user => user.id !== userId));
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    setUsers(users.filter(user => user.id !== userId));
+                    alert('ลบผู้ใช้สำเร็จ');
+                } else {
+                    const error = await response.json();
+                    alert(`เกิดข้อผิดพลาด: ${error.message}`);
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+            }
         }
     };
 

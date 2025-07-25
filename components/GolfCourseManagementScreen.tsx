@@ -102,37 +102,90 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   // ใช้ข้อมูลจาก props ที่ส่งมาจาก lib/data.ts แทน mock data
 
   // Golf Course Management Functions
-  const handleAddCourse = () => {
+  const handleAddCourse = async () => {
     if (newCourse.name && newCourse.location) {
-      const newId = Math.max(...golfCourses.map(c => c.id), 0) + 1;
-      setGolfCourses([...golfCourses, { 
-        id: newId, 
-        ...newCourse, 
-        created_at: new Date().toISOString() 
-      }]);
-      setNewCourse({ name: '', location: '' });
-      setShowAddCourseForm(false);
+      try {
+        const response = await fetch('/api/golf-courses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newCourse)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setGolfCourses([...golfCourses, result.data]);
+          setNewCourse({ name: '', location: '' });
+          setShowAddCourseForm(false);
+          alert('เพิ่มสนามกอล์ฟสำเร็จ');
+        } else {
+          const error = await response.json();
+          alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Error adding golf course:', error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
     }
   };
 
-  const handleUpdateCourse = () => {
+  const handleUpdateCourse = async () => {
     if (editingCourse) {
-      setGolfCourses(golfCourses.map(course => 
-        course.id === editingCourse.id ? editingCourse : course
-      ));
-      setEditingCourse(null);
+      try {
+        const response = await fetch(`/api/golf-courses/${editingCourse.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: editingCourse.name,
+            location: editingCourse.location
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setGolfCourses(golfCourses.map(course => 
+            course.id === editingCourse.id ? result.data : course
+          ));
+          setEditingCourse(null);
+          alert('อัปเดตสนามกอล์ฟสำเร็จ');
+        } else {
+          const error = await response.json();
+          alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Error updating golf course:', error);
+        alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+      }
     }
   };
 
-  const handleDeleteCourse = (id: number) => {
+  const handleDeleteCourse = async (id: number) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบสนามนี้?')) {
-      setGolfCourses(golfCourses.filter(course => course.id !== id));
-      setVehicles(vehicles.filter(vehicle => vehicle.golf_course_id !== id));
+      try {
+        const response = await fetch(`/api/golf-courses/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          setGolfCourses(golfCourses.filter(course => course.id !== id));
+          setVehicles(vehicles.filter(vehicle => vehicle.golf_course_id !== id));
+          alert('ลบสนามกอล์ฟสำเร็จ');
+        } else {
+          const error = await response.json();
+          alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Error deleting golf course:', error);
+        alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+      }
     }
   };
 
   // Vehicle Management Functions
-  const handleAddVehicle = () => {
+  const handleAddVehicle = async () => {
     // ล้างข้อความแจ้งเตือนเก่า
     setSerialError('');
     setVehicleNumberError('');
@@ -151,11 +204,9 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         return; // หยุดการทำงานถ้าพบข้อมูลซ้ำ
       }
       
-      const newId = Math.max(...vehicles.map(v => v.id), 0) + 1;
       const golfCourse = golfCourses.find(c => c.id === newVehicle.golf_course_id);
       
-      const vehicleToAdd: Vehicle = { 
-        id: newId, 
+      const vehicleData = {
         serial_number: newVehicle.serial_number,
         vehicle_number: newVehicle.vehicle_number,
         golf_course_id: newVehicle.golf_course_id,
@@ -163,29 +214,48 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         brand: 'ไม่ระบุ',
         model: 'ไม่ระบุ',
         year: new Date().getFullYear(),
-        status: 'active' as const,
-        created_at: new Date().toISOString()
+        status: 'active' as const
       };
-      
-      setVehicles([...vehicles, vehicleToAdd]);
-      
-      // บันทึกประวัติการเพิ่มรถใหม่
-      addSerialHistoryEntry({
-        serial_number: vehicleToAdd.serial_number,
-        vehicle_id: vehicleToAdd.id,
-        vehicle_number: vehicleToAdd.vehicle_number,
-        action_type: 'registration',
-        action_date: new Date().toISOString(),
-        details: `เพิ่มรถใหม่ - หมายเลขรถ: ${vehicleToAdd.vehicle_number}, สนาม: ${golfCourse?.name ?? 'ไม่ระบุ'}`,
-        performed_by: 'administrator',
-        performed_by_id: 1,
-        golf_course_id: vehicleToAdd.golf_course_id,
-        golf_course_name: golfCourse?.name ?? 'ไม่ระบุ',
-        is_active: true
-      });
-      
-      setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: 0 });
-      setShowAddVehicleForm(false);
+
+      try {
+        const response = await fetch('/api/vehicles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(vehicleData)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setVehicles([...vehicles, result.data]);
+          
+          // บันทึกประวัติการเพิ่มรถใหม่
+          addSerialHistoryEntry({
+            serial_number: result.data.serial_number,
+            vehicle_id: result.data.id,
+            vehicle_number: result.data.vehicle_number,
+            action_type: 'registration',
+            action_date: new Date().toISOString(),
+            details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name ?? 'ไม่ระบุ'}`,
+            performed_by: 'administrator',
+            performed_by_id: 1,
+            golf_course_id: result.data.golf_course_id,
+            golf_course_name: golfCourse?.name ?? 'ไม่ระบุ',
+            is_active: true
+          });
+          
+          setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: 0 });
+          setShowAddVehicleForm(false);
+          alert('เพิ่มรถกอล์ฟสำเร็จ');
+        } else {
+          const error = await response.json();
+          alert(`เกิดข้อผิดพลาด: ${error.message}`);
+        }
+      } catch (error) {
+        console.error('Error adding vehicle:', error);
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
     }
   };
 
