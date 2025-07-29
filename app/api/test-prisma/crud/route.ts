@@ -83,12 +83,12 @@ export async function GET() {
 
     // Test 2: Read operations
     try {
-      const readUser = await prisma.user.findUnique({
+      await prisma.user.findUnique({
         where: { id: testData.testUser.id }
       })
       operations.push('Read User by ID - ✅')
 
-      const readVehicle = await prisma.vehicle.findUnique({
+      await prisma.vehicle.findUnique({
         where: { id: testData.testVehicle.id }
       })
       operations.push('Read Vehicle by ID - ✅')
@@ -99,13 +99,13 @@ export async function GET() {
 
     // Test 3: Update operations
     try {
-      const updatedUser = await prisma.user.update({
+      await prisma.user.update({
         where: { id: testData.testUser.id },
         data: { name: 'Updated Test User' }
       })
       operations.push('Update User - ✅')
 
-      const updatedJob = await prisma.job.update({
+      await prisma.job.update({
         where: { id: testData.testJob.id },
         data: { status: 'in_progress' }
       })
@@ -118,7 +118,7 @@ export async function GET() {
     // Test 4: Complex queries
     try {
       // ทดสอบ aggregation
-      const jobStats = await prisma.job.groupBy({
+      await prisma.job.groupBy({
         by: ['status'],
         _count: {
           status: true

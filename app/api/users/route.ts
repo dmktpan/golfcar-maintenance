@@ -63,7 +63,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, username, name, role, golf_course_id, golf_course_name, managed_golf_courses } = body;
+    const { code, username, name, role, golf_course_id, golf_course_name, managed_golf_courses, password } = body;
 
     // Validation
     if (!code || !username || !name || !role || !golf_course_id || !golf_course_name) {
@@ -80,49 +80,65 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // ตรวจสอบ password สำหรับ admin และ supervisor
+    if ((role === 'admin' || role === 'supervisor') && !password) {
+      return NextResponse.json({
+        success: false,
+        message: 'Password is required for admin and supervisor roles'
+      }, { status: 400 });
+    }
+
     let user: any;
     const currentTime = new Date();
 
     try {
       // ลองใช้ Prisma create ก่อน
+      const userData: any = {
+        code: code.trim(),
+        username: username.trim(),
+        name: name.trim(),
+        role,
+        golf_course_id: golf_course_id,
+        golf_course_name: golf_course_name.trim(),
+        managed_golf_courses: managed_golf_courses || []
+      };
+
+      // เพิ่ม password หากมี
+      if (password && password.trim() !== '') {
+        userData.password = password.trim();
+      }
+
       user = await prisma.user.create({
-        data: {
-          code: code.trim(),
-          username: username.trim(),
-          name: name.trim(),
-          role,
-          golf_course_id: golf_course_id,
-          golf_course_name: golf_course_name.trim(),
-          managed_golf_courses: managed_golf_courses || []
-        }
+        data: userData
       });
     } catch (prismaError) {
       console.warn('Prisma create failed, using raw MongoDB:', prismaError);
       
       // Fallback ใช้ raw MongoDB operations
+      const documentData: any = {
+        code: code.trim(),
+        username: username.trim(),
+        name: name.trim(),
+        role,
+        golf_course_id: golf_course_id,
+        golf_course_name: golf_course_name.trim(),
+        managed_golf_courses: managed_golf_courses || [],
+        createdAt: currentTime,
+        updatedAt: currentTime
+      };
+
+      // เพิ่ม password หากมี
+      if (password && password.trim() !== '') {
+        documentData.password = password.trim();
+      }
+
       const result = await prisma.$runCommandRaw({
         insert: 'users',
-        documents: [{
-          code: code.trim(),
-          name: name.trim(),
-          role,
-          golf_course_id: golf_course_id,
-          managed_golf_courses: managed_golf_courses || [],
-          createdAt: currentTime,
-          updatedAt: currentTime
-        }]
+        documents: [documentData]
       }) as { n?: number };
 
       if (result.n && result.n > 0) {
-        user = {
-          code: code.trim(),
-          name: name.trim(),
-          role,
-          golf_course_id: golf_course_id,
-          managed_golf_courses: managed_golf_courses || [],
-          createdAt: currentTime,
-          updatedAt: currentTime
-        };
+        user = documentData;
       } else {
         throw new Error('Failed to create user');
       }

@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import { default as NextImage } from 'next/image';
 import styles from './ImageUpload.module.css';
 
 interface ImageUploadProps {
@@ -205,7 +206,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             try {
               const result = JSON.parse(xhr.responseText);
               resolve(result);
-            } catch (e) {
+            } catch (error) {
+              console.error('JSON parse error:', error);
               reject(new Error('Invalid response format'));
             }
           } else if (xhr.status === 408) {
@@ -335,10 +337,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <div className={styles.previewGrid}>
                 {images.map((imagePath, index) => (
                   <div key={`uploaded-${index}`} className={styles.previewItem}>
-                    <img 
+                    <NextImage 
                       src={imagePath} 
                       alt={`Uploaded ${index + 1}`}
                       className={styles.previewImage}
+                      width={150}
+                      height={150}
                     />
                     <button
                       type="button"
@@ -361,10 +365,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <div className={styles.previewGrid}>
                 {selectedFiles.map((item, index) => (
                   <div key={`new-${index}`} className={styles.previewItem}>
-                    <img 
+                    <NextImage 
                       src={item.preview} 
                       alt={`Preview ${index + 1}`}
                       className={styles.previewImage}
+                      width={150}
+                      height={150}
                     />
                     <button
                       type="button"

@@ -38,28 +38,29 @@ export async function POST(request: Request) {
       jobId, 
       partName, 
       partId, 
-      quantity, 
+      quantityUsed, 
       usedDate, 
-      userName, 
+      usedBy, 
       vehicleNumber, 
-      serialNumber, 
+      vehicleSerial, 
       golfCourseName, 
       jobType, 
-      system 
+      system,
+      notes
     } = body;
 
     // Validation
-    if (!jobId || !partName || !partId || !quantity || !usedDate || !userName || !vehicleNumber || !serialNumber || !golfCourseName || !jobType || !system) {
+    if (!jobId || !partName || !partId || !quantityUsed || !usedDate || !usedBy || !vehicleNumber || !vehicleSerial || !golfCourseName || !jobType || !system) {
       return NextResponse.json({
         success: false,
-        message: 'All fields are required'
+        message: 'All required fields must be provided'
       }, { status: 400 });
     }
 
-    if (quantity <= 0) {
+    if (quantityUsed <= 0) {
       return NextResponse.json({
         success: false,
-        message: 'Quantity must be greater than 0'
+        message: 'Quantity used must be greater than 0'
       }, { status: 400 });
     }
 
@@ -72,9 +73,18 @@ export async function POST(request: Request) {
 
     const partsUsageLog = await prisma.partsUsageLog.create({
       data: {
-        jobId: jobId.trim(),
+        jobId: jobId.toString(),
+        partName: partName.trim(),
         partId: partId.trim(),
-        quantity: parseInt(quantity),
+        quantityUsed: parseInt(quantityUsed),
+        vehicleNumber: vehicleNumber.trim(),
+        vehicleSerial: vehicleSerial.trim(),
+        golfCourseName: golfCourseName.trim(),
+        usedBy: usedBy.trim(),
+        usedDate: usedDate,
+        notes: notes || '',
+        jobType: jobType,
+        system: system.trim()
       }
     });
 

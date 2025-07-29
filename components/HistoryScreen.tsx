@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Job, Vehicle, Part, View, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 
@@ -58,7 +59,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
     });
 
     // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
-    const getPartName = (part: { part_id: number; part_name?: string }) => {
+    const getPartName = (part: { part_id: string; part_name?: string }) => {
         // ใช้ part_name ที่บันทึกไว้เป็นหลัก
         if (part.part_name) {
             return part.part_name;
@@ -66,7 +67,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
         
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
         for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
-            const partInfo = system.find(p => p.id === part.part_id);
+            const partInfo = system.find(p => p.id === parseInt(part.part_id));
             if (partInfo) {
                 return partInfo.name;
             }
@@ -206,10 +207,12 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs }: HistoryScreenProps) =
                                             <div className="image-gallery">
                                                 {job.images.map((image, index) => (
                                                     <div key={index} className="image-item">
-                                                        <img 
+                                                        <Image 
                                                             src={image} 
                                                             alt={`รูปภาพงาน ${index + 1}`}
                                                             className="job-image"
+                                                            width={200}
+                                                            height={150}
                                                             onClick={() => window.open(image, '_blank')}
                                                         />
                                                     </div>

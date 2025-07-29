@@ -63,6 +63,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('Received vehicle data:', body);
+    
     const { 
       serial_number, 
       vehicle_number, 
@@ -75,10 +77,10 @@ export async function POST(request: Request) {
     } = body;
 
     // Validation
-    if (!serial_number || !vehicle_number || !golf_course_id || !golf_course_name || !model) {
+    if (!serial_number || !vehicle_number || !golf_course_id) {
       return NextResponse.json({
         success: false,
-        message: 'Serial number, vehicle number, golf course ID, golf course name, and model are required'
+        message: 'Serial number, vehicle number, and golf course ID are required'
       }, { status: 400 });
     }
 
@@ -89,18 +91,48 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // ตรวจสอบการซ้ำของ serial_number เท่านั้น
+    const existingSerial = await prisma.vehicle.findUnique({
+      where: { serial_number: serial_number.trim() }
+    });
+
+    if (existingSerial) {
+      return NextResponse.json({
+        success: false,
+        message: `หมายเลขซีเรียล "${serial_number}" มีอยู่ในระบบแล้ว`
+      }, { status: 400 });
+    }
+
     const vehicle = await prisma.vehicle.create({
       data: {
         serial_number: serial_number.trim(),
         vehicle_number: vehicle_number.trim(),
-        golf_course_id: golf_course_id,
-        golf_course_name: golf_course_name.trim(),
-        model: model.trim(),
+        golf_course_id: String(golf_course_id),
+        golf_course_name: golf_course_name?.trim() || 'ไม่ระบุ',
+        model: model?.trim() || 'ไม่ระบุ',
         battery_serial: battery_serial?.trim(),
         status: status || 'active',
         transfer_date: transfer_date?.trim()
       }
     });
+
+    // บันทึก Serial History สำหรับการสร้างรถใหม่
+    await prisma.serialHistoryEntry.create({
+      data: {
+        serial_number: vehicle.serial_number,
+        vehicle_number: vehicle.vehicle_number,
+        action_type: 'registration',
+        action_date: new Date(),
+        details: `เพิ่มรถใหม่ - หมายเลขรถ: ${vehicle.vehicle_number}, สนาม: ${vehicle.golf_course_name}`,
+        is_active: true,
+        status: 'completed',
+        golf_course_name: vehicle.golf_course_name,
+        vehicle_id: vehicle.id,
+        performed_by_id: '000000000000000000000001' // Default admin ID
+      }
+    });
+
+    console.log('Vehicle created successfully:', vehicle);
 
     return NextResponse.json({
       success: true,

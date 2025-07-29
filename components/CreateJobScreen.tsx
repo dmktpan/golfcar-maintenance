@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
+import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
 import ImageUpload from './ImageUpload';
 
 // Local interface for selected parts in this component
@@ -33,7 +33,6 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [partsSearchTerm, setPartsSearchTerm] = useState('');
-    const [newSubTask, setNewSubTask] = useState(''); // เพิ่ม state สำหรับงานย่อยใหม่
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
@@ -41,19 +40,8 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     // กรองรถเฉพาะที่อยู่ในสนามเดียวกับพนักงานที่ล็อกอิน
     const userGolfCourse = golfCourses.find(gc => gc.id === user.golf_course_id);
     const availableVehicles = vehicles.filter(v => v.golf_course_id === user.golf_course_id);
-    const selectedVehicle = availableVehicles.find(v => v.id === parseInt(vehicleId));
-    const golfCourse = userGolfCourse;
+    const selectedVehicle = availableVehicles.find(v => v.id === vehicleId);
     
-    // Get available subtasks for selected system
-    const getAvailableSubTasks = () => {
-        if (!system) return [];
-        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
-        if (!systemData) return [];
-        return systemData.tasks || [];
-    };
-    
-    const availableSubTasks = getAvailableSubTasks();
-
     useEffect(() => {
         setSubTasks([]);
     }, [system]);
@@ -64,24 +52,15 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             setSystem('');
             setSubTasks([]);
         }
-        // รีเซ็ต remarks และ newSubTask เมื่อเปลี่ยนเป็น BM หรือ RC
+        // รีเซ็ต remarks เมื่อเปลี่ยนเป็น BM หรือ RC
         if (jobType === 'BM' || jobType === 'Recondition') {
             setRemarks('');
-            setNewSubTask('');
         }
         // รีเซ็ต bmCause เมื่อไม่ใช่ BM
         if (jobType !== 'BM') {
             setBmCause('');
         }
     }, [jobType]);
-
-    // เพิ่มฟังก์ชันสำหรับจัดการงานย่อยใหม่ (เฉพาะ PM)
-    const handleAddSubTask = () => {
-        if (jobType === 'PM' && newSubTask.trim() && !subTasks.includes(newSubTask.trim())) {
-            setSubTasks(prev => [...prev, newSubTask.trim()]);
-            setNewSubTask('');
-        }
-    };
 
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
@@ -218,19 +197,17 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         }
         
         try {
-            // สร้างงานใหม่
-            const newJob: Job = {
-                id: Math.max(...jobs.map(j => j.id), 0) + 1,
-                user_id: user.id,
+            // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
+            const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
+                user_id: user.id.toString(),
                 userName: user.name,
                 vehicle_id: selectedVehicle.id,
                 vehicle_number: selectedVehicle.vehicle_number,
                 golf_course_id: selectedVehicle.golf_course_id,
                 type: jobType,
                 status: 'pending',
-                created_at: new Date().toISOString(),
                 parts: selectedParts.map(part => ({
-                    part_id: part.id,
+                    part_id: part.id.toString(),
                     quantity_used: part.quantity,
                     part_name: part.name
                 })),
@@ -243,9 +220,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
-            onJobCreate(newJob);
-            alert('สร้างงานเรียบร้อยแล้ว');
-            setView('dashboard');
+            onJobCreate(newJob as Job);
             
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการสร้างงาน กรุณาลองใหม่อีกครั้ง');
@@ -261,24 +236,22 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
     // Group subtasks by category for better UI
     const getSubTasksByCategory = () => {
-                if (!system) return {};
+        if (!system) return {};
         const systemData = MOCK_SYSTEMS.find(s => s.id === system);
         if (!systemData || !systemData.tasks) return {};
         
-        // For now, return all tasks under a single category
-        return {
-            'tasks': systemData.tasks
-        };
+        // Return the categorized tasks directly
+        return systemData.tasks;
     };
     
     const subTaskCategories = getSubTasksByCategory();
     
     const getCategoryDisplayName = (category: string) => {
         const categoryNames: Record<string, string> = {
-            'cleaning': 'ทำความสะอาด',
-            'lubrication': 'หล่อลื่น',
-            'tightening': 'ขันแน่น',
-            'inspection': 'ตรวจเช็ค'
+            'ทำความสะอาด': 'ทำความสะอาด',
+            'หล่อลื่น': 'หล่อลื่น',
+            'ขันแน่น': 'ขันแน่น',
+            'ตรวจเช็ค': 'ตรวจเช็ค'
         };
         return categoryNames[category] || category;
     };
@@ -709,7 +682,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 {/* แสดงข้อความเมื่อไม่พบผลลัพธ์ */}
                                 {getFilteredParts(PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY]).length === 0 && (
                                     <div className="no-parts-found">
-                                        <p>ไม่พบอะไหล่ที่ค้นหา "{partsSearchTerm}"</p>
+                                        <p>ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;</p>
                                         <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
                                     </div>
                                 )}

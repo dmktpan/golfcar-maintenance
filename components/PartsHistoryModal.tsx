@@ -14,17 +14,17 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
   const [filterDateTo, setFilterDateTo] = useState('');
   const [filterPartName, setFilterPartName] = useState('');
   const [filterJobType, setFilterJobType] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'part' | 'quantity'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy] = useState<'date' | 'part' | 'quantity'>('date');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Filter parts usage logs for this serial number
   const serialPartsLogs = useMemo(() => {
-    return partsUsageLog.filter(log => log.serialNumber === serialNumber);
+    return partsUsageLog.filter(log => log.vehicleSerial === serialNumber);
   }, [serialNumber, partsUsageLog]);
 
   // Apply filters and sorting
   const filteredLogs = useMemo(() => {
-    let filtered = serialPartsLogs.filter(log => {
+    const filtered = serialPartsLogs.filter(log => {
       // Filter by date range
       if (filterDateFrom) {
         const logDate = new Date(log.usedDate);
@@ -64,7 +64,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
           comparison = a.partName.localeCompare(b.partName);
           break;
         case 'quantity':
-          comparison = a.quantity - b.quantity;
+          comparison = a.quantityUsed - b.quantityUsed;
           break;
       }
 
@@ -88,11 +88,6 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
 
     return groups;
   }, [filteredLogs]);
-
-  // Get unique values for filters
-  const uniquePartNames = useMemo(() => {
-    return Array.from(new Set(serialPartsLogs.map(log => log.partName))).sort();
-  }, [serialPartsLogs]);
 
   const uniqueJobTypes = useMemo(() => {
     return Array.from(new Set(serialPartsLogs.map(log => log.jobType))).sort();
@@ -147,7 +142,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
   };
 
   // Calculate summary statistics
-  const totalParts = filteredLogs.reduce((sum, log) => sum + log.quantity, 0);
+  const totalParts = filteredLogs.reduce((sum, log) => sum + log.quantityUsed, 0);
   const uniqueParts = new Set(filteredLogs.map(log => log.partName)).size;
   const totalJobs = new Set(filteredLogs.map(log => log.jobId)).size;
 
@@ -282,7 +277,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
                           <div className="log-header">
                             <div className="part-info">
                               <span className="part-name">🔧 {log.partName}</span>
-                              <span className="quantity-badge">×{log.quantity}</span>
+                              <span className="quantity-badge">×{log.quantityUsed}</span>
                             </div>
                             <div className="job-info">
                               <span className={`job-type-badge ${log.jobType.toLowerCase()}`}>
@@ -298,7 +293,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
                             </div>
                             <div className="detail-row">
                               <span className="detail-label">👤 ผู้ใช้:</span>
-                              <span className="detail-value">{log.userName}</span>
+                              <span className="detail-value">{log.usedBy}</span>
                             </div>
                             <div className="detail-row">
                               <span className="detail-label">🚗 หมายเลขรถ:</span>

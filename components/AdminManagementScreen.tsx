@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, GolfCourse, View } from '@/lib/data';
-import { UserPermission } from '@/app/page';
 
 interface AdminManagementScreenProps {
     setView: (view: View) => void;
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-    userPermissions: UserPermission[];
     updateUserPermissions: (userId: number, permissions: string[]) => void;
     getUserPermissions: (userId: number) => string[];
     golfCourses: GolfCourse[];
@@ -31,7 +29,7 @@ const MOCK_PERMISSIONS: Permission[] = [
     { id: 'manage_vehicles', name: 'จัดการรถกอล์ฟ', description: 'สามารถเพิ่ม แก้ไข และลบข้อมูลรถกอล์ฟ', roles: ['admin', 'supervisor'] },
 ];
 
-const AdminManagementScreen = ({ setView, users, setUsers, userPermissions, updateUserPermissions, getUserPermissions, golfCourses }: AdminManagementScreenProps) => {
+const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions, getUserPermissions, golfCourses }: AdminManagementScreenProps) => {
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
@@ -119,7 +117,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, userPermissions, upda
         setCurrentUserPermissions([]);
     };
 
-    const getGolfCourseName = (id: number) => {
+    const getGolfCourseName = (id: string) => {
         const course = golfCourses.find(c => c.id === id);
         return course ? course.name : 'ไม่ระบุ';
     };

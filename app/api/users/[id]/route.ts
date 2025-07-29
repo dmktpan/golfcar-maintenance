@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { isValidObjectId } from '@/lib/utils/validation';
 
 // GET - ดึงข้อมูลผู้ใช้ตาม ID
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid user ID format'
+      }, { status: 400 });
+    }
     
     const user = await prisma.user.findUnique({
       where: { id }
@@ -41,8 +50,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid user ID format'
+      }, { status: 400 });
+    }
+    
     const body = await request.json();
-    const { code, username, name, role, golf_course_id, golf_course_name, managed_golf_courses } = body;
+    const { code, username, name, role, golf_course_id, golf_course_name, managed_golf_courses, password } = body;
 
     // Validation
     if (!code || !username || !name || !role || !golf_course_id || !golf_course_name) {
@@ -59,17 +77,24 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }, { status: 400 });
     }
 
+    const updateData: any = {
+      code: code.trim(),
+      username: username.trim(),
+      name: name.trim(),
+      role,
+      golf_course_id: golf_course_id,
+      golf_course_name: golf_course_name.trim(),
+      managed_golf_courses: managed_golf_courses || []
+    };
+
+    // เพิ่ม password หากมีการส่งมา (สำหรับการเปลี่ยนรหัสผ่าน)
+    if (password && password.trim() !== '') {
+      updateData.password = password.trim();
+    }
+
     const user = await prisma.user.update({
       where: { id },
-      data: {
-        code: code.trim(),
-        username: username.trim(),
-        name: name.trim(),
-        role,
-        golf_course_id: golf_course_id,
-        golf_course_name: golf_course_name.trim(),
-        managed_golf_courses: managed_golf_courses || []
-      }
+      data: updateData
     });
 
     return NextResponse.json({
@@ -96,6 +121,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid user ID format'
+      }, { status: 400 });
+    }
 
     await prisma.user.delete({
       where: { id }

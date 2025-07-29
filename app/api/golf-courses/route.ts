@@ -63,7 +63,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name } = body;
+    const { name, location } = body;
 
     if (!name) {
       return NextResponse.json({
@@ -79,7 +79,8 @@ export async function POST(request: Request) {
       // ลองใช้ Prisma create ก่อน
       golfCourse = await prisma.golfCourse.create({
         data: {
-          name: name.trim()
+          name: name.trim(),
+          location: location ? location.trim() : null
         }
       });
     } catch (prismaError) {
@@ -90,6 +91,7 @@ export async function POST(request: Request) {
         insert: 'golf_courses',
         documents: [{
           name: name.trim(),
+          location: location ? location.trim() : null,
           createdAt: currentTime,
           updatedAt: currentTime
         }]
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
       if (result.n && result.n > 0) {
         golfCourse = {
           name: name.trim(),
+          location: location ? location.trim() : null,
           createdAt: currentTime,
           updatedAt: currentTime
         };

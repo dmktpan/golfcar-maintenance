@@ -5,6 +5,11 @@ import { prisma } from '@/lib/db/prisma';
 export async function GET() {
   try {
     const serialHistory = await prisma.serialHistoryEntry.findMany({
+      where: {
+        serial_number: {
+          not: ""
+        }
+      },
       orderBy: {
         action_date: 'desc'
       }
@@ -92,11 +97,16 @@ export async function POST(request: Request) {
 
     const serialHistoryEntry = await prisma.serialHistoryEntry.create({
       data: {
+        serial_number: serial_number.trim(),
+        vehicle_number: vehicle_number.trim(),
         action_type,
         action_date: action_date ? new Date(action_date) : new Date(),
         actual_transfer_date: actual_transfer_date ? new Date(actual_transfer_date) : null,
         details: details.trim(),
         is_active: Boolean(is_active),
+        status: status || null,
+        job_type: job_type || null,
+        golf_course_name: golf_course_name.trim(),
         vehicle_id: vehicle_id.toString(),
         performed_by_id: performed_by_id.toString(),
         related_job_id: related_job_id ? related_job_id.toString() : null,

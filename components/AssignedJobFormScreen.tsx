@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, JobStatus, Vehicle, GolfCourse, MOCK_SYSTEMS, View, SelectedPart, BMCause } from '@/lib/data';
+import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
 import ImageUpload from './ImageUpload';
 
 // Interface สำหรับ local state ของอะไหล่ที่เลือก
@@ -92,9 +92,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         return job.parts?.map(part => {
             // หาข้อมูลอะไหล่จาก PARTS_BY_SYSTEM
             const allParts = Object.values(PARTS_BY_SYSTEM).flat();
-            const partInfo = allParts.find(p => p.id === part.part_id);
+            const partInfo = allParts.find(p => p.id === parseInt(part.part_id));
             return {
-                id: part.part_id,
+                id: parseInt(part.part_id),
                 name: part.part_name || partInfo?.name || 'ไม่ทราบชื่อ',
                 quantity: part.quantity_used,
                 unit: partInfo?.unit || 'ชิ้น'
@@ -108,16 +108,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
     
-    // Get available subtasks for selected system
-    const getAvailableSubTasks = () => {
-        if (!system) return [];
-        const systemData = MOCK_SYSTEMS.find(s => s.id === system);
-        if (!systemData) return [];
-        return systemData.tasks || [];
-    };
-    
-    const availableSubTasks = getAvailableSubTasks();
-
     // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
     const getFilteredParts = () => {
         const currentParts = PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM];
@@ -160,16 +150,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
     };
 
-    const handlePartQuantityChange = (partId: number, quantity: number) => {
-        if (quantity <= 0) {
-            setSelectedParts(prev => prev.filter(p => p.id !== partId));
-        } else {
-            setSelectedParts(prev => prev.map(p => 
-                p.id === partId ? { ...p, quantity } : p
-            ));
-        }
-    };
-
     const handleRemovePart = (partId: number) => {
         setSelectedParts(prev => prev.filter(p => p.id !== partId));
     };
@@ -191,14 +171,20 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
         
         try {
-            // อัปเดตข้อมูลงาน - ไม่บันทึกข้อมูลที่ไม่เกี่ยวข้องสำหรับ BM และ RC
+            // อัปเดตข้อมูลงาน - ส่งข้อมูลครบถ้วนตาม API requirements
             const updatedJob: Job = {
                 ...job,
                 type: jobType,
+                status: 'pending', // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
+                vehicle_id: job.vehicle_id, // ต้องมี
+                vehicle_number: job.vehicle_number || assignedVehicle?.vehicle_number || '', // ต้องมี
+                golf_course_id: job.golf_course_id || assignedVehicle?.golf_course_id || '', // ต้องมี
+                user_id: job.user_id, // ต้องมี
+                userName: job.userName, // ต้องมี
                 system: system,
                 subTasks: jobType === 'PM' ? allSubTasks : [],
                 parts: selectedParts.map(part => ({
-                    part_id: part.id,
+                    part_id: part.id.toString(),
                     quantity_used: part.quantity,
                     part_name: part.name
                 })),
@@ -207,13 +193,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
                 images: images, // เพิ่มรูปภาพ
                 updated_at: new Date().toISOString(),
-                status: 'pending', // เปลี่ยนสถานะเป็น pending เพื่อรอการอนุมัติ
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
             
             onJobUpdate(updatedJob);
-            alert('บันทึกข้อมูลงานเรียบร้อยแล้ว');
-            setView('dashboard');
             
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -234,20 +217,18 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         const systemData = MOCK_SYSTEMS.find(s => s.id === system);
         if (!systemData || !systemData.tasks) return {};
         
-        // For now, return all tasks under a single category
-        return {
-            'tasks': systemData.tasks
-        };
+        // Return the categorized tasks directly
+        return systemData.tasks;
     };
     
     const subTaskCategories = getSubTasksByCategory();
     
     const getCategoryDisplayName = (category: string) => {
         const categoryNames: Record<string, string> = {
-            'cleaning': 'ทำความสะอาด',
-            'lubrication': 'หล่อลื่น',
-            'tightening': 'ขันแน่น',
-            'inspection': 'ตรวจเช็ค'
+            'ทำความสะอาด': 'ทำความสะอาด',
+            'หล่อลื่น': 'หล่อลื่น',
+            'ขันแน่น': 'ขันแน่น',
+            'ตรวจเช็ค': 'ตรวจเช็ค'
         };
         return categoryNames[category] || category;
     };
@@ -630,7 +611,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                     })
                                 ) : (
                                     <div className="no-parts-found">
-                                        ไม่พบอะไหล่ที่ค้นหา "{partsSearchTerm}"
+                                        ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;
                                     </div>
                                 )}
                             </div>

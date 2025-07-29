@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, Part, GolfCourse, Vehicle, PartsUsageLog, SerialHistoryEntry, View, JobStatus } from '@/lib/data';
-import { golfCoursesApi, usersApi, vehiclesApi, partsApi, jobsApi, partsUsageLogsApi, serialHistoryApi, authApi } from '@/lib/api';
+import { golfCoursesApi, usersApi, vehiclesApi, partsApi, jobsApi, partsUsageLogsApi, serialHistoryApi } from '@/lib/api';
 import LoginScreen from '@/components/LoginScreen';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
@@ -114,6 +114,51 @@ export default function HomePage() {
     localStorage.setItem('currentView', view);
   }, [view]);
 
+  // ระบบ Session Timeout - ออกจากระบบอัตโนมัติหลังจากไม่ได้ใช้งาน 5 นาที
+  useEffect(() => {
+    if (!user) return; // ไม่ทำงานถ้ายังไม่ได้ล็อกอิน
+
+    let timeoutId: NodeJS.Timeout;
+    let lastActivity = Date.now();
+
+    const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 นาที
+
+    const resetTimeout = () => {
+      lastActivity = Date.now();
+      clearTimeout(timeoutId);
+      
+      timeoutId = setTimeout(() => {
+        // ตรวจสอบว่าผ่านไป 5 นาทีจริงๆ หรือไม่
+        if (Date.now() - lastActivity >= SESSION_TIMEOUT) {
+          alert('หมดเวลาการใช้งาน กรุณาล็อกอินใหม่');
+          handleLogout();
+        }
+      }, SESSION_TIMEOUT);
+    };
+
+    const handleActivity = () => {
+      resetTimeout();
+    };
+
+    // เริ่มต้น timeout
+    resetTimeout();
+
+    // ติดตาม activity ต่างๆ
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    // ทำความสะอาดเมื่อ component unmount หรือ user เปลี่ยน
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+    };
+  }, [user]); // dependency เฉพาะ user เพื่อให้ reset เมื่อ login/logout
+
   // ฟังก์ชันสำหรับบันทึก Serial History Entry
   const addSerialHistoryEntry = async (entry: Omit<SerialHistoryEntry, 'id'>): Promise<SerialHistoryEntry | null> => {
     try {
@@ -127,90 +172,6 @@ export default function HomePage() {
       console.error('Error adding serial history entry:', error);
     }
     return null;
-  };
-
-  // ฟังก์ชันสำหรับบันทึก Serial History เมื่อสร้างงาน
-  const logJobCreation = async (job: Job) => {
-    const vehicle = vehicles.find(v => v.id === job.vehicle_id);
-    const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
-    
-    if (vehicle) {
-      await addSerialHistoryEntry({
-        serial_number: vehicle.serial_number,
-        vehicle_id: job.vehicle_id,
-        vehicle_number: job.vehicle_number,
-        action_type: 'maintenance',
-        action_date: job.created_at || new Date().toISOString().split('T')[0],
-        details: `สร้างงาน${job.type} - ${job.remarks || 'ไม่มีรายละเอียด'}`,
-        performed_by: job.userName,
-        performed_by_id: job.user_id,
-        golf_course_id: job.golf_course_id,
-        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
-        is_active: vehicle.status === 'active',
-        status: 'pending',
-        job_type: job.type,
-        system: job.system,
-        battery_serial: job.battery_serial
-      });
-    }
-  };
-
-  // ฟังก์ชันสำหรับบันทึก Serial History เมื่ออัปเดตงาน
-  const logJobUpdate = async (updatedJob: Job, previousJob?: Job) => {
-    const vehicle = vehicles.find(v => v.id === updatedJob.vehicle_id);
-    const golfCourse = golfCourses.find(gc => gc.id === updatedJob.golf_course_id);
-    
-    if (vehicle) {
-      let actionType: SerialHistoryEntry['action_type'] = 'maintenance';
-      let details = '';
-      let status: SerialHistoryEntry['status'] = 'pending';
-
-      if (previousJob?.status !== updatedJob.status) {
-        switch (updatedJob.status) {
-          case 'completed':
-            actionType = 'maintenance';
-            details = `งาน${updatedJob.type}เสร็จสิ้น - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-            status = 'completed';
-            break;
-          case 'in_progress':
-            actionType = 'maintenance';
-            details = `เริ่มดำเนินงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-            status = 'in_progress';
-            break;
-          case 'rejected':
-            actionType = 'maintenance';
-            details = `งาน${updatedJob.type}ถูกปฏิเสธ - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-            status = 'pending';
-            break;
-          default:
-            actionType = 'maintenance';
-            details = `อัปเดตงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-            status = 'pending';
-        }
-      } else {
-        details = `อัปเดตงาน${updatedJob.type} - ${updatedJob.remarks || 'ไม่มีรายละเอียด'}`;
-        status = updatedJob.status === 'completed' ? 'completed' : 
-                 updatedJob.status === 'in_progress' ? 'in_progress' : 'pending';
-      }
-
-      await addSerialHistoryEntry({
-        serial_number: vehicle.serial_number,
-        vehicle_id: updatedJob.vehicle_id,
-        vehicle_number: updatedJob.vehicle_number,
-        action_type: actionType,
-        action_date: updatedJob.updated_at || new Date().toISOString().split('T')[0],
-        details: details,
-        performed_by: updatedJob.userName,
-        performed_by_id: updatedJob.user_id,
-        golf_course_id: updatedJob.golf_course_id,
-        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
-        is_active: vehicle.status === 'active',
-        status: status,
-        job_type: updatedJob.type,
-        system: updatedJob.system,
-        battery_serial: updatedJob.battery_serial
-      });
-    }
   };
 
   const handleLogin = async (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
@@ -254,14 +215,19 @@ export default function HomePage() {
   
   const handleCreateJob = async (newJob: Job) => {
     try {
-      // สร้างงานใหม่ผ่าน API
+      // ตรวจสอบข้อมูลที่จำเป็นก่อนส่ง
+      if (!newJob.type || !newJob.status || !newJob.vehicle_id || 
+          !newJob.vehicle_number || !newJob.golf_course_id || 
+          !newJob.user_id || !newJob.userName) {
+        alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลอีกครั้ง');
+        return;
+      }
+
+      // สร้างงานใหม่ผ่าน API (Serial History จะถูกบันทึกใน API โดยอัตโนมัติ)
       const result = await jobsApi.create(newJob);
       if (result.success) {
         const createdJob = result.data as Job;
         setJobs(prev => [createdJob, ...prev]);
-        
-        // บันทึก Serial History
-        await logJobCreation(createdJob);
         
         // อัปเดต stock ของอะไหล่ถ้ามี
         if (createdJob.parts && createdJob.parts.length > 0) {
@@ -282,11 +248,27 @@ export default function HomePage() {
           }
         }
 
+        alert('สร้างงานเรียบร้อยแล้ว');
         const targetView = user?.role === 'staff' ? 'dashboard' : 'admin_dashboard';
         setView(targetView);
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.message || 'ไม่สามารถสร้างงานได้'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating job:', error);
+      
+      // แสดงข้อความแจ้งเตือนที่เหมาะสม
+      let errorMessage = 'เกิดข้อผิดพลาดในการสร้างงาน';
+      
+      if (error.message && error.message.includes('400')) {
+        errorMessage = 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง';
+      } else if (error.message && error.message.includes('500')) {
+        errorMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+      } else if (error.message && error.message.includes('network')) {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+      }
+      
+      alert(errorMessage);
     }
   };
   
@@ -301,32 +283,72 @@ export default function HomePage() {
 
   const handleJobUpdate = async (updatedJob: Job) => {
     try {
-      const previousJob = jobs.find(job => job.id === updatedJob.id);
-      
-      // อัปเดตงานผ่าน API
+      // Debug: แสดงข้อมูลที่ส่งไป
+      console.log('Sending job update data:', {
+        id: updatedJob.id,
+        type: updatedJob.type,
+        status: updatedJob.status,
+        vehicle_id: updatedJob.vehicle_id,
+        vehicle_number: updatedJob.vehicle_number,
+        golf_course_id: updatedJob.golf_course_id,
+        user_id: updatedJob.user_id,
+        userName: updatedJob.userName,
+        system: updatedJob.system,
+        subTasks: updatedJob.subTasks,
+        parts: updatedJob.parts,
+        partsNotes: updatedJob.partsNotes,
+        remarks: updatedJob.remarks,
+        battery_serial: updatedJob.battery_serial,
+        bmCause: updatedJob.bmCause,
+        images: updatedJob.images
+      });
+
+      // ตรวจสอบข้อมูลที่จำเป็นก่อนส่ง
+      if (!updatedJob.type || !updatedJob.status || !updatedJob.vehicle_id || 
+          !updatedJob.vehicle_number || !updatedJob.golf_course_id || 
+          !updatedJob.user_id || !updatedJob.userName) {
+        alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลอีกครั้ง');
+        return;
+      }
+
+      // อัปเดตงานผ่าน API (Serial History จะถูกบันทึกใน API โดยอัตโนมัติ)
       const result = await jobsApi.update(updatedJob.id, updatedJob);
       if (result.success) {
         const updated = result.data as Job;
         
         // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
         if (updated.status === 'approved') {
-          await addPartsUsageLog(updated.id, updated.partsNotes, updated);
+          await addPartsUsageLog(parseInt(updated.id), updated.partsNotes, updated);
         }
-        
-        // บันทึก Serial History
-        await logJobUpdate(updated, previousJob);
         
         setJobs(prev => prev.map(job => job.id === updated.id ? updated : job));
         setSelectedJobForForm(null);
+        alert('บันทึกข้อมูลงานเรียบร้อยแล้ว');
+        setView('dashboard');
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.message || 'ไม่สามารถบันทึกข้อมูลได้'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating job:', error);
+      
+      // แสดงข้อความแจ้งเตือนที่เหมาะสม
+      let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+      
+      if (error.message && error.message.includes('400')) {
+        errorMessage = 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง';
+      } else if (error.message && error.message.includes('500')) {
+        errorMessage = 'เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง';
+      } else if (error.message && error.message.includes('network')) {
+        errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+      }
+      
+      alert(errorMessage);
     }
   };
 
   const addPartsUsageLog = async (jobId: number, partsNotes?: string, jobData?: Job) => {
     try {
-      const job = jobData || jobs.find(j => j.id === jobId);
+      const job = jobData || jobs.find(j => j.id === jobId.toString());
       if (!job || job.status !== 'approved') {
         return;
       }
@@ -335,7 +357,7 @@ export default function HomePage() {
       const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
 
       if (job.parts && job.parts.length > 0) {
-        for (const [index, part] of Array.from(job.parts.entries())) {
+        for (const part of job.parts) {
           const logData = {
             jobId: jobId,
             partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
@@ -363,11 +385,80 @@ export default function HomePage() {
   };
 
   // ฟังก์ชันสำหรับอัปเดตสถานะงาน
-  const onUpdateStatus = (jobId: number, status: JobStatus) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (job) {
-      const updatedJob = { ...job, status };
-      handleJobUpdate(updatedJob);
+  const onUpdateStatus = async (jobId: number, status: JobStatus) => {
+    try {
+      // หาข้อมูลงานปัจจุบัน
+      const currentJob = jobs.find(job => job.id === jobId.toString());
+      if (!currentJob) {
+        console.error('Job not found:', jobId);
+        return;
+      }
+
+      // อัปเดต jobs state โดยตรงเพื่อให้ UI อัปเดตทันที
+      setJobs(prevJobs => 
+        prevJobs.map(job => 
+          job.id === jobId.toString() 
+            ? { ...job, status } 
+            : job
+        )
+      );
+
+      // เตรียมข้อมูลที่จำเป็นสำหรับ API
+      const updateData = {
+        status,
+        type: currentJob.type,
+        vehicle_id: currentJob.vehicle_id,
+        vehicle_number: currentJob.vehicle_number,
+        golf_course_id: currentJob.golf_course_id,
+        user_id: currentJob.user_id,
+        userName: currentJob.userName,
+        system: currentJob.system,
+        subTasks: currentJob.subTasks,
+        remarks: currentJob.remarks,
+        bmCause: currentJob.bmCause,
+        battery_serial: currentJob.battery_serial,
+        assigned_to: currentJob.assigned_to,
+        partsNotes: currentJob.partsNotes,
+        images: currentJob.images
+      };
+
+      // เรียก API เพื่อบันทึกการเปลี่ยนแปลงลงฐานข้อมูล
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        // หากการอัปเดตใน API ล้มเหลว ให้กลับสถานะเดิม
+        setJobs(prevJobs => 
+          prevJobs.map(job => 
+            job.id === jobId.toString() 
+              ? { ...job, status: currentJob.status } // กลับสถานะเดิม
+              : job
+          )
+        );
+        console.error('Failed to update job status:', result.message);
+        alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error updating job status:', error);
+      // กลับสถานะเดิมในกรณีเกิดข้อผิดพลาด
+      const currentJob = jobs.find(job => job.id === jobId.toString());
+      if (currentJob) {
+        setJobs(prevJobs => 
+          prevJobs.map(job => 
+            job.id === jobId.toString() 
+              ? { ...job, status: currentJob.status }
+              : job
+          )
+        );
+      }
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
     }
   };
 
@@ -441,12 +532,8 @@ export default function HomePage() {
         )}
         {view === 'parts_management' && (
           <PartsManagementScreen 
-            parts={parts} 
-            setParts={setParts} 
-            setView={handleSetView}
             partsUsageLog={partsUsageLog}
-            setPartsUsageLog={setPartsUsageLog}
-            addPartsUsageLog={addPartsUsageLog}
+            setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
           />
@@ -488,6 +575,8 @@ export default function HomePage() {
             jobs={jobs}
             vehicles={vehicles}
             serialHistory={serialHistory}
+            golfCourses={golfCourses}
+            users={users}
           />
         )}
         {view === 'admin_management' && (
@@ -495,7 +584,6 @@ export default function HomePage() {
             setView={handleSetView}
             users={users}
             setUsers={setUsers}
-            userPermissions={userPermissions}
             updateUserPermissions={updateUserPermissions}
             getUserPermissions={getUserPermissions}
             golfCourses={golfCourses}
@@ -540,6 +628,7 @@ export default function HomePage() {
             users={users}
             vehicles={vehicles}
             onUpdateStatus={onUpdateStatus}
+            addPartsUsageLog={addPartsUsageLog}
           />
         )}
       </main>

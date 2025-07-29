@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { isValidObjectId } from '@/lib/utils/validation';
 
 // GET - ดึงข้อมูลสนามกอล์ฟตาม ID
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid golf course ID format'
+      }, { status: 400 });
+    }
     
     const golfCourse = await prisma.golfCourse.findUnique({
       where: { id }
@@ -41,8 +50,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid golf course ID format'
+      }, { status: 400 });
+    }
+    
     const body = await request.json();
-    const { name } = body;
+    const { name, location } = body;
 
     if (!name) {
       return NextResponse.json({
@@ -54,7 +72,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const golfCourse = await prisma.golfCourse.update({
       where: { id },
       data: {
-        name: name.trim()
+        name: name.trim(),
+        location: location ? location.trim() : null
       }
     });
 
@@ -82,6 +101,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid golf course ID format'
+      }, { status: 400 });
+    }
 
     await prisma.golfCourse.delete({
       where: { id }

@@ -17,7 +17,7 @@ interface JobCardProps {
   isHistory?: boolean;
 }
 
-const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFillJobForm, isHistory = false }: JobCardProps) => {
+const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFillJobForm }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
     
     // ดึงข้อมูลรถจาก vehicles prop แทน MOCK_VEHICLES
@@ -51,7 +51,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
         );
 
         // ปุ่มสำหรับพนักงานที่ได้รับงานมอบหมาย
-        if (user.role === 'staff' && job.status === 'assigned' && job.assigned_to === user.id && onFillJobForm) {
+        if (user.role === 'staff' && job.status === 'assigned' && job.assigned_to === user.id.toString() && onFillJobForm) {
             buttons.push(
                 <button 
                     key="fill-form"
@@ -66,12 +66,12 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
         // ปุ่มเสร็จสิ้นงาน
         if (user.role === 'staff' && 
             (job.status === 'assigned' || job.status === 'in_progress') && 
-            job.assigned_to === user.id) {
+            job.assigned_to === user.id.toString()) {
             buttons.push(
                 <button 
                     key="complete"
                     className={`${styles.actionButton} ${styles.success}`} 
-                    onClick={() => onUpdateStatus(job.id, 'completed')}
+                    onClick={() => onUpdateStatus(parseInt(job.id), 'completed')}
                 >
                     <span className="btn-icon">✓</span> เสร็จสิ้น
                 </button>
@@ -81,7 +81,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
         // ปุ่มแก้ไขสำหรับงานที่พนักงานสร้างเอง
         if (user.role === 'staff' && 
             job.status === 'pending' && 
-            job.user_id === user.id && 
+            job.user_id === user.id.toString() && 
             !job.assigned_by && 
             onFillJobForm) {
             buttons.push(
@@ -101,14 +101,14 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
                 <button 
                     key="approve"
                     className={`${styles.actionButton} ${styles.success}`} 
-                    onClick={() => onUpdateStatus(job.id, 'approved')}
+                    onClick={() => onUpdateStatus(parseInt(job.id), 'approved')}
                 >
                     <span className="btn-icon">✓</span> อนุมัติ
                 </button>,
                 <button 
                     key="reject"
                     className={`${styles.actionButton} ${styles.danger}`} 
-                    onClick={() => onUpdateStatus(job.id, 'rejected')}
+                    onClick={() => onUpdateStatus(parseInt(job.id), 'rejected')}
                 >
                     <span className="btn-icon">✕</span> ไม่อนุมัติ
                 </button>

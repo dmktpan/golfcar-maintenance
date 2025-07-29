@@ -7,8 +7,8 @@ const ADMIN_USER = {
   username: 'admin000',
   name: 'administrator',
   role: 'admin' as const,
-  password: '123456', // รหัสผ่านเริ่มต้น
-  managed_golf_courses: [] as number[] // แก้ไขให้เป็น number array ที่ชัดเจน
+  password: 'admin000', // รหัสผ่านเริ่มต้น
+  managed_golf_courses: [] as string[] // แก้ไขให้เป็น string array ตาม Prisma schema
 };
 
 // สนามกอล์ฟเริ่มต้น 1 สนาม สำหรับ admin
@@ -84,7 +84,7 @@ export async function POST() {
             name: ADMIN_USER.name,
             role: ADMIN_USER.role,
             password: ADMIN_USER.password,
-            managed_golf_courses: [], // ส่งเป็น empty array ของ numbers
+            managed_golf_courses: [], // ส่งเป็น empty array ของ strings
             golf_course_id: golfCourseId,
             golf_course_name: DEFAULT_GOLF_COURSE.name
           }
@@ -121,7 +121,7 @@ export async function POST() {
         name: ADMIN_USER.name,
         role: ADMIN_USER.role,
         password: ADMIN_USER.password,
-        loginInstructions: 'ใช้ username: admin000 และ password: 123456 สำหรับล็อกอิน'
+        loginInstructions: 'ใช้ username: admin000 และ password: admin000 สำหรับล็อกอิน'
       },
       ...(results.errors.length > 0 && { errors: results.errors })
     };

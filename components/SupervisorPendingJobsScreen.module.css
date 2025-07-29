@@ -58,12 +58,256 @@
     }
 }
 
+/* Modal Styles */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.closeButton {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.closeButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.modalBody {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.detailsSection {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detailsSection:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.detailsSection h4 {
+    margin: 0 0 16px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.detailsSection h4::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+.tasksList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.taskItem {
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-left: 4px solid #667eea;
+    margin-bottom: 8px;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.partsList {
+    display: grid;
+    gap: 12px;
+}
+
+.partItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.partName {
+    font-weight: 600;
+    color: #374151;
+}
+
+.partQuantity {
+    background: #667eea;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.partsNotes {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+    color: #92400e;
+}
+
+.remarksText {
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.6;
+}
+
+.imagesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.jobImage {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.jobImage:hover {
+    border-color: #667eea;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.cancelButton {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cancelButton:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes pulse {
     0%, 100% {
-        transform: scale(1);
+        opacity: 1;
     }
     50% {
-        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Animation for new jobs */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -73,6 +317,8 @@
     max-width: 1400px;
     margin: 0 auto;
     margin-top: 60px; /* เผื่อ notification banner */
+    background-color: #f8fafc;
+    min-height: 100vh;
 }
 
 /* Header */
@@ -81,46 +327,55 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #e9ecef;
+    padding: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .headerLeft {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 16px;
 }
 
 .btnBack {
-    background: #6c757d;
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-    border: none;
-    padding: 10px 15px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 16px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 600;
     transition: all 0.2s;
+    backdrop-filter: blur(10px);
 }
 
 .btnBack:hover {
-    background: #5a6268;
+    background: rgba(255, 255, 255, 0.3);
     transform: translateX(-2px);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .pageTitle {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #2c3e50;
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
     margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .pendingBadge {
-    background: #dc3545;
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-    padding: 4px 12px;
+    padding: 8px 16px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     animation: pulse 2s infinite;
 }
 
@@ -129,13 +384,14 @@
     background: white;
     padding: 25px;
     border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
     margin-bottom: 25px;
 }
 
 .filtersGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr 1fr auto;
     gap: 20px;
     align-items: end;
 }
@@ -147,41 +403,46 @@
 }
 
 .filterLabel {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: #374151;
     font-size: 0.9rem;
 }
 
 .filterSelect,
 .filterInput {
-    padding: 10px 12px;
-    border: 2px solid #e9ecef;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 0.9rem;
-    transition: border-color 0.2s;
+    background: white;
+    transition: all 0.2s ease;
+    min-width: 200px;
 }
 
 .filterSelect:focus,
 .filterInput:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .btnReset {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 10px 20px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+    padding: 12px 20px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 600;
     transition: all 0.2s;
     height: fit-content;
+    white-space: nowrap;
 }
 
 .btnReset:hover {
-    background: #5a6268;
+    background: #e2e8f0;
+    color: #475569;
     transform: translateY(-1px);
 }
 
@@ -236,16 +497,30 @@
 /* Enhanced Job Card */
 .jobCardEnhanced {
     background: white;
-    border: 2px solid #e9ecef;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 20px;
-    transition: all 0.3s;
+    padding: 24px;
+    transition: all 0.3s ease;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
 }
 
 .jobCardEnhanced:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    border-color: #667eea;
+}
+
+.jobCardEnhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
 }
 
 .jobCardEnhanced.statusPending {
@@ -277,8 +552,15 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.jobHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .vehicleInfo {
@@ -288,9 +570,26 @@
 }
 
 .vehicleNumber {
-    font-size: 1.1rem;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.jobTypeLabel {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jobHeaderRight {
+    text-align: right;
 }
 
 .serialNumber {
@@ -310,14 +609,17 @@
 }
 
 .jobDate {
-    font-size: 0.85rem;
-    color: #6c757d;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .golfCourse {
-    font-size: 0.9rem;
-    color: #495057;
-    font-weight: 500;
+    font-size: 0.95rem;
+    color: #1f2937;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .jobCardBody {
@@ -338,21 +640,35 @@
 }
 
 .infoLabel {
-    font-size: 0.8rem;
-    color: #6c757d;
-    font-weight: 500;
+    font-size: 0.85rem;
+    color: #374151;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .infoValue {
-    font-size: 0.95rem;
-    color: #2c3e50;
-    font-weight: 500;
+    font-size: 1rem;
+    color: #111827;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .jobDetails {
-    margin-top: 15px;
+    margin-bottom: 24px;
+}
+
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.detailItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .jobDetailItem {
@@ -360,17 +676,23 @@
 }
 
 .detailLabel {
-    font-size: 0.9rem;
-    color: #495057;
-    font-weight: 500;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     display: block;
     margin-bottom: 5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .detailValue {
-    font-size: 0.9rem;
-    color: #2c3e50;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #0f172a;
+    word-break: break-word;
     line-height: 1.5;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .subtasksList {
@@ -417,24 +739,26 @@
 }
 
 .partName {
-    font-size: 0.9rem;
-    color: #2c3e50;
-    font-weight: 500;
+    font-size: 0.95rem;
+    color: #111827;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .partQuantity {
-    font-size: 0.85rem;
-    color: #6c757d;
+    font-size: 0.9rem;
+    color: #1f2937;
     background: #ffffff;
     padding: 4px 8px;
     border-radius: 12px;
     border: 1px solid #dee2e6;
-    font-weight: 500;
+    font-weight: 600;
     min-width: 80px;
     text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .jobCardFooter {
@@ -442,6 +766,88 @@
     gap: 12px;
     padding-top: 15px;
     border-top: 1px solid #e9ecef;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.actionButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.actionButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.actionButton:hover::before {
+    left: 100%;
+}
+
+.buttonIcon {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.approveButton {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.approveButton:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.rejectButton {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.rejectButton:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.detailsButton {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.detailsButton:hover {
+    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
 }
 
 .btnSuccess,
@@ -521,6 +927,10 @@
 .emptyState {
     text-align: center;
     padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
     color: #6c757d;
 }
 
@@ -530,9 +940,17 @@
     opacity: 0.5;
 }
 
+.emptyState h3 {
+    color: #374151;
+    margin: 0 0 8px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
 .emptyState p {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
+    font-size: 1rem;
+    margin: 0;
+    color: #6b7280;
 }
 
 .emptySubtitle {
@@ -543,34 +961,82 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
-        padding: 15px;
+        padding: 16px;
         margin-top: 80px;
+    }
+    
+    .pageHeader {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .headerLeft {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .pageTitle {
+        font-size: 1.5rem;
     }
     
     .filtersGrid {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .filterSelect,
+    .filterInput {
+        min-width: auto;
+        width: 100%;
     }
     
     .summarySection {
         flex-direction: column;
     }
     
+    .jobCardEnhanced {
+        padding: 20px;
+    }
+    
+    .jobCardHeader {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .jobHeaderLeft {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .jobHeaderRight {
+        text-align: left;
+        width: 100%;
+    }
+    
     .jobInfoGrid {
         grid-template-columns: 1fr;
+    }
+    
+    .detailsGrid {
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
     
     .jobCardFooter {
         flex-direction: column;
     }
     
-    .pageTitle {
-        font-size: 1.4rem;
+    .actionButtons {
+        justify-content: stretch;
+        flex-direction: column;
     }
     
-    .headerLeft {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+    .actionButton {
+        flex: 1;
+        min-width: auto;
+        width: 100%;
     }
     
     /* Parts List Mobile Styles */
@@ -588,6 +1054,31 @@
 }
 
 @media (max-width: 480px) {
+    .container {
+        padding: 12px;
+    }
+    
+    .pageHeader {
+        padding: 16px;
+    }
+    
+    .pageTitle {
+        font-size: 1.25rem;
+    }
+    
+    .jobCardEnhanced {
+        padding: 16px;
+    }
+    
+    .vehicleNumber {
+        font-size: 1.1rem;
+    }
+    
+    .jobTypeLabel {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+    
     .notificationContent {
         padding: 10px 15px;
         flex-direction: column;

@@ -23,8 +23,8 @@ function ViewAssignedJobsScreen({
   onUpdateStatus,
   onFillJobForm 
 }: ViewAssignedJobsScreenProps) {
-    const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+    const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
 
     // Filter jobs based on selected filters
@@ -36,25 +36,21 @@ function ViewAssignedJobsScreen({
         );
 
         if (selectedCourseId) {
-            filtered = filtered.filter(job => job.golf_course_id === selectedCourseId);
+            // รองรับทั้ง string และ number id
+            filtered = filtered.filter(job => 
+                String(job.golf_course_id) === String(selectedCourseId)
+            );
         }
 
         if (selectedEmployeeId) {
-            filtered = filtered.filter(job => job.assigned_to === selectedEmployeeId);
+            // รองรับทั้ง string และ number id
+            filtered = filtered.filter(job => 
+                String(job.assigned_to) === String(selectedEmployeeId)
+            );
         }
 
         setFilteredJobs(filtered);
     }, [jobs, selectedCourseId, selectedEmployeeId]);
-
-    // ฟังก์ชันหาข้อมูลรถ
-    const getVehicleInfo = (vehicleId: number) => {
-        return vehicles.find(v => v.id === vehicleId);
-    };
-
-    // ฟังก์ชันหาชื่อสนาม
-    const getGolfCourseName = (golfCourseId: number) => {
-        return golfCourses.find(gc => gc.id === golfCourseId)?.name || 'ไม่ระบุ';
-    };
 
     return (
         <div style={{ padding: '20px' }}>
@@ -77,7 +73,7 @@ function ViewAssignedJobsScreen({
                     </label>
                     <select 
                         value={selectedCourseId || ''} 
-                        onChange={(e) => setSelectedCourseId(e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={(e) => setSelectedCourseId(e.target.value || null)}
                         style={{ 
                             padding: '8px 12px', 
                             borderRadius: '4px', 
@@ -87,7 +83,7 @@ function ViewAssignedJobsScreen({
                     >
                         <option value="">ทุกสนาม</option>
                         {golfCourses.map(course => (
-                            <option key={course.id} value={course.id}>
+                            <option key={course.id} value={String(course.id)}>
                                 {course.name}
                             </option>
                         ))}
@@ -100,7 +96,7 @@ function ViewAssignedJobsScreen({
                     </label>
                     <select 
                         value={selectedEmployeeId || ''} 
-                        onChange={(e) => setSelectedEmployeeId(e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={(e) => setSelectedEmployeeId(e.target.value || null)}
                         style={{ 
                             padding: '8px 12px', 
                             borderRadius: '4px', 
@@ -110,7 +106,7 @@ function ViewAssignedJobsScreen({
                     >
                         <option value="">ทุกคน</option>
                         {users.filter(user => user.role === 'staff').map(user => (
-                            <option key={user.id} value={user.id}>
+                            <option key={user.id} value={String(user.id)}>
                                 {user.name}
                             </option>
                         ))}

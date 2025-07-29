@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { MOCK_SYSTEMS, JobType, JobStatus, Job, User, Vehicle, GolfCourse, View } from '@/lib/data';
+import { jobsApi } from '@/lib/api';
 //import { View } from '@/app/page';
 
 interface MultiAssignScreenProps {
@@ -16,38 +17,38 @@ interface MultiAssignScreenProps {
 
 interface AssignmentItem {
     id: number;
-    golfCourseId: number;
-    vehicleId: number;
+    golfCourseId: string | number;
+    vehicleId: string | number;
     serialNumber: string;
     vehicleNumber: string;
-    userId: number;
+    userId: string | number;
     jobType: JobType;
     system: string;
     remarks: string;
 }
 
-const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golfCourses }: MultiAssignScreenProps) => {
+const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourses }: MultiAssignScreenProps) => {
     const [assignments, setAssignments] = useState<AssignmentItem[]>([{
         id: 1,
-        golfCourseId: 0,
-        vehicleId: 0,
+        golfCourseId: '',
+        vehicleId: '',
         serialNumber: '',
         vehicleNumber: '',
-        userId: 0,
+        userId: '',
         jobType: 'PM',
         system: '',
         remarks: ''
     }]);
     const [successMessage, setSuccessMessage] = useState('');
 
-    const getFilteredStaffUsers = (golfCourseId: number) => {
-        if (golfCourseId === 0) return [];
-        return users.filter(user => user.role === 'staff' && user.golf_course_id === golfCourseId);
+    const getFilteredStaffUsers = (golfCourseId: string | number) => {
+        if (golfCourseId === 0 || golfCourseId === '') return [];
+        return users.filter(user => user.role === 'staff' && String(user.golf_course_id) === String(golfCourseId));
     };
 
-    const getFilteredVehicles = (golfCourseId: number) => {
-        if (golfCourseId === 0) return [];
-        return vehicles.filter(vehicle => vehicle.golf_course_id === golfCourseId);
+    const getFilteredVehicles = (golfCourseId: string | number) => {
+        if (golfCourseId === 0 || golfCourseId === '') return [];
+        return vehicles.filter(vehicle => String(vehicle.golf_course_id) === String(golfCourseId));
     };
 
     const handleInputChange = (id: number, field: keyof AssignmentItem, value: any) => {
@@ -56,27 +57,15 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
         ));
     };
 
-    const handleGolfCourseChange = (id: number, golfCourseId: number) => {
+    const handleGolfCourseChange = (id: number, golfCourseId: string | number) => {
         setAssignments(prev => prev.map(item => 
             item.id === id ? {
                 ...item,
                 golfCourseId,
-                vehicleId: 0,
+                vehicleId: '',
                 serialNumber: '',
                 vehicleNumber: '',
-                userId: 0
-            } : item
-        ));
-    };
-
-    const handleVehicleChange = (id: number, vehicleId: number) => {
-        const selectedVehicle = vehicles.find(v => v.id === vehicleId);
-        setAssignments(prev => prev.map(item => 
-            item.id === id ? {
-                ...item,
-                vehicleId,
-                serialNumber: selectedVehicle?.serial_number || '',
-                vehicleNumber: selectedVehicle?.vehicle_number || ''
+                userId: ''
             } : item
         ));
     };
@@ -92,7 +81,7 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
             setAssignments(prev => prev.map(item => 
                 item.id === id ? {
                     ...item,
-                    vehicleId: selectedVehicle.id,
+                    vehicleId: String(selectedVehicle.id),
                     serialNumber: selectedVehicle.serial_number,
                     vehicleNumber: selectedVehicle.vehicle_number
                 } : item
@@ -102,7 +91,7 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                 item.id === id ? {
                     ...item,
                     serialNumber,
-                    vehicleId: 0,
+                    vehicleId: '',
                     vehicleNumber: ''
                 } : item
             ));
@@ -120,7 +109,7 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
             setAssignments(prev => prev.map(item => 
                 item.id === id ? {
                     ...item,
-                    vehicleId: selectedVehicle.id,
+                    vehicleId: String(selectedVehicle.id),
                     serialNumber: selectedVehicle.serial_number,
                     vehicleNumber: selectedVehicle.vehicle_number
                 } : item
@@ -130,7 +119,7 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                 item.id === id ? {
                     ...item,
                     vehicleNumber,
-                    vehicleId: 0,
+                    vehicleId: '',
                     serialNumber: ''
                 } : item
             ));
@@ -141,11 +130,11 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
         const newId = Math.max(...assignments.map(a => a.id)) + 1;
         setAssignments([...assignments, {
             id: newId,
-            golfCourseId: 0,
-            vehicleId: 0,
+            golfCourseId: '',
+            vehicleId: '',
             serialNumber: '',
             vehicleNumber: '',
-            userId: 0,
+            userId: '',
             jobType: 'PM',
             system: '',
             remarks: ''
@@ -158,14 +147,14 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
         // Validate all assignments
         const isValid = assignments.every(assignment => 
-            assignment.golfCourseId !== 0 && 
-            assignment.vehicleId !== 0 && 
-            assignment.userId !== 0 && 
+            assignment.golfCourseId !== '' && 
+            assignment.vehicleId !== '' && 
+            assignment.userId !== '' && 
             (assignment.jobType !== 'PM' || assignment.system !== '')
         );
         
@@ -174,56 +163,66 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
             return;
         }
         
-        // Create new jobs from assignments
-        const newJobs: Job[] = assignments.map(assignment => {
-            const vehicle = vehicles.find(v => 
-                (v.serial_number === assignment.serialNumber || v.vehicle_number === assignment.vehicleNumber) &&
-                v.golf_course_id === assignment.golfCourseId
-            );
-            const assignedUser = users.find(u => u.id === assignment.userId);
+        // Create new jobs from assignments using API
+        try {
+            const jobPromises = assignments.map(async (assignment) => {
+                const vehicle = vehicles.find(v => 
+                    (v.serial_number === assignment.serialNumber || v.vehicle_number === assignment.vehicleNumber) &&
+                    String(v.golf_course_id) === String(assignment.golfCourseId)
+                );
+                const assignedUser = users.find(u => u.id === assignment.userId);
+                
+                const newJobData = {
+                    user_id: String(assignment.userId),
+                    userName: assignedUser?.name || '',
+                    vehicle_id: String(vehicle?.id || ''),
+                    vehicle_number: vehicle?.vehicle_number || assignment.vehicleNumber,
+                    golf_course_id: String(assignment.golfCourseId),
+                    type: assignment.jobType,
+                    status: 'assigned' as JobStatus,
+                    parts: [],
+                    system: assignment.system || '',
+                    subTasks: [],
+                    partsNotes: '',
+                    remarks: assignment.remarks,
+                    assigned_to: String(assignment.userId)
+                };
+                
+                const result = await jobsApi.create(newJobData);
+                if (result.success) {
+                    return result.data as Job;
+                } else {
+                    throw new Error(`Failed to create job: ${result.message}`);
+                }
+            });
             
-            return {
-                id: Date.now() + Math.random(),
-                user_id: assignment.userId,
-                userName: assignedUser?.name || '',
-                vehicle_id: vehicle?.id || 0,
-                vehicle_number: vehicle?.vehicle_number || assignment.vehicleNumber,
-                golf_course_id: assignment.golfCourseId, // เพิ่ม golf_course_id
-                type: assignment.jobType,
-                status: 'assigned' as JobStatus, // ใช้ JobStatus type
-                created_at: new Date().toISOString(),
-                parts: [],
-                system: assignment.system || '',
-                subTasks: [],
-                partsNotes: '',
-                remarks: assignment.remarks,
-                assigned_by: user.id, // ID ของหัวหน้างานที่มอบหมาย
-                assigned_by_name: user.name, // ชื่อหัวหน้างานที่มอบหมาย
-                assigned_to: assignment.userId // เพิ่มการตั้งค่า assigned_to
-            };
-        });
-        
-        // Add new jobs to the jobs list
-        setJobs(prevJobs => [...prevJobs, ...newJobs]);
-        
-        // Show success message
-        setSuccessMessage(`มอบหมายงานสำเร็จ ${assignments.length} รายการ`);
-        
-        // Reset form after 3 seconds
-        setTimeout(() => {
-            setSuccessMessage('');
-            setAssignments([{
-                id: 1,
-                golfCourseId: 0,
-                vehicleId: 0,
-                serialNumber: '',
-                vehicleNumber: '',
-                userId: 0,
-                jobType: 'PM',
-                system: '',
-                remarks: ''
-            }]);
-        }, 3000);
+            const createdJobs = await Promise.all(jobPromises);
+            
+            // Add created jobs to the jobs list
+            setJobs(prevJobs => [...prevJobs, ...createdJobs]);
+            
+            // Show success message
+            setSuccessMessage(`มอบหมายงานสำเร็จ ${assignments.length} รายการ`);
+            
+            // Reset form after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage('');
+                setAssignments([{
+                    id: 1,
+                    golfCourseId: '',
+                    vehicleId: '',
+                    serialNumber: '',
+                    vehicleNumber: '',
+                    userId: '',
+                    jobType: 'PM',
+                    system: '',
+                    remarks: ''
+                }]);
+            }, 3000);
+        } catch (error) {
+            console.error('Error creating jobs:', error);
+            alert(`เกิดข้อผิดพลาดในการสร้างงาน: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     };
 
     return (
@@ -250,12 +249,12 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                                 <select 
                                     id={`golfCourse-${assignment.id}`}
                                     value={assignment.golfCourseId}
-                                    onChange={(e) => handleGolfCourseChange(assignment.id, parseInt(e.target.value))}
+                                    onChange={(e) => handleGolfCourseChange(assignment.id, e.target.value || '')}
                                     required
                                 >
-                                    <option value={0}>-- เลือกสนาม --</option>
+                                    <option value="">-- เลือกสนาม --</option>
                                     {golfCourses.map(course => (
-                                        <option key={course.id} value={course.id}>
+                                        <option key={course.id} value={String(course.id)}>
                                             {course.name}
                                         </option>
                                     ))}
@@ -271,8 +270,8 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                                     list={`serialList-${assignment.id}`}
                                     value={assignment.serialNumber}
                                     onChange={(e) => handleSerialNumberChange(assignment.id, e.target.value)}
-                                    placeholder={assignment.golfCourseId === 0 ? "เลือกสนามก่อน" : "กรอกหมายเลขซีเรียล"}
-                                    disabled={assignment.golfCourseId === 0}
+                                    placeholder={assignment.golfCourseId === '' ? "เลือกสนามก่อน" : "กรอกหมายเลขซีเรียล"}
+                                    disabled={assignment.golfCourseId === ''}
                                     required
                                 />
                                 <datalist id={`serialList-${assignment.id}`}>
@@ -290,8 +289,8 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                                     list={`vehicleList-${assignment.id}`}
                                     value={assignment.vehicleNumber}
                                     onChange={(e) => handleVehicleNumberChange(assignment.id, e.target.value)}
-                                    placeholder={assignment.golfCourseId === 0 ? "เลือกสนามก่อน" : "กรอกเลขรถ"}
-                                    disabled={assignment.golfCourseId === 0}
+                                    placeholder={assignment.golfCourseId === '' ? "เลือกสนามก่อน" : "กรอกเลขรถ"}
+                                    disabled={assignment.golfCourseId === ''}
                                     required
                                 />
                                 <datalist id={`vehicleList-${assignment.id}`}>
@@ -307,11 +306,11 @@ const MultiAssignScreen = ({ setView, user, jobs, setJobs, users, vehicles, golf
                                 <select 
                                     id={`user-${assignment.id}`}
                                     value={assignment.userId}
-                                    onChange={(e) => handleInputChange(assignment.id, 'userId', parseInt(e.target.value))}
-                                    disabled={assignment.golfCourseId === 0}
+                                    onChange={(e) => handleInputChange(assignment.id, 'userId', e.target.value)}
+                                    disabled={assignment.golfCourseId === ''}
                                     required
                                 >
-                                    <option value={0}>{assignment.golfCourseId === 0 ? "-- เลือกสนามก่อน --" : "-- เลือกพนักงาน --"}</option>
+                                    <option value="">{assignment.golfCourseId === '' ? "-- เลือกสนามก่อน --" : "-- เลือกพนักงาน --"}</option>
                                     {getFilteredStaffUsers(assignment.golfCourseId).map(user => (
                                         <option key={user.id} value={user.id}>{user.name}</option>
                                     ))}

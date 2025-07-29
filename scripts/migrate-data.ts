@@ -241,14 +241,21 @@ async function migrateData() {
     for (const entry of mongoSerialHistory) {
       await prisma.serialHistoryEntry.create({
         data: {
+          serial_number: entry.serial_number || '',
+          vehicle_number: entry.vehicle_number || '',
           action_type: entry.action_type,
           action_date: entry.action_date || new Date(),
           actual_transfer_date: entry.actual_transfer_date,
-          details: entry.details,
-          is_active: entry.is_active,
+          details: entry.details || '',
+          is_active: entry.is_active || false,
+          status: entry.status,
+          job_type: entry.job_type,
+          golf_course_name: entry.golf_course_name,
           vehicle_id: entry.vehicle_id,
           performed_by_id: entry.performed_by_id,
           related_job_id: entry.related_job_id,
+          createdAt: entry.createdAt || new Date(),
+          updatedAt: entry.updatedAt || new Date(),
         }
       })
     }
@@ -260,10 +267,20 @@ async function migrateData() {
     for (const log of mongoPartsUsageLogs) {
       await prisma.partsUsageLog.create({
         data: {
-          jobId: log.jobId,
-          partId: log.partId,
-          quantity: log.quantity,
+          jobId: log.jobId?.toString() || '',
+          partName: log.partName || '',
+          partId: log.partId || '',
+          quantityUsed: log.quantity || 1,
+          vehicleNumber: log.vehicleNumber || '',
+          vehicleSerial: log.serialNumber || '',
+          golfCourseName: log.golfCourseName || '',
+          usedBy: log.userName || '',
+          usedDate: log.usedDate || '',
+          notes: '',
+          jobType: log.jobType || '',
+          system: log.system || '',
           createdAt: log.createdAt || new Date(),
+          updatedAt: log.updatedAt || new Date(),
         }
       })
     }

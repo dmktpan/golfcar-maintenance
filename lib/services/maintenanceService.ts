@@ -4,7 +4,7 @@ import type { MaintenanceInput, MaintenanceResponse } from '@/types/maintenance'
 
 export class MaintenanceService {
   static async createMaintenance(data: MaintenanceInput): Promise<MaintenanceResponse> {
-    const { description, date, cost, notes, vehicle_id, vehicle_number, golf_course_id, user_id, userName, images } = data;
+    const { description, date, cost, notes, vehicle_id, vehicle_number, golf_course_id, user_id, userName } = data;
 
     const newMaintenanceJob = await prisma.job.create({
       data: {

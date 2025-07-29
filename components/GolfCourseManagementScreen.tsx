@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Import interfaces and functions from lib/data.ts
 import { 
@@ -20,7 +20,7 @@ interface GolfCourseManagementScreenProps {
 interface BulkUploadData {
   serial_number: string;
   vehicle_number: string;
-  golf_course_id: number;
+  golf_course_id: string;
 }
 
 const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({ 
@@ -29,7 +29,6 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   setGolfCourses, 
   vehicles, 
   setVehicles,
-  serialHistory,
   addSerialHistoryEntry
 }) => {
   // Remove conflicting useState declarations and use props instead
@@ -37,19 +36,29 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const [newCourse, setNewCourse] = useState({ name: '', location: '' });
   const [editingCourse, setEditingCourse] = useState<GolfCourse | null>(null);
   const [showAddCourseForm, setShowAddCourseForm] = useState(false);
-  const [newVehicle, setNewVehicle] = useState({ serial_number: '', vehicle_number: '', golf_course_id: 0 });
+  const [newVehicle, setNewVehicle] = useState({ serial_number: '', vehicle_number: '', golf_course_id: '' });
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
-  const [filterCourse, setFilterCourse] = useState<number | ''>('');
-  const [selectedVehicles, setSelectedVehicles] = useState<number[]>([]);
+  const [filterCourse, setFilterCourse] = useState<string | ''>('');
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([]);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showBulkTransferModal, setShowBulkTransferModal] = useState(false);
   const [bulkUploadData, setBulkUploadData] = useState<BulkUploadData[]>([]);
   const [bulkUploadErrors, setBulkUploadErrors] = useState<string[]>([]);
-  const [transferToCourse, setTransferToCourse] = useState<number | ''>('');
+  const [transferToCourse, setTransferToCourse] = useState<string | ''>('');
   const [transferDate, setTransferDate] = useState<string>(''); // เพิ่ม state สำหรับวันที่ย้าย
   const [serialError, setSerialError] = useState<string>(''); // เพิ่ม state สำหรับแสดงข้อผิดพลาด Serial ซ้ำ
   const [vehicleNumberError, setVehicleNumberError] = useState<string>(''); // เพิ่ม state สำหรับแสดงข้อผิดพลาดหมายเลขรถซ้ำ
+
+  // Debug logging for newVehicle state changes
+  useEffect(() => {
+    console.log('newVehicle state changed:', newVehicle);
+  }, [newVehicle]);
+
+  // Debug logging for golfCourses changes
+  useEffect(() => {
+    console.log('golfCourses changed:', golfCourses);
+  }, [golfCourses]);
 
   // Helper function to get status label
   const getStatusLabel = (status: string) => {
@@ -63,30 +72,31 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   };
 
   // Helper function to check duplicate serial number
-  const checkDuplicateSerial = (serialNumber: string, excludeId?: number): boolean => {
+  const checkDuplicateSerial = (serialNumber: string, excludeId?: string): boolean => {
     return vehicles.some(vehicle => 
       vehicle.serial_number === serialNumber && vehicle.id !== excludeId
     );
   };
 
   // Helper function to check duplicate vehicle number
-  const checkDuplicateVehicleNumber = (vehicleNumber: string, excludeId?: number): boolean => {
+  const checkDuplicateVehicleNumber = (vehicleNumber: string, excludeId?: string): boolean => {
     return vehicles.some(vehicle => 
       vehicle.vehicle_number === vehicleNumber && vehicle.id !== excludeId
     );
   };
 
   // Helper function to validate vehicle data
-  const validateVehicleData = (serialNumber: string, vehicleNumber: string, excludeId?: number): { isValid: boolean; errors: { serial?: string; vehicleNumber?: string } } => {
+  const validateVehicleData = (serialNumber: string, vehicleNumber: string, excludeId?: string): { isValid: boolean; errors: { serial?: string; vehicleNumber?: string } } => {
     const errors: { serial?: string; vehicleNumber?: string } = {};
     
     if (checkDuplicateSerial(serialNumber, excludeId)) {
       errors.serial = `หมายเลขซีเรียล "${serialNumber}" มีอยู่ในระบบแล้ว`;
     }
     
-    if (checkDuplicateVehicleNumber(vehicleNumber, excludeId)) {
-      errors.vehicleNumber = `หมายเลขรถ "${vehicleNumber}" มีอยู่ในระบบแล้ว`;
-    }
+    // ลบการตรวจสอบ vehicle_number ที่ซ้ำ - อนุญาตให้ซ้ำได้
+    // if (checkDuplicateVehicleNumber(vehicleNumber, excludeId)) {
+    //   errors.vehicleNumber = `หมายเลขรถ "${vehicleNumber}" มีอยู่ในระบบแล้ว`;
+    // }
     
     return {
       isValid: Object.keys(errors).length === 0,
@@ -95,7 +105,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   };
 
   // Helper function to count vehicles by course
-  const getVehicleCountByCourse = (courseId: number): number => {
+  const getVehicleCountByCourse = (courseId: string): number => {
     return vehicles.filter(vehicle => vehicle.golf_course_id === courseId).length;
   };
 
@@ -162,7 +172,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     }
   };
 
-  const handleDeleteCourse = async (id: number) => {
+  const handleDeleteCourse = async (id: string) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบสนามนี้?')) {
       try {
         const response = await fetch(`/api/golf-courses/${id}`, {
@@ -210,7 +220,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         serial_number: newVehicle.serial_number,
         vehicle_number: newVehicle.vehicle_number,
         golf_course_id: newVehicle.golf_course_id,
-        golf_course_name: golfCourse?.name ?? '',
+        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
         brand: 'ไม่ระบุ',
         model: 'ไม่ระบุ',
         year: new Date().getFullYear(),
@@ -230,22 +240,22 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           const result = await response.json();
           setVehicles([...vehicles, result.data]);
           
-          // บันทึกประวัติการเพิ่มรถใหม่
+          // บันทึกประวัตการเพิ่มรถใหม่
           addSerialHistoryEntry({
             serial_number: result.data.serial_number,
             vehicle_id: result.data.id,
             vehicle_number: result.data.vehicle_number,
             action_type: 'registration',
             action_date: new Date().toISOString(),
-            details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name ?? 'ไม่ระบุ'}`,
+            details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name || 'ไม่ระบุ'}`,
             performed_by: 'administrator',
-            performed_by_id: 1,
+            performed_by_id: "1",
             golf_course_id: result.data.golf_course_id,
-            golf_course_name: golfCourse?.name ?? 'ไม่ระบุ',
+            golf_course_name: golfCourse?.name || 'ไม่ระบุ',
             is_active: true
           });
           
-          setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: 0 });
+          setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: '' });
           setShowAddVehicleForm(false);
           alert('เพิ่มรถกอล์ฟสำเร็จ');
         } else {
@@ -286,7 +296,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         vehicle.id === editingVehicle.id ? editingVehicle : vehicle
       ));
       
-      // บันทึกประวัติการเปลี่ยนแปลง
+      // บันทึกประวัตการเปลี่ยนแปลง
       if (oldVehicle) {
         const changes: string[] = [];
         
@@ -297,8 +307,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           changes.push(`หมายเลขรถ: ${oldVehicle.vehicle_number} → ${editingVehicle.vehicle_number}`);
         }
         if (oldVehicle.golf_course_id !== editingVehicle.golf_course_id) {
-          const oldCourse = golfCourses.find(c => c.id === oldVehicle.golf_course_id)?.name ?? 'ไม่ระบุ';
-          const newCourse = golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name ?? 'ไม่ระบุ';
+          const oldCourse = golfCourses.find(c => c.id === oldVehicle.golf_course_id)?.name || 'ไม่ระบุ';
+          const newCourse = golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ';
           changes.push(`สนาม: ${oldCourse} → ${newCourse}`);
         }
         if (oldVehicle.status !== editingVehicle.status) {
@@ -314,9 +324,9 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
             action_date: new Date().toISOString(),
             details: `แก้ไขข้อมูลรถ - ${changes.join(', ')}`,
             performed_by: 'administrator',
-            performed_by_id: 1,
+            performed_by_id: "1",
             golf_course_id: editingVehicle.golf_course_id,
-            golf_course_name: golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name ?? 'ไม่ระบุ',
+            golf_course_name: golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ',
             is_active: true
           });
         }
@@ -326,12 +336,12 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     }
   };
 
-  const handleDeleteVehicle = (id: number) => {
+  const handleDeleteVehicle = (id: string) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบรถคันนี้?')) {
       const vehicleToDelete = vehicles.find(v => v.id === id);
       
       if (vehicleToDelete) {
-        // บันทึกประวัติการลบ
+        // บันทึกประวัตการลบ
         addSerialHistoryEntry({
           serial_number: vehicleToDelete.serial_number,
           vehicle_id: vehicleToDelete.id,
@@ -340,7 +350,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           action_date: new Date().toISOString(),
           details: `ลบรถออกจากระบบ - หมายเลขรถ: ${vehicleToDelete.vehicle_number}, สนาม: ${vehicleToDelete.golf_course_name}`,
           performed_by: 'administrator',
-          performed_by_id: 1,
+          performed_by_id: "1",
           golf_course_id: vehicleToDelete.golf_course_id,
           golf_course_name: vehicleToDelete.golf_course_name,
           is_active: false
@@ -351,7 +361,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     }
   };
 
-  const handleSelectVehicle = (id: number) => {
+  const handleSelectVehicle = (id: string) => {
     setSelectedVehicles(prev => 
       prev.includes(id) 
         ? prev.filter(vehicleId => vehicleId !== id)
@@ -371,7 +381,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       const data: BulkUploadData[] = [];
       const errors: string[] = [];
       const seenSerials = new Set<string>(); // ตรวจสอบ Serial ซ้ำในไฟล์เอง
-      const seenVehicleNumbers = new Set<string>(); // ตรวจสอบหมายเลขรถซ้ำในไฟล์เอง
+      // ลบการตรวจสอบ vehicle_number ซ้ำ - อนุญาตให้ซ้ำได้
+      // const seenVehicleNumbers = new Set<string>(); 
 
       lines.forEach((line, index) => {
         if (index === 0) return; // Skip header
@@ -382,8 +393,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           return;
         }
 
-        const courseId = parseInt(golf_course_id);
-        if (isNaN(courseId) || !golfCourses.find(c => c.id === courseId)) {
+        const courseId = golf_course_id;
+        if (!golfCourses.find(c => c.id === courseId)) {
           const availableCourses = golfCourses.map(c => `${c.id}=${c.name}`).join(', ');
           errors.push(`บรรทัด ${index + 1}: รหัสสนามไม่ถูกต้อง (ใช้ได้: ${availableCourses})`);
           return;
@@ -401,21 +412,20 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           return;
         }
 
-        // ตรวจสอบหมายเลขรถซ้ำในระบบ
-        if (vehicles.find(v => v.vehicle_number === vehicle_number)) {
-          errors.push(`บรรทัด ${index + 1}: หมายเลขรถ "${vehicle_number}" มีอยู่ในระบบแล้ว`);
-          return;
-        }
+        // ลบการตรวจสอบ vehicle_number ซ้ำ - อนุญาตให้ซ้ำได้
+        // if (vehicles.find(v => v.vehicle_number === vehicle_number)) {
+        //   errors.push(`บรรทัด ${index + 1}: หมายเลขรถ "${vehicle_number}" มีอยู่ในระบบแล้ว`);
+        //   return;
+        // }
 
-        // ตรวจสอบหมายเลขรถซ้ำในไฟล์เอง
-        if (seenVehicleNumbers.has(vehicle_number)) {
-          errors.push(`บรรทัด ${index + 1}: หมายเลขรถ "${vehicle_number}" ซ้ำกันในไฟล์`);
-          return;
-        }
+        // if (seenVehicleNumbers.has(vehicle_number)) {
+        //   errors.push(`บรรทัด ${index + 1}: หมายเลขรถ "${vehicle_number}" ซ้ำกันในไฟล์`);
+        //   return;
+        // }
 
-        // เพิ่มลงใน Set เพื่อตรวจสอบการซ้ำ
+        // เพิ่มลงใน Set เพื่อตรวจสอบการซ้ำ (เฉพาะ serial_number)
         seenSerials.add(serial_number);
-        seenVehicleNumbers.add(vehicle_number);
+        // seenVehicleNumbers.add(vehicle_number);
 
         data.push({ serial_number, vehicle_number, golf_course_id: courseId });
       });
@@ -430,15 +440,16 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     if (bulkUploadData.length === 0) return;
 
     const newVehicles = bulkUploadData.map((data, index) => {
-      const newId = Math.max(...vehicles.map(v => v.id), 0) + index + 1;
-      const golfCourse = golfCourses.find(c => c.id === data.golf_course_id);
+      // สร้าง ID ใหม่โดยใช้ timestamp และ index เพื่อให้ unique
+      const newId = `${Date.now()}_${index}`;
+      const golfCourse = golfCourses.find(c => c.id === String(data.golf_course_id));
       
       return {
         id: newId,
         serial_number: data.serial_number,
         vehicle_number: data.vehicle_number,
-        golf_course_id: data.golf_course_id,
-        golf_course_name: golfCourse?.name ?? '',
+        golf_course_id: String(data.golf_course_id),
+        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
         brand: 'ไม่ระบุ',
         model: 'ไม่ระบุ',
         year: new Date().getFullYear(),
@@ -449,7 +460,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
     setVehicles([...vehicles, ...newVehicles]);
     
-    // บันทึกประวัติการอัปโหลดหลายคัน
+    // บันทึกประวัตการอัปโหลดหลายคัน
     newVehicles.forEach(vehicle => {
       addSerialHistoryEntry({
         serial_number: vehicle.serial_number,
@@ -459,7 +470,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         action_date: new Date().toISOString(),
         details: `อัปโหลดรถจากไฟล์ - หมายเลขรถ: ${vehicle.vehicle_number}, สนาม: ${vehicle.golf_course_name}`,
         performed_by: 'administrator',
-        performed_by_id: 1,
+        performed_by_id: "1",
         golf_course_id: vehicle.golf_course_id,
         golf_course_name: vehicle.golf_course_name,
         is_active: true
@@ -471,48 +482,60 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     setShowBulkUploadModal(false);
   };
 
-  const handleBulkTransfer = () => {
+  const handleBulkTransfer = async () => {
     if (selectedVehicles.length === 0 || !transferToCourse || !transferDate) return;
 
-    const vehiclesToTransfer = vehicles.filter(v => selectedVehicles.includes(v.id));
-    const targetCourse = golfCourses.find(c => c.id === transferToCourse);
-    
-    if (!targetCourse) return;
+    try {
+      const targetCourseId = transferToCourse;
+      const targetCourse = golfCourses.find(c => c.id === targetCourseId);
+      
+      if (!targetCourse) {
+        alert('ไม่พบสนามปลายทาง');
+        return;
+      }
 
-    // อัปเดตข้อมูลรถ
-    setVehicles(vehicles.map(vehicle => 
-      selectedVehicles.includes(vehicle.id)
-        ? { 
-            ...vehicle, 
-            golf_course_id: transferToCourse as number, 
-            golf_course_name: targetCourse.name
-          }
-        : vehicle
-    ));
-
-    // บันทึกประวัติการโอนย้ายหลายคันพร้อมวันที่
-    vehiclesToTransfer.forEach(vehicle => {
-      const oldCourse = golfCourses.find(c => c.id === vehicle.golf_course_id)?.name ?? 'ไม่ระบุ';
-      addSerialHistoryEntry({
-        serial_number: vehicle.serial_number,
-        vehicle_id: vehicle.id,
-        vehicle_number: vehicle.vehicle_number,
-        action_type: 'bulk_transfer',
-        action_date: new Date().toISOString(), // วันที่/เวลาที่บันทึกในระบบ (ปัจจุบัน)
-        actual_transfer_date: transferDate, // วันที่ย้ายจริงที่ผู้ใช้เลือก
-        details: `โยกย้ายรถ - จาก: ${oldCourse} ไป: ${targetCourse.name} (วันที่โยกย้ายจริง: ${new Date(transferDate).toLocaleDateString('th-TH')})`,
-        performed_by: 'administrator',
-        performed_by_id: 1,
-        golf_course_id: transferToCourse as number,
-        golf_course_name: targetCourse.name,
-        is_active: true
+      // เรียก API เพื่อย้ายรถ
+      const response = await fetch('/api/vehicles/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vehicle_ids: selectedVehicles,
+          target_golf_course_id: targetCourseId,
+          target_golf_course_name: targetCourse.name,
+          transfer_date: transferDate,
+          performed_by: 'administrator'
+        }),
       });
-    });
 
-    setSelectedVehicles([]);
-    setTransferToCourse('');
-    setTransferDate('');
-    setShowBulkTransferModal(false);
+      const result = await response.json();
+
+      if (result.success) {
+        // อัปเดต state ใน frontend
+        setVehicles(vehicles.map(vehicle => 
+          selectedVehicles.includes(vehicle.id)
+            ? { 
+                ...vehicle, 
+                golf_course_id: targetCourseId, 
+                golf_course_name: targetCourse.name
+              }
+            : vehicle
+        ));
+
+        alert(`ย้ายรถสำเร็จ ${result.data.length} คัน`);
+        
+        setSelectedVehicles([]);
+        setTransferToCourse('');
+        setTransferDate('');
+        setShowBulkTransferModal(false);
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error transferring vehicles:', error);
+      alert('เกิดข้อผิดพลาดในการย้ายรถ');
+    }
   };
 
   const downloadTemplate = () => {
@@ -539,7 +562,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   };
 
   const filteredVehicles = filterCourse 
-    ? vehicles.filter(vehicle => vehicle.golf_course_id === filterCourse)
+    ? vehicles.filter(vehicle => String(vehicle.golf_course_id) === filterCourse)
     : vehicles;
 
   return (
@@ -714,12 +737,17 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                   {vehicleNumberError && <div className="error-message">{vehicleNumberError}</div>}
                 </div>
                 <select
+                  key="add-vehicle-course-select"
                   value={newVehicle.golf_course_id}
-                  onChange={(e) => setNewVehicle({...newVehicle, golf_course_id: parseInt(e.target.value)})}
+                  onChange={(e) => {
+                    console.log('Dropdown changed to:', e.target.value);
+                    setNewVehicle({...newVehicle, golf_course_id: e.target.value});
+                  }}
+                  className="course-select"
                 >
-                  <option value={0}>เลือกสนาม</option>
+                  <option value="">เลือกสนาม</option>
                   {golfCourses.map(course => (
-                    <option key={course.id} value={course.id}>{course.name}</option>
+                    <option key={course.id} value={String(course.id)}>{course.name}</option>
                   ))}
                 </select>
                 <button onClick={handleAddVehicle} className="save-button">บันทึก</button>
@@ -743,11 +771,11 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
               <label>กรองตามสนาม:</label>
               <select
                 value={filterCourse}
-                onChange={(e) => setFilterCourse(e.target.value ? parseInt(e.target.value) : '')}
+                onChange={(e) => setFilterCourse(e.target.value || '')}
               >
                 <option value="">ทุกสนาม</option>
                 {golfCourses.map(course => (
-                  <option key={course.id} value={course.id}>{course.name}</option>
+                  <option key={course.id} value={String(course.id)}>{course.name}</option>
                 ))}
               </select>
             </div>
@@ -827,24 +855,24 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                       <td>
                         {editingVehicle?.id === vehicle.id ? (
                           <select
-                            value={editingVehicle.golf_course_id}
+                            value={String(editingVehicle.golf_course_id)}
                             onChange={(e) => {
-                              const courseId = parseInt(e.target.value);
+                              const courseId = e.target.value;
                               const selectedCourse = golfCourses.find(c => c.id === courseId);
                               setEditingVehicle({
                                 ...editingVehicle, 
                                 golf_course_id: courseId,
-                                golf_course_name: selectedCourse?.name ?? ''
+                                golf_course_name: selectedCourse?.name || 'ไม่ระบุ'
                               });
                             }}
                             className="course-select"
                           >
                             {golfCourses.map(course => (
-                              <option key={course.id} value={course.id}>{course.name}</option>
+                              <option key={course.id} value={String(course.id)}>{course.name}</option>
                             ))}
                           </select>
                         ) : (
-                          course?.name ?? 'ไม่พบสนาม'
+                          course?.name || 'ไม่พบสนาม'
                         )}
                       </td>
                       <td>
@@ -950,7 +978,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                           <tr key={index}>
                             <td>{item.serial_number}</td>
                             <td>{item.vehicle_number}</td>
-                            <td>{course?.name ?? 'ไม่พบสนาม'}</td>
+                            <td>{course?.name || 'ไม่พบสนาม'}</td>
                           </tr>
                         );
                       })}
@@ -994,12 +1022,12 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                   <label>สนามปลายทาง:</label>
                   <select
                     value={transferToCourse}
-                    onChange={(e) => setTransferToCourse(e.target.value ? parseInt(e.target.value) : '')}
+                    onChange={(e) => setTransferToCourse(e.target.value || '')}
                     className="transfer-select"
                   >
                     <option value="">เลือกสนาม</option>
                     {golfCourses.map(course => (
-                      <option key={course.id} value={course.id}>{course.name}</option>
+                      <option key={course.id} value={String(course.id)}>{course.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1052,14 +1080,3 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 };
 
 export default GolfCourseManagementScreen;
-
-  // Helper function to get status color class
-  const getStatusColorClass = (status: string) => {
-    const statusColors: Record<string, string> = {
-      'active': 'status-active',
-      'inactive': 'status-inactive',
-      'parked': 'status-parked',
-      'spare': 'status-spare'
-    };
-    return statusColors[status] || 'status-active';
-  };

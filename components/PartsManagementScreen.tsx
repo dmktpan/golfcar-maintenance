@@ -1,27 +1,19 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { PartsUsageLog, Vehicle, GolfCourse, View } from '../lib/data';
 import PartsHistoryModal from './PartsHistoryModal';
 
 interface PartsManagementScreenProps {
-    parts: any[];
-    setParts: (parts: any[]) => void;
     partsUsageLog: PartsUsageLog[];
-    setPartsUsageLog: (logs: PartsUsageLog[]) => void;
-    addPartsUsageLog: (jobId: number, partsNotes: string) => void;
     setView: (view: View) => void;
     vehicles: Vehicle[];
     golfCourses: GolfCourse[];
 }
 
 function PartsManagementScreen({ 
-    parts, 
-    setParts, 
     partsUsageLog, 
-    setPartsUsageLog,
-    addPartsUsageLog,
     setView,
     vehicles,
     golfCourses 
@@ -43,38 +35,32 @@ function PartsManagementScreen({
     const [sortBy, setSortBy] = useState<'serial' | 'vehicle' | 'golfCourse' | 'partsCount' | 'lastUpdate'>('lastUpdate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    // ดึง Serial Numbers ทั้งหมดที่มีในระบบ
-    const allSerialNumbers = useMemo(() => {
-        const uniqueSerials = Array.from(new Set(vehicles.map(v => v.serial_number)));
-        return uniqueSerials.sort();
-    }, [vehicles]);
-
     // ดึง Serial Numbers ที่มีประวัติการใช้อะไหล่
     const serialsWithHistory = useMemo(() => {
-        const serialsWithLogs = Array.from(new Set(partsUsageLog.map(log => log.serialNumber)));
+        const serialsWithLogs = Array.from(new Set(partsUsageLog.map(log => log.vehicleSerial)));
         return serialsWithLogs.sort();
     }, [partsUsageLog]);
 
     // ฟังก์ชันสำหรับดึงข้อมูลรถจาก Serial Number
-    const getVehicleBySerial = (serialNumber: string) => {
+    const getVehicleBySerial = useCallback((serialNumber: string) => {
         return vehicles.find(v => v.serial_number === serialNumber);
-    };
+    }, [vehicles]);
 
     // ฟังก์ชันสำหรับดึงชื่อสนามจาก Vehicle
-    const getGolfCourseNameByVehicle = (vehicle: Vehicle | undefined) => {
+    const getGolfCourseNameByVehicle = useCallback((vehicle: Vehicle | undefined) => {
         if (!vehicle) return 'ไม่ระบุ';
         const golfCourse = golfCourses.find(gc => gc.id === vehicle.golf_course_id);
         return golfCourse?.name || 'ไม่ระบุ';
-    };
+    }, [golfCourses]);
 
     // ฟังก์ชันสำหรับนับจำนวนอะไหล่ที่ใช้ในแต่ละ Serial
-    const getPartsCountBySerial = (serialNumber: string) => {
-        return partsUsageLog.filter(log => log.serialNumber === serialNumber).length;
-    };
+    const getPartsCountBySerial = useCallback((serialNumber: string) => {
+        return partsUsageLog.filter(log => log.vehicleSerial === serialNumber).length;
+    }, [partsUsageLog]);
 
     // ฟังก์ชันสำหรับกรองและเรียงลำดับข้อมูล
     const filteredAndSortedSerials = useMemo(() => {
-        let filtered = serialsWithHistory.filter(serial => {
+        const filtered = serialsWithHistory.filter(serial => {
             const vehicle = getVehicleBySerial(serial);
             const golfCourseName = getGolfCourseNameByVehicle(vehicle);
             
@@ -99,7 +85,7 @@ function PartsManagementScreen({
             // กรองตามวันที่
             let matchesDateRange = true;
             if (filters.dateFrom || filters.dateTo) {
-                const serialLogs = partsUsageLog.filter(log => log.serialNumber === serial);
+                const serialLogs = partsUsageLog.filter(log => log.vehicleSerial === serial);
                 if (serialLogs.length > 0) {
                     const latestDate = new Date(Math.max(...serialLogs.map(log => new Date(log.usedDate).getTime())));
                     const earliestDate = new Date(Math.min(...serialLogs.map(log => new Date(log.usedDate).getTime())));
@@ -140,10 +126,10 @@ function PartsManagementScreen({
                     break;
                 case 'lastUpdate':
                     const aLatest = partsUsageLog
-                        .filter(log => log.serialNumber === a)
+                        .filter(log => log.vehicleSerial === a)
                         .sort((x, y) => new Date(y.usedDate).getTime() - new Date(x.usedDate).getTime())[0];
                     const bLatest = partsUsageLog
-                        .filter(log => log.serialNumber === b)
+                        .filter(log => log.vehicleSerial === b)
                         .sort((x, y) => new Date(y.usedDate).getTime() - new Date(x.usedDate).getTime())[0];
                     aValue = aLatest ? new Date(aLatest.usedDate).getTime() : 0;
                     bValue = bLatest ? new Date(bLatest.usedDate).getTime() : 0;
@@ -162,7 +148,7 @@ function PartsManagementScreen({
         });
 
         return filtered;
-    }, [serialsWithHistory, searchTerm, filters, sortBy, sortOrder, partsUsageLog, vehicles, golfCourses]);
+    }, [serialsWithHistory, searchTerm, filters, sortBy, sortOrder, partsUsageLog, getGolfCourseNameByVehicle, getPartsCountBySerial, getVehicleBySerial]);
 
     // ดึงรายการสนามกอล์ฟที่ไม่ซ้ำ
     const uniqueGolfCourses = useMemo(() => {
@@ -171,7 +157,7 @@ function PartsManagementScreen({
             return getGolfCourseNameByVehicle(vehicle);
         });
         return Array.from(new Set(courses)).sort();
-    }, [serialsWithHistory, vehicles, golfCourses]);
+    }, [serialsWithHistory, getGolfCourseNameByVehicle, getVehicleBySerial]);
 
     // ฟังก์ชันสำหรับแสดง Modal
     const handleShowHistory = (serialNumber: string) => {
@@ -206,7 +192,7 @@ function PartsManagementScreen({
                 const golfCourseName = getGolfCourseNameByVehicle(vehicle);
                 const partsCount = getPartsCountBySerial(serial);
                 const latestLog = partsUsageLog
-                    .filter(log => log.serialNumber === serial)
+                    .filter(log => log.vehicleSerial === serial)
                     .sort((a, b) => new Date(b.usedDate).getTime() - new Date(a.usedDate).getTime())[0];
                 
                 return [
@@ -412,7 +398,7 @@ function PartsManagementScreen({
                             const golfCourseName = getGolfCourseNameByVehicle(vehicle);
                             const partsCount = getPartsCountBySerial(serial);
                             const latestLog = partsUsageLog
-                                .filter(log => log.serialNumber === serial)
+                                .filter(log => log.vehicleSerial === serial)
                                 .sort((a, b) => new Date(b.usedDate).getTime() - new Date(a.usedDate).getTime())[0];
 
                             return (

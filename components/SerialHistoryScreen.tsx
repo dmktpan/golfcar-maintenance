@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { User, Job, SerialHistoryEntry, MOCK_GOLF_COURSES, View, Vehicle } from '@/lib/data';
+import { User, Job, SerialHistoryEntry, MOCK_GOLF_COURSES, View, Vehicle, GolfCourse } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
 
@@ -11,9 +11,11 @@ interface SerialHistoryScreenProps {
   jobs: Job[];
   vehicles: Vehicle[];
   serialHistory: SerialHistoryEntry[];
+  golfCourses: GolfCourse[];
+  users: User[];
 }
 
-const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: SerialHistoryScreenProps) => {
+const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, golfCourses, users }: SerialHistoryScreenProps) => {
   // Search and filter states
   const [searchSerial, setSearchSerial] = useState('');
   const [searchVehicleNumber, setSearchVehicleNumber] = useState('');
@@ -24,8 +26,8 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
   const [showInactive, setShowInactive] = useState(true);
   
   // Sort states
-  const [sortBy, setSortBy] = useState<'date' | 'serial' | 'action'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortBy] = useState<'date' | 'serial' | 'action'>('date');
+    const [sortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Modal states
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -177,15 +179,23 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
       }
     });
     
-    let coursesToShow = Array.from(allCourses.values());
+    const coursesToShow = Array.from(allCourses.values());
     
     // Apply user role restrictions
     if (user.role === 'admin') {
       return coursesToShow;
     } else if (user.role === 'supervisor' && user.managed_golf_courses) {
-      return coursesToShow.filter(course => 
-        user.managed_golf_courses!.includes(course.id)
-      );
+      // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะเห็นสนามทั้งหมดในตัวกรอง
+      const totalGolfCourses = golfCourses.length;
+      const managedCoursesCount = user.managed_golf_courses.length;
+      
+      if (managedCoursesCount === totalGolfCourses) {
+        return coursesToShow; // แสดงสนามทั้งหมดเหมือน admin
+      } else {
+        return coursesToShow.filter(course => 
+          user.managed_golf_courses!.includes(course.id)
+        );
+      }
     } else {
       return coursesToShow.filter(course => course.id === user.golf_course_id);
     }
@@ -193,13 +203,21 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
 
   // Filter and sort entries
   const filteredEntries = useMemo(() => {
-    let filtered = allSerialHistory.filter(entry => {
+    const filtered = allSerialHistory.filter(entry => {
       let hasAccess = false;
       
       if (user.role === 'admin') {
         hasAccess = true;
       } else if (user.role === 'supervisor' && user.managed_golf_courses) {
-        hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
+        // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
+        const totalGolfCourses = golfCourses.length;
+        const managedCoursesCount = user.managed_golf_courses.length;
+        
+        if (managedCoursesCount === totalGolfCourses) {
+          hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
+        } else {
+          hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
+        }
       } else {
         hasAccess = entry.golf_course_id === user.golf_course_id;
       }
@@ -262,10 +280,10 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
     });
 
     return filtered;
-  }, [allSerialHistory, user, searchSerial, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder]);
+  }, [allSerialHistory, user, searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder]);
 
   // Event handlers
-  const handleViewJob = (jobId: number) => {
+  const handleViewJob = (jobId: string) => {
     const job = jobs.find(j => j.id === jobId);
     if (job) {
       setSelectedJob(job);
@@ -432,7 +450,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
             >
               <option value="">ทั้งหมด ({availableGolfCoursesWithData.length} สนาม)</option>
               {availableGolfCoursesWithData.map(course => (
-                <option key={course.id} value={course.id.toString()}>
+                <option key={course.id} value={course.id ? course.id.toString() : ''}>
                   {course.name}
                 </option>
               ))}
@@ -603,6 +621,9 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory }: S
       {isModalOpen && selectedJob && (
         <JobDetailsModal
           job={selectedJob}
+          golfCourses={golfCourses}
+          users={users}
+          vehicles={vehicles}
           onClose={handleCloseModal}
         />
       )}

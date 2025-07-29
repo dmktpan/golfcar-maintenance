@@ -192,6 +192,47 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Select All Buttons for User Management */
+.select-all-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.select-all-buttons .btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.select-all-buttons .btn-secondary {
+  background-color: var(--success-color);
+  color: var(--text-light);
+  border: 1px solid var(--success-color);
+}
+
+.select-all-buttons .btn-secondary:hover {
+  background-color: #38a169;
+  border-color: #38a169;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(72, 187, 120, 0.3);
+}
+
+.select-all-buttons .btn-outline {
+  background-color: transparent;
+  color: var(--danger-color);
+  border: 1px solid var(--danger-color);
+}
+
+.select-all-buttons .btn-outline:hover {
+  background-color: var(--danger-color);
+  color: var(--text-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(245, 101, 101, 0.3);
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: var(--text-light);

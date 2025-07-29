@@ -15,8 +15,8 @@ model GolfCourse {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String    @unique
   location  String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   users     User[]
@@ -28,27 +28,29 @@ model GolfCourse {
 model User {
   id                   String   @id @default(auto()) @map("_id") @db.ObjectId
   code                 String   @unique
-  username             String   @unique
+  username             String?  @unique
   name                 String
   role                 UserRole
   password             String?  // เพิ่ม password field
-  managed_golf_courses Int[]
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  managed_golf_courses String[] @db.ObjectId
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relations
-  golfCourse     GolfCourse @relation(fields: [golf_course_id], references: [id])
   golf_course_id   String     @db.ObjectId
-  golf_course_name String // Denormalized field for convenience
+  golfCourse       GolfCourse @relation(fields: [golf_course_id], references: [id])
+  golf_course_name String     // Denormalized field for convenience
 
   createdJobs  Job[]      @relation("CreatedBy")
   assignedJobs Job[]      @relation("AssignedTo")
   historyLogs  SerialHistoryEntry[] @relation("PerformedByUser")
+
+  @@map("users") // Map to users collection instead of User
 }
 
 model Vehicle {
   id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  vehicle_number   String        @unique
+  vehicle_number   String
   serial_number    String        @unique
   brand            String?
   model            String?
@@ -56,8 +58,8 @@ model Vehicle {
   battery_serial   String?
   status           VehicleStatus @default(active)
   transfer_date    DateTime?
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   // Relations
   golfCourse       GolfCourse @relation(fields: [golf_course_id], references: [id])
@@ -81,8 +83,9 @@ model Job {
   battery_serial     String?
   partsNotes         String?
   parts              JobPart[]
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  images             String[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Denormalized fields for convenience
   userName           String?
@@ -101,7 +104,7 @@ model Job {
   assignee           User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
   assigned_to        String?   @db.ObjectId
   
-  historyLog         SerialHistoryEntry?
+  historyLogs        SerialHistoryEntry[]
 }
 
 model Part {
@@ -113,8 +116,8 @@ model Part {
   stock_qty      Int
   min_qty        Int?
   max_qty        Int?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   golfCourse     GolfCourse? @relation(fields: [golf_course_id], references: [id])
@@ -123,7 +126,7 @@ model Part {
 
 model JobPart {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
-  part_id        Int
+  part_id        String
   part_name      String
   quantity_used  Int
   
@@ -134,7 +137,7 @@ model JobPart {
 
 model PartsUsageLog {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  jobId            Int
+  jobId            String
   partName         String
   partId           String
   quantityUsed     Int
@@ -146,17 +149,24 @@ model PartsUsageLog {
   notes            String
   jobType          String
   system           String
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model SerialHistoryEntry {
   id                   String     @id @default(auto()) @map("_id") @db.ObjectId
+  serial_number        String
+  vehicle_number       String
   action_type          ActionType
   action_date          DateTime   @default(now())
   actual_transfer_date DateTime?
   details              String
   is_active            Boolean
+  status               String?
+  job_type             String?
+  golf_course_name     String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
   
   // Relations
   vehicle              Vehicle    @relation(fields: [vehicle_id], references: [id])
@@ -166,7 +176,7 @@ model SerialHistoryEntry {
   performed_by_id      String     @db.ObjectId
 
   related_job          Job?       @relation(fields: [related_job_id], references: [id])
-  related_job_id       String?    @unique @db.ObjectId
+  related_job_id       String?    @db.ObjectId
 }
 
 

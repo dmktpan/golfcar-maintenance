@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Job, GolfCourse, User, Vehicle, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './JobDetailsModal.module.css';
@@ -15,13 +16,13 @@ interface JobDetailsModalProps {
 
 const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDetailsModalProps) => {
   // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
-  const getPartName = (part: { part_id: number; part_name?: string }) => {
+  const getPartName = (part: { part_id: string; part_name?: string }) => {
     if (part.part_name) {
       return part.part_name;
     }
     
     for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
-      const partInfo = system.find((p: any) => p.id === part.part_id);
+      const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
       if (partInfo) {
         return partInfo.name;
       }
@@ -30,17 +31,17 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
     return `อะไหล่ ID: ${part.part_id}`;
   };
 
-  const getGolfCourseName = (courseId: number) => {
+  const getGolfCourseName = (courseId: string) => {
     const course = golfCourses.find(c => c.id === courseId);
     return course ? course.name : 'ไม่ระบุ';
   };
 
-  const getAssignedByName = (userId: number) => {
-    const user = users.find(u => u.id === userId);
+  const getAssignedByName = (userId: string) => {
+    const user = users.find(u => u.id.toString() === userId);
     return user ? user.name : 'ไม่ระบุ';
   };
 
-  const getVehicleInfo = (vehicleId: number) => {
+  const getVehicleInfo = (vehicleId: string) => {
     return vehicles.find(v => v.id === vehicleId);
   };
 
@@ -301,10 +302,12 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
               <div className={styles['image-gallery']}>
                 {job.images.map((image, index) => (
                   <div key={index} className={styles['image-item']}>
-                    <img 
+                    <Image 
                       src={image} 
                       alt={`รูปภาพงาน ${index + 1}`} 
                       className={styles['job-image']}
+                      width={200}
+                      height={150}
                       onClick={() => window.open(image, '_blank')}
                     />
                   </div>

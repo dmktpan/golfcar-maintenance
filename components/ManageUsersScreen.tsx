@@ -13,16 +13,20 @@ interface ManageUsersScreenProps {
 const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUsersScreenProps) => {
     const [newUser, setNewUser] = useState<{
         code: string;
+        username: string;
         name: string;
         role: UserRole;
-        golf_course_id: number;
-        managed_golf_courses: number[];
+        golf_course_id: string;
+        managed_golf_courses: string[];
+        password?: string;
     }>({  
         code: '',
+        username: '',
         name: '',
         role: 'staff',
-        golf_course_id: 1,
-        managed_golf_courses: []
+        golf_course_id: '',
+        managed_golf_courses: [],
+        password: ''
     });
     const [editMode, setEditMode] = useState(false);
     const [editUserId, setEditUserId] = useState<number | null>(null);
@@ -31,16 +35,30 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         const { name, value } = e.target;
         setNewUser(prev => ({
             ...prev,
-            [name]: name === 'golf_course_id' ? parseInt(value) : value
+            [name]: value
         }));
     };
 
-    const handleManagedCoursesChange = (courseId: number, checked: boolean) => {
+    const handleManagedCoursesChange = (courseId: string, checked: boolean) => {
         setNewUser(prev => ({
             ...prev,
             managed_golf_courses: checked 
                 ? [...prev.managed_golf_courses, courseId]
                 : prev.managed_golf_courses.filter(id => id !== courseId)
+        }));
+    };
+
+    const handleSelectAllCourses = () => {
+        setNewUser(prev => ({
+            ...prev,
+            managed_golf_courses: golfCourses.map(course => course.id)
+        }));
+    };
+
+    const handleDeselectAllCourses = () => {
+        setNewUser(prev => ({
+            ...prev,
+            managed_golf_courses: []
         }));
     };
 
@@ -55,9 +73,19 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
             finalManagedCourses = []; // Staff ไม่ดูแลสนามใด
         }
 
+        // หาชื่อสนามกอล์ฟ
+        const selectedGolfCourse = golfCourses.find(c => c.id === newUser.golf_course_id);
+        const golf_course_name = selectedGolfCourse ? selectedGolfCourse.name : '';
+
         const userData = {
-            ...newUser,
-            managed_golf_courses: finalManagedCourses.length > 0 ? finalManagedCourses : undefined
+            code: newUser.code,
+            username: newUser.username,
+            name: newUser.name,
+            role: newUser.role,
+            golf_course_id: newUser.golf_course_id,
+            golf_course_name: golf_course_name,
+            managed_golf_courses: finalManagedCourses.length > 0 ? finalManagedCourses : undefined,
+            ...(newUser.password && newUser.password.trim() !== '' && { password: newUser.password })
         };
 
         try {
@@ -110,20 +138,24 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         // Reset form
         setNewUser({
             code: '',
+            username: '',
             name: '',
             role: 'staff',
-            golf_course_id: 1,
-            managed_golf_courses: []
+            golf_course_id: '',
+            managed_golf_courses: [],
+            password: ''
         });
     };
 
     const handleEditUser = (user: User) => {
         setNewUser({
             code: user.code,
+            username: user.username || user.code, // ใช้ code เป็น username หากไม่มี
             name: user.name,
             role: user.role,
             golf_course_id: user.golf_course_id,
-            managed_golf_courses: user.managed_golf_courses || []
+            managed_golf_courses: user.managed_golf_courses || [],
+            password: '' // ไม่แสดง password เดิม
         });
         setEditMode(true);
         setEditUserId(user.id);
@@ -150,7 +182,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         }
     };
 
-    const getGolfCourseName = (id: number) => {
+    const getGolfCourseName = (id: string) => {
         const course = golfCourses.find(c => c.id === id);
         return course ? course.name : 'ไม่ระบุ';
     };
@@ -165,7 +197,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         }
         
         return user.managed_golf_courses
-            .map((id: number) => getGolfCourseName(id))
+            .map((id: string) => getGolfCourseName(id))
             .join(', ');
     };
 
@@ -186,6 +218,18 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                         value={newUser.code} 
                         onChange={handleInputChange} 
                         required 
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="username">ชื่อผู้ใช้ (Username)</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        value={newUser.username} 
+                        onChange={handleInputChange} 
+                        required 
+                        placeholder="ใช้สำหรับเข้าสู่ระบบ"
                     />
                 </div>
                 <div className="form-group">
@@ -222,16 +266,51 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                         onChange={handleInputChange} 
                         required
                     >
+                        <option value="">เลือกสนามกอล์ฟ</option>
                         {golfCourses.map(course => (
                             <option key={course.id} value={course.id}>{course.name}</option>
                         ))}
                     </select>
                 </div>
 
+                {/* แสดงช่อง password สำหรับ Admin และหัวหน้า */}
+                {(newUser.role === 'admin' || newUser.role === 'supervisor') && (
+                    <div className="form-group">
+                        <label htmlFor="password">
+                            รหัสผ่าน {editMode ? '(เว้นว่างหากไม่ต้องการเปลี่ยน)' : ''}
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            value={newUser.password || ''} 
+                            onChange={handleInputChange} 
+                            required={!editMode} // required เฉพาะเมื่อเพิ่มใหม่
+                            placeholder={editMode ? 'เว้นว่างหากไม่ต้องการเปลี่ยน' : 'ใส่รหัสผ่าน'}
+                        />
+                    </div>
+                )}
+
                 {/* แสดงการเลือกสนามที่ดูแลเฉพาะหัวหน้า */}
                 {newUser.role === 'supervisor' && (
                     <div className="form-group full-width">
                         <label>สนามกอล์ฟที่รับผิดชอบ:</label>
+                        <div className="select-all-buttons" style={{ marginBottom: '1rem' }}>
+                            <button 
+                                type="button" 
+                                className="btn-secondary btn-sm"
+                                onClick={handleSelectAllCourses}
+                            >
+                                ✅ เลือกทั้งหมด
+                            </button>
+                            <button 
+                                type="button" 
+                                className="btn-outline btn-sm"
+                                onClick={handleDeselectAllCourses}
+                            >
+                                ❌ ยกเลิกทั้งหมด
+                            </button>
+                        </div>
                         <div className="checkbox-group">
                             {golfCourses.map(course => (
                                 <label key={course.id} className="checkbox-label">
@@ -245,7 +324,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                             ))}
                         </div>
                         <small className="form-hint">
-                            หัวหน้าสามารถเลือก "ทั้งหมด" เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ
+                            หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br/>
+                            <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
                         </small>
                     </div>
                 )}
@@ -271,10 +351,12 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                                 setEditUserId(null);
                                 setNewUser({
                                     code: '',
+                                    username: '',
                                     name: '',
                                     role: 'staff',
-                                    golf_course_id: 1,
-                                    managed_golf_courses: []
+                                    golf_course_id: '',
+                                    managed_golf_courses: [],
+                                    password: ''
                                 });
                             }}
                         >

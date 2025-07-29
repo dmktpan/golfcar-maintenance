@@ -21,11 +21,20 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
       ...options,
     });
 
+    const data = await response.json();
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      console.error(`API error for ${endpoint}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        data: data
+      });
+      
+      // ส่ง error message จาก API ถ้ามี
+      const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error(`API call failed for ${endpoint}:`, error);
@@ -36,16 +45,16 @@ async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<
 // Golf Courses API
 export const golfCoursesApi = {
   getAll: () => apiCall('/golf-courses'),
-  getById: (id: number) => apiCall(`/golf-courses/${id}`),
+  getById: (id: string) => apiCall(`/golf-courses/${id}`),
   create: (data: any) => apiCall('/golf-courses', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiCall(`/golf-courses/${id}`, {
+  update: (id: string, data: any) => apiCall(`/golf-courses/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiCall(`/golf-courses/${id}`, {
+  delete: (id: string) => apiCall(`/golf-courses/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -53,16 +62,16 @@ export const golfCoursesApi = {
 // Users API
 export const usersApi = {
   getAll: () => apiCall('/users'),
-  getById: (id: number) => apiCall(`/users/${id}`),
+  getById: (id: string) => apiCall(`/users/${id}`),
   create: (data: any) => apiCall('/users', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiCall(`/users/${id}`, {
+  update: (id: string, data: any) => apiCall(`/users/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiCall(`/users/${id}`, {
+  delete: (id: string) => apiCall(`/users/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -70,16 +79,16 @@ export const usersApi = {
 // Vehicles API
 export const vehiclesApi = {
   getAll: () => apiCall('/vehicles'),
-  getById: (id: number) => apiCall(`/vehicles/${id}`),
+  getById: (id: string) => apiCall(`/vehicles/${id}`),
   create: (data: any) => apiCall('/vehicles', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiCall(`/vehicles/${id}`, {
+  update: (id: string, data: any) => apiCall(`/vehicles/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiCall(`/vehicles/${id}`, {
+  delete: (id: string) => apiCall(`/vehicles/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -87,16 +96,16 @@ export const vehiclesApi = {
 // Parts API
 export const partsApi = {
   getAll: () => apiCall('/parts'),
-  getById: (id: number) => apiCall(`/parts/${id}`),
+  getById: (id: string) => apiCall(`/parts/${id}`),
   create: (data: any) => apiCall('/parts', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiCall(`/parts/${id}`, {
+  update: (id: string, data: any) => apiCall(`/parts/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiCall(`/parts/${id}`, {
+  delete: (id: string) => apiCall(`/parts/${id}`, {
     method: 'DELETE',
   }),
 };
@@ -104,16 +113,16 @@ export const partsApi = {
 // Jobs API
 export const jobsApi = {
   getAll: () => apiCall('/jobs'),
-  getById: (id: number) => apiCall(`/jobs/${id}`),
+  getById: (id: string) => apiCall(`/jobs/${id}`),
   create: (data: any) => apiCall('/jobs', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiCall(`/jobs/${id}`, {
+  update: (id: string, data: any) => apiCall(`/jobs/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiCall(`/jobs/${id}`, {
+  delete: (id: string) => apiCall(`/jobs/${id}`, {
     method: 'DELETE',
   }),
 };

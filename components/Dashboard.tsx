@@ -16,24 +16,30 @@ interface DashboardProps {
     setView: (view: View) => void;
     onFillJobForm?: (job: Job) => void;
     addPartsUsageLog?: (jobId: number, partsNotes?: string) => void;
+    onUpdateStatus?: (jobId: number, status: JobStatus) => void;
 }
 
-const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView, onFillJobForm, addPartsUsageLog }: DashboardProps) => {
+const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
     
-    const onUpdateStatus = (jobId: number, status: JobStatus) => {
-        const updatedJob = jobs.find(job => job.id === jobId);
-        if (updatedJob) {
-            const newJob = { ...updatedJob, status };
-            setJobs(jobs.map(job => job.id === jobId ? newJob : job));
-            
-            // เพิ่ม Log การใช้อะไหล่เมื่อสถานะเปลี่ยนเป็น approved
-            if (status === 'approved' && addPartsUsageLog) {
-                addPartsUsageLog(jobId, newJob.partsNotes);
+    // ใช้ onUpdateStatus จาก props หรือ fallback เป็นฟังก์ชันภายใน
+    const handleUpdateStatus = (jobId: number, status: JobStatus) => {
+        if (onUpdateStatus) {
+            onUpdateStatus(jobId, status);
+        } else {
+            const updatedJob = jobs.find(job => job.id === jobId.toString());
+            if (updatedJob) {
+                const newJob = { ...updatedJob, status };
+                setJobs(jobs.map(job => job.id === jobId.toString() ? newJob : job));
+                
+                // เพิ่ม Log การใช้อะไหล่เมื่อสถานะเปลี่ยนเป็น approved
+                if (status === 'approved' && addPartsUsageLog) {
+                    addPartsUsageLog(jobId, newJob.partsNotes);
+                }
             }
         }
-    }
+    };
 
     // กรองงานตามบทบาทของผู้ใช้
     const getUserJobs = () => {
@@ -41,7 +47,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
             return jobs;
         } else {
             return jobs.filter(job => 
-                job.user_id === user.id && 
+                job.user_id === user.id.toString() && 
                 job.status !== 'approved'
             );
         }
@@ -53,7 +59,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
         
         if (activeTab === 'history') {
             return jobs.filter(job => 
-                job.user_id === user.id && job.status === 'approved'
+                job.user_id === user.id.toString() && job.status === 'approved'
             ).sort((a, b) => 
                 new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
@@ -79,7 +85,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
             assigned: userJobs.filter(job => job.status === 'assigned').length,
             in_progress: userJobs.filter(job => job.status === 'in_progress').length,
             completed: userJobs.filter(job => job.status === 'completed').length,
-            approved: jobs.filter(job => job.user_id === user.id && job.status === 'approved').length,
+            approved: jobs.filter(job => job.user_id === user.id.toString() && job.status === 'approved').length,
             rejected: userJobs.filter(job => job.status === 'rejected').length,
         };
     };
@@ -215,7 +221,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                             vehicles={vehicles}
                             golfCourses={golfCourses}
                             users={users}
-                            onUpdateStatus={onUpdateStatus}
+                            onUpdateStatus={handleUpdateStatus}
                             onFillJobForm={onFillJobForm}
                             isHistory={activeTab === 'history'}
                         />

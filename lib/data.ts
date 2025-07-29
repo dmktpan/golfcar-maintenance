@@ -28,35 +28,35 @@ export interface User {
   name: string;
   code: string;
   role: UserRole;
-  golf_course_id: number;
+  golf_course_id: string;
   golf_course_name: string;
   created_at: string;
-  managed_golf_courses?: number[];
+  managed_golf_courses?: string[];
 }
 
 export interface GolfCourse {
-  id: number;
+  id: string;
   name: string;
   location: string;
   created_at: string;
 }
 
 export interface Vehicle {
-  id: number;
+  id: string;
   vehicle_number: string;
   serial_number: string;
   brand: string;
   model: string;
   year: number;
   battery_serial?: string; // เพิ่มฟิลด์สำหรับซีเรียลแบตเตอรี่
-  golf_course_id: number;
+  golf_course_id: string;
   golf_course_name: string;
   status: 'active' | 'maintenance' | 'retired' | 'parked';
   created_at: string;
 }
 
 export interface Part {
-  id: number;
+  id: string;
   name: string;
   part_number?: string;
   category?: string;
@@ -66,7 +66,7 @@ export interface Part {
   min_qty: number; // Primary field matching Prisma schema
   max_qty: number; // Primary field matching Prisma schema
   min_stock?: number; // For backward compatibility
-  golf_course_id?: number;
+  golf_course_id?: string;
   golf_course_name?: string;
   created_at?: string;
   createdAt?: string;
@@ -74,12 +74,12 @@ export interface Part {
 }
 
 export interface Job {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   userName: string;
-  vehicle_id: number;
+  vehicle_id: string;
   vehicle_number: string;
-  golf_course_id: number;
+  golf_course_id: string;
   type: JobType;
   status: JobStatus;
   created_at: string;
@@ -90,15 +90,15 @@ export interface Job {
   subTasks?: string[];
   partsNotes?: string;
   remarks?: string;
-  assigned_by?: number;
+  assigned_by?: string;
   assigned_by_name?: string;
-  assigned_to?: number;
+  assigned_to?: string;
   bmCause?: BMCause;
   images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
 }
 
 export interface SelectedPart {
-  part_id: number;
+  part_id: string;
   quantity_used: number;
   part_name: string;
 }
@@ -118,45 +118,45 @@ export const MOCK_SYSTEMS = [
     id: 'brake',
     name: 'ระบบเบรก',
     description: 'ระบบเบรกและการหยุดรถ',
-    tasks: [
-      'เป่าฝุ่น ขัดหน้าผ้าเบรก',
-      'ทำความสะอาดสายเบรก',
-      'ติดตั้งผ้าเบรก',
-      'ติดตั้งสายเบรกและปรับตั้งสาย'
-    ]
+    tasks: {
+      'ทำความสะอาด': ['เป่าฝุ่น/ขัดหน้าผ้าเบรก', 'ทำความสะอาดสายเบรก', 'ทำความสะอาดชุดแป้นเบรก'],
+      'หล่อลื่น': ['หล่อลื่นรางสไลด์', 'หล่อลื่นแกนสลิง', 'หล่อลื่นแป้นเบรก'],
+      'ขันแน่น': ['ติดตั้งผ้าเบรก', 'ติดตั้งสายเบรกและปรับตั้งสาย', 'ติดตั้งแป้นเบรก'],
+      'ตรวจเช็ค': ['การทำงานกลไกเบรก', 'ความคล่องตัวสายเบรก', 'ความคล่องตัวของการเบรกและล็อกเบรก','ซีลล้อหลัง/การรั่วของน้ำมันเฟืองท้าย'],
+    }
   },
   {
     id: 'steering',
     name: 'ระบบพวงมาลัย',
     description: 'ระบบพวงมาลัยและการควบคุมทิศทาง',
-    tasks: [
-      'ถอดยอยออกเพื่อทำความสะอาดด้วยโซแนกส์ส้ม',
-      'ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย',
-      'ใช้น้ำมันหล่อลื่นหยอดตามกากบาทยอยและโยกให้คล่องตัว',
-      'เปลี่ยนยางกันฝุ่นและเติมจารบีเฟืองแร็ก'
-    ]
+    tasks: {
+      'ทำความสะอาด': ['ถอดยอยออกเพื่อทำความสะอาดด้วยโซแนกส์ส้ม','ทำความสะอาดคราบสกปรกต่างที่เกาะตามกระปุกพ่วงมาลัย','ทำความลูกหมากปลายโช๊คและใต้โช๊ค','ล้างเอาจารบีเก่าออกแล้วเป่าลม(กรณีเป็นตับเอียง'],
+      'หล่อลื่น': ['ใช้น้ำมันหล่อลื่นหยอดตามกากบาทยอยและโยกให้คล่องตัว','เปลี่ยนยางกันฝุ่นและเติมจารบีเฟืองแร็ก','ไม่มีจุดหล่อลืน','เติมจารบีใหม่ให้เหมาะสม'],
+      'ขันแน่น': ['ติดตั้งยอยและขันน็อตยอยด้วยประแจเบอร์ 12 ให้แน่นทุกจุด','ขันน็อตยึดแกนให้แน่น','ไล่ขันแน่นน็อตลูกหมากทุกจุด','ไล่ขันน็อตแกนล้อหน้าและน็อตลูกปืน'],
+      'ตรวจเช็ค': ['ตรวจหมุนให้แน่ว่าไม่มีการรูดเมื่อขันน็อตยึด','ตรวจเช็ค END RACK และจุดยึดต่างของกระปุกพวงมาลัย','ตรวจเช็คลูกหมากว่ามีโยกหลวมหรือไม่','ลอยล้อกเพื่อฟังเสียงลูกปืนแตก']
+    }
   },
   {
     id: 'motor',
     name: 'ระบบมอเตอร์',
     description: 'ระบบมอเตอร์และเฟืองท้าย',
-    tasks: [
-      'ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย ทุกๆปี',
-      'ตรวจเช็คการไหลลื่นของแปรงถ่านและการคลยตัวของน็อตขั้วมอเตอร์ทุกๆจุด ตรวจลูกปืนมอเตอร์ด้วยการหมุนฟังเสียง',
-      'ทำความสะอาดชุดเฟืองท้าย',
-      'เปลี่ยนน้ำมันเฟืองท้าย'
-    ]
+    tasks: {
+      'ทำความสะอาด': ['ทำความสะอาดชุดเฟืองท้ายให้สะอาดด้วยปืนแรงดัน','ถอดมอเตอร์เป่าฝุ่นทำความสะอาด','ล้างทำความสะอาดครabschสกปรก ทอร์ชั่นบาร์','ล้างทำความสะอาดครabschสกปรก โช๊คหลัง'],  
+      'หล่อลื่น': ['ถ่ายและเปลี่ยนน้ำมันเฟืองท้าย(ทุกๆปี)','ชโลมน้ำมันตรงล้างแปรงถ่าน','หยอดน้ำหล่อลื่นตรงบูชและจุดหมุน','หยอดน้ำตรงหัวบูชบน'],
+      'ขันแน่น': ['ไล่ขันน็อตปิดน้ำมันเฟืองท้ายให้แน่น','ไล่ขันขั่วมอเตอร์ที่คลายตัว','ไล่ขันน็อตยึด','ขันน๊อตยึดหัวโช๊คให้แน่นพอดี'],
+      'ตรวจเช็ค': ['ระดับน้ำมันเฟืองที่น็อตตัวบนและตรวจเช็คน็อตยึดทุกจัดการคลายตัวหรือไม่','ตรวจเช็คการไหลลื่นของแปรงถ่านและการคลายตัวของน็อตขั้วมอเตอร์ทุกๆจุด ตรวจลูกปืนมอเตอร์ด้วยการหมุนฟังเสียง','ตรวจเช็คการคลายตัวของน็อตยึดทอร์ชั่นบาร์ และตรวจรอบแตกรอยราวของจุดเชื่อมต่าง','ตรวจการรั่วของน้ำมันโช๊ค']
+    }
   },
   {
     id: 'electric',
     name: 'ระบบไฟฟ้า',
     description: 'ระบบไฟฟ้าและแบตเตอรี่',
-    tasks: [
-      'ตรวจเช็คระบบไฟฟ้า',
-      'ตรวจสอบแบตเตอรี่',
-      'ทำความสะอาดขั้วแบตเตอรี่',
-      'ตรวจสอบสายไฟ'
-    ]
+    tasks: {
+      'ทำความสะอาด': ['blank'],
+      'หล่อลื่น': ['blank'],
+      'ขันแน่น': ['blank'],
+      'ตรวจเช็ค': ['blank']
+    }
   }
 ];
 
@@ -164,20 +164,20 @@ export const MOCK_JOBS: Job[] = [];
 
 // เพิ่ม interface สำหรับ Serial History Log
 export interface SerialHistoryEntry {
-  id: number;
+  id: string;
   serial_number: string;
-  vehicle_id: number;
+  vehicle_id: string;
   vehicle_number: string;
   action_type: 'registration' | 'transfer' | 'maintenance' | 'decommission' | 'inspection' | 'status_change' | 'data_edit' | 'data_delete' | 'bulk_transfer' | 'bulk_upload';
   action_date: string; // วันที่/เวลาที่บันทึกในระบบ (เวลาจริงที่ทำงาน)
   actual_transfer_date?: string; // วันที่ย้ายจริงตามสัญญาหรือในสถานที่จริง (เฉพาะการโอนย้าย)
   details: string;
   performed_by: string;
-  performed_by_id: number;
-  golf_course_id: number;
+  performed_by_id: string;
+  golf_course_id: string;
   golf_course_name: string;
   is_active: boolean;
-  related_job_id?: number;
+  related_job_id?: string;
   job_type?: 'PM' | 'BM' | 'Recondition';
   system?: string;
   parts_used?: string[];
@@ -195,25 +195,28 @@ export const MOCK_SERIAL_HISTORY: SerialHistoryEntry[] = [];
 
 // เพิ่ม interface สำหรับ PartsUsageLog
 export interface PartsUsageLog {
-    id: number;
-    jobId: number;
+    id: string;
+    jobId: string;
     partName: string;
     partId: string;
-    quantity: number;
-    usedDate: string;
-    userName: string;
+    quantityUsed: number;
     vehicleNumber: string;
-    serialNumber: string;
+    vehicleSerial: string;
     golfCourseName: string;
+    usedBy: string;
+    usedDate: string;
+    notes: string;
     jobType: 'PM' | 'BM' | 'Recondition';
     system: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
-// ฟังก์ชันสำหรับเพิ่มประวัติการเปลี่ยนแปลง
+// ฟังก์ชันสำหรับเพิ่มประวัตการเปลี่ยนแปลง
 export const addSerialHistoryEntry = (entry: Omit<SerialHistoryEntry, 'id'>): SerialHistoryEntry => {
   const newEntry: SerialHistoryEntry = {
     ...entry,
-    id: MOCK_SERIAL_HISTORY.length + 1
+    id: (MOCK_SERIAL_HISTORY.length + 1).toString()
   };
   MOCK_SERIAL_HISTORY.push(newEntry);
   return newEntry;
@@ -244,7 +247,7 @@ export const logVehicleChange = (
     action_date: new Date().toISOString(),
     details: getActionDetails(action, vehicle, previousData, newData),
     performed_by: performedBy,
-    performed_by_id: 3, // ในการใช้งานจริงควรใช้ ID ผู้ใช้ปัจจุบัน
+    performed_by_id: "68885b9f2853f6353e4b2145", // ใช้ ObjectID ของ admin000 ที่มีอยู่จริง
     golf_course_id: vehicle.golf_course_id,
     golf_course_name: vehicle.golf_course_name,
     is_active: vehicle.status === 'active',
@@ -261,7 +264,7 @@ export const logVehicleChange = (
 // ฟังก์ชันสำหรับบันทึกการโอนย้ายหลายคัน
 export const logBulkTransfer = (
   vehicles: Vehicle[],
-  targetGolfCourseId: number,
+  targetGolfCourseId: string,
   targetGolfCourseName: string,
   performedBy: string,
   actualTransferDate?: string // วันที่ย้ายจริงตามสัญญา
@@ -285,7 +288,7 @@ export const logBulkTransfer = (
       actual_transfer_date: actualTransferDate ? new Date(actualTransferDate).toISOString() : undefined, // วันที่ย้ายจริง
       details: `โอนย้ายรถจาก ${vehicle.golf_course_name} ไปยัง ${targetGolfCourseName}${actualTransferDate ? ` (วันที่ย้ายจริง: ${new Date(actualTransferDate).toLocaleDateString('th-TH')})` : ''}`,
       performed_by: performedBy,
-      performed_by_id: 3,
+      performed_by_id: "68885b9f2853f6353e4b2145", // ใช้ ObjectID ของ admin000 ที่มีอยู่จริง
       golf_course_id: targetGolfCourseId,
       golf_course_name: targetGolfCourseName,
       is_active: vehicle.status === 'active',
@@ -312,7 +315,7 @@ export const logBulkUpload = (
       action_date: new Date().toISOString(),
       details: `เพิ่มรถใหม่ผ่านการอัปโหลดไฟล์ - ${vehicle.vehicle_number} (${vehicle.model})`,
       performed_by: performedBy,
-      performed_by_id: 3,
+      performed_by_id: "68885b9f2853f6353e4b2145", // ใช้ ObjectID ของ admin000 ที่มีอยู่จริง
       golf_course_id: vehicle.golf_course_id,
       golf_course_name: vehicle.golf_course_name,
       is_active: vehicle.status === 'active',

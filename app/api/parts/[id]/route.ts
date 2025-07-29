@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { isValidObjectId } from '@/lib/utils/validation';
 
 // GET - ดึงข้อมูลอะไหล่ตาม ID
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid part ID format'
+      }, { status: 400 });
+    }
     
     const part = await prisma.part.findUnique({
       where: { id }
@@ -41,6 +50,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid part ID format'
+      }, { status: 400 });
+    }
+    
     const body = await request.json();
     const { name, unit, stock_qty, min_qty, max_qty } = body;
 
@@ -101,6 +119,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+
+    // ตรวจสอบ ObjectID
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid part ID format'
+      }, { status: 400 });
+    }
 
     await prisma.part.delete({
       where: { id }
