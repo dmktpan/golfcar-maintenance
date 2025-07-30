@@ -83,106 +83,86 @@ export default function HomePage() {
         
         // โหลดข้อมูลพื้นฐานทั้งหมดพร้อมกัน
         console.log('📡 กำลังเรียก API ทั้งหมด...');
-        const apiCalls = [
-          golfCoursesApi.getAll(),
-          usersApi.getAll(),
-          vehiclesApi.getAll(),
-          partsApi.getAll(),
-          jobsApi.getAll(),
-          partsUsageLogsApi.getAll(),
-          serialHistoryApi.getAll()
+        
+        // เรียง API calls ตามความสำคัญ - เรียกข้อมูลสำคัญก่อน
+        const criticalApiCalls = [
+          { name: 'users', call: usersApi.getAll() },
+          { name: 'golfCourses', call: golfCoursesApi.getAll() }
+        ];
+        
+        const optionalApiCalls = [
+          { name: 'vehicles', call: vehiclesApi.getAll() },
+          { name: 'parts', call: partsApi.getAll() },
+          { name: 'jobs', call: jobsApi.getAll() },
+          { name: 'partsUsageLog', call: partsUsageLogsApi.getAll() },
+          { name: 'serialHistory', call: serialHistoryApi.getAll() }
         ];
 
-        const results = [];
-        for (let i = 0; i < apiCalls.length; i++) {
+        // โหลดข้อมูลสำคัญก่อน
+        for (let i = 0; i < criticalApiCalls.length; i++) {
           try {
-            const result = await apiCalls[i];
-            results.push({ status: 'fulfilled', value: result });
-            setLoadingProgress(20 + ((i + 1) / apiCalls.length) * 60);
-            console.log(`✅ API ${i + 1}/${apiCalls.length} สำเร็จ`);
+            console.log(`🔑 กำลังโหลดข้อมูลสำคัญ: ${criticalApiCalls[i].name}`);
+            const result = await criticalApiCalls[i].call;
+            
+            if (result.success) {
+              // Handle different data types for critical API calls
+              if (criticalApiCalls[i].name === 'users') {
+                setUsers(result.data as User[]);
+              } else if (criticalApiCalls[i].name === 'golfCourses') {
+                setGolfCourses(result.data as GolfCourse[]);
+              }
+              console.log(`✅ ข้อมูลสำคัญ ${criticalApiCalls[i].name} โหลดสำเร็จ:`, (result.data as any[]).length, 'รายการ');
+            } else {
+              throw new Error(`API call failed: ${result.message}`);
+            }
+            
+            setLoadingProgress(20 + ((i + 1) / criticalApiCalls.length) * 30);
           } catch (error) {
-            results.push({ status: 'rejected', reason: error });
-            console.error(`❌ API ${i + 1}/${apiCalls.length} ล้มเหลว:`, error);
+            console.error(`❌ ข้อมูลสำคัญ ${criticalApiCalls[i].name} ล้มเหลว:`, error);
+            
+            // ถ้าข้อมูลสำคัญโหลดไม่ได้ ให้แสดง error
+            setLoadingError(`ไม่สามารถโหลดข้อมูลสำคัญ (${criticalApiCalls[i].name}) ได้ กรุณาตรวจสอบการเชื่อมต่อ`);
+            setConnectionStatus('disconnected');
+            return; // หยุดการโหลดข้อมูลอื่น
           }
         }
 
-        const [
-          golfCoursesResult,
-          usersResult,
-          vehiclesResult,
-          partsResult,
-          jobsResult,
-          partsUsageLogResult,
-          serialHistoryResult
-        ] = results;
+        // โหลดข้อมูลเสริมแบบ parallel (ไม่บล็อกถ้าล้มเหลว)
+        const optionalPromises = optionalApiCalls.map(async (apiCall) => {
+          try {
+            console.log(`📊 กำลังโหลด ${apiCall.name}...`);
+            const result = await apiCall.call;
+            if (result.success) {
+              // Handle different data types for optional API calls
+              switch (apiCall.name) {
+                case 'vehicles':
+                  setVehicles(result.data as Vehicle[]);
+                  break;
+                case 'parts':
+                  setParts(result.data as Part[]);
+                  break;
+                case 'jobs':
+                  setJobs(result.data as Job[]);
+                  break;
+                case 'partsUsageLog':
+                  setPartsUsageLog(result.data as PartsUsageLog[]);
+                  break;
+                case 'serialHistory':
+                  setSerialHistory(result.data as SerialHistoryEntry[]);
+                  break;
+              }
+              console.log(`✅ โหลด ${apiCall.name} สำเร็จ:`, (result.data as any[]).length, 'รายการ');
+            }
+            return { name: apiCall.name, success: true };
+          } catch (error) {
+            console.warn(`⚠️ ข้อมูลเสริม ${apiCall.name} ล้มเหลว (ข้ามไป):`, error);
+            return { name: apiCall.name, success: false, error };
+          }
+        });
 
+        // รอข้อมูลเสริมทั้งหมด (แต่ไม่บล็อกถ้าบางตัวล้มเหลว)
+        const optionalResults = await Promise.allSettled(optionalPromises);
         setLoadingProgress(85);
-
-        console.log('📊 ผลลัพธ์การโหลดข้อมูล:', {
-          golfCourses: golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success,
-          users: usersResult.status === 'fulfilled' && usersResult.value?.success,
-          vehicles: vehiclesResult.status === 'fulfilled' && vehiclesResult.value?.success,
-          parts: partsResult.status === 'fulfilled' && partsResult.value?.success,
-          jobs: jobsResult.status === 'fulfilled' && jobsResult.value?.success,
-          partsUsageLog: partsUsageLogResult.status === 'fulfilled' && partsUsageLogResult.value?.success,
-          serialHistory: serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value?.success
-        });
-
-        // แสดง error details ถ้ามี
-        [golfCoursesResult, usersResult, vehiclesResult, partsResult, jobsResult, partsUsageLogResult, serialHistoryResult].forEach((result, index) => {
-          const names = ['golfCourses', 'users', 'vehicles', 'parts', 'jobs', 'partsUsageLog', 'serialHistory'];
-          if (result.status === 'rejected') {
-            console.error(`❌ ${names[index]} failed:`, result.reason);
-          } else if (result.status === 'fulfilled' && !result.value?.success) {
-            console.error(`❌ ${names[index]} API error:`, result.value);
-          }
-        });
-
-        // ตั้งค่าข้อมูลที่โหลดได้
-        if (golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success) {
-          setGolfCourses(golfCoursesResult.value.data as GolfCourse[]);
-          console.log('✅ โหลด Golf Courses สำเร็จ:', (golfCoursesResult.value.data as GolfCourse[]).length, 'รายการ');
-        }
-        if (usersResult.status === 'fulfilled' && usersResult.value?.success) {
-          setUsers(usersResult.value.data as User[]);
-          console.log('✅ โหลด Users สำเร็จ:', (usersResult.value.data as User[]).length, 'รายการ');
-        }
-        if (vehiclesResult.status === 'fulfilled' && vehiclesResult.value?.success) {
-          setVehicles(vehiclesResult.value.data as Vehicle[]);
-          console.log('✅ โหลด Vehicles สำเร็จ:', (vehiclesResult.value.data as Vehicle[]).length, 'รายการ');
-        }
-        if (partsResult.status === 'fulfilled' && partsResult.value?.success) {
-          setParts(partsResult.value.data as Part[]);
-          console.log('✅ โหลด Parts สำเร็จ:', (partsResult.value.data as Part[]).length, 'รายการ');
-        }
-        if (jobsResult.status === 'fulfilled' && jobsResult.value?.success) {
-          setJobs(jobsResult.value.data as Job[]);
-          console.log('✅ โหลด Jobs สำเร็จ:', (jobsResult.value.data as Job[]).length, 'รายการ');
-        }
-        if (partsUsageLogResult.status === 'fulfilled' && partsUsageLogResult.value?.success) {
-          setPartsUsageLog(partsUsageLogResult.value.data as PartsUsageLog[]);
-          console.log('✅ โหลด Parts Usage Log สำเร็จ:', (partsUsageLogResult.value.data as PartsUsageLog[]).length, 'รายการ');
-        }
-        if (serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value?.success) {
-          setSerialHistory(serialHistoryResult.value.data as SerialHistoryEntry[]);
-          console.log('✅ โหลด Serial History สำเร็จ:', (serialHistoryResult.value.data as SerialHistoryEntry[]).length, 'รายการ');
-        }
-
-        setLoadingProgress(95);
-
-        // ตรวจสอบว่ามีข้อมูลสำคัญหรือไม่
-        const usersLoaded = usersResult.status === 'fulfilled' && usersResult.value?.success;
-        const golfCoursesLoaded = golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success;
-        
-        if (!usersLoaded || !golfCoursesLoaded) {
-          const errorMsg = 'ไม่สามารถโหลดข้อมูลสำคัญได้ กรุณาตรวจสอบการเชื่อมต่อ';
-          console.error('❌', errorMsg);
-          setLoadingError(errorMsg);
-          setConnectionStatus('disconnected');
-        } else {
-          console.log('🎉 โหลดข้อมูลสำคัญสำเร็จ!');
-          setConnectionStatus('connected');
-        }
 
         // โหลดข้อมูลผู้ใช้ที่ล็อกอินจาก localStorage
         if (typeof window !== 'undefined') {

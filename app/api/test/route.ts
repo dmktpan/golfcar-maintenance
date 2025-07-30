@@ -5,25 +5,47 @@ export async function GET() {
   try {
     console.log('🔍 กำลังทดสอบ API endpoints...');
     
-    const baseUrl = 'http://localhost:3000/api';
+    // ตรวจสอบว่าอยู่ใน build time หรือไม่
+    const isBuildTime = process.env.NODE_ENV === 'production' && !process.env.VERCEL;
+    
+    if (isBuildTime) {
+      console.log('⚠️ ข้าม API test ระหว่าง build time');
+      return NextResponse.json({
+        success: true,
+        message: 'API test skipped during build time',
+        buildTime: true
+      });
+    }
+    
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000/api' 
+      : `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api`;
     
     // ทดสอบ API users
-    const usersResponse = await fetch(`${baseUrl}/users`);
+    const usersResponse = await fetch(`${baseUrl}/users`, {
+      headers: { 'User-Agent': 'Internal-Test' }
+    });
     const usersData = await usersResponse.json();
     console.log('Users API Response:', usersData);
     
     // ทดสอบ API golf-courses
-    const golfCoursesResponse = await fetch(`${baseUrl}/golf-courses`);
+    const golfCoursesResponse = await fetch(`${baseUrl}/golf-courses`, {
+      headers: { 'User-Agent': 'Internal-Test' }
+    });
     const golfCoursesData = await golfCoursesResponse.json();
     console.log('Golf Courses API Response:', golfCoursesData);
     
     // ทดสอบ API vehicles
-    const vehiclesResponse = await fetch(`${baseUrl}/vehicles`);
+    const vehiclesResponse = await fetch(`${baseUrl}/vehicles`, {
+      headers: { 'User-Agent': 'Internal-Test' }
+    });
     const vehiclesData = await vehiclesResponse.json();
     console.log('Vehicles API Response:', vehiclesData);
     
     // ทดสอบ API jobs
-    const jobsResponse = await fetch(`${baseUrl}/jobs`);
+    const jobsResponse = await fetch(`${baseUrl}/jobs`, {
+      headers: { 'User-Agent': 'Internal-Test' }
+    });
     const jobsData = await jobsResponse.json();
     console.log('Jobs API Response:', jobsData);
     

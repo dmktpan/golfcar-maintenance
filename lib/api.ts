@@ -1,7 +1,7 @@
 // lib/api.ts
 export const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'http://192.168.1.54:8080/api'
-  : 'http://localhost:8080/api'
+  ? 'http://192.168.1.54:8080/api'  // ใช้พอร์ต 3000 สำหรับ production
+  : 'http://localhost:3000/api'     // ใช้พอร์ต 3001 สำหรับ development
 
 // Generic API response type
 interface ApiResponse<T> {
@@ -14,8 +14,8 @@ interface ApiResponse<T> {
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
-  retries: number = 3,
-  timeout: number = 10000
+  retries: number = 2,
+  timeout: number = 30000 // เพิ่มเป็น 30 วินาที
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -34,20 +34,19 @@ async function apiCall<T>(
       });
 
       clearTimeout(timeoutId);
-      const data = await response.json();
       
       if (!response.ok) {
+        const errorText = await response.text();
         console.error(`❌ API Error ${response.status}: ${endpoint}`, {
           status: response.status,
           statusText: response.statusText,
-          data: data
+          body: errorText
         });
         
-        // ส่ง error message จาก API ถ้ามี
-        const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
-        throw new Error(errorMessage);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      const data = await response.json();
       console.log(`✅ API Success: ${endpoint} (${data.data?.length || 'N/A'} items)`);
       return data;
 
@@ -62,9 +61,9 @@ async function apiCall<T>(
         
         console.error(`❌ API Error (attempt ${attempt}): ${endpoint}`, error.message);
         
-        // Retry logic
-        if (attempt < retries) {
-          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        // Retry logic - ลดจำนวน retry และไม่ retry ถ้า timeout
+        if (attempt < retries && !error.message.includes('timeout')) {
+          const delay = Math.min(2000, Math.pow(2, attempt) * 1000); // จำกัด delay สูงสุด 2 วินาที
           console.log(`🔄 Retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return makeRequest(attempt + 1);
