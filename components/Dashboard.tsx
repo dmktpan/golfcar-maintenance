@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Job, JobStatus, User, View, Vehicle, GolfCourse } from '@/lib/data';
 import JobCard from './JobCard';
 import styles from './Dashboard.module.css';
@@ -23,8 +23,65 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
     
-    // ใช้ onUpdateStatus จาก props หรือ fallback เป็นฟังก์ชันภายใน
-    const handleUpdateStatus = (jobId: number, status: JobStatus) => {
+    // สถิติข้อมูลที่โหลดมา
+    const dataStats = useMemo(() => ({
+        jobs: jobs.length,
+        vehicles: vehicles.length,
+        golfCourses: golfCourses.length,
+        users: users.length
+    }), [jobs.length, vehicles.length, golfCourses.length, users.length]);
+    
+    // ใช้ useMemo เพื่อลด re-calculation
+    const filteredJobs = useMemo(() => {
+        const getUserJobs = () => {
+            if (user.role === 'supervisor' || user.role === 'admin') {
+                return jobs;
+            } else {
+                return jobs.filter(job => 
+                    job.user_id === user.id.toString() && 
+                    job.status !== 'approved'
+                );
+            }
+        };
+
+        const userJobs = getUserJobs();
+        
+        if (activeTab === 'history') {
+            return jobs.filter(job => 
+                job.user_id === user.id.toString() && job.status === 'approved'
+            ).sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+        }
+
+        const filtered = filter === 'all' 
+            ? userJobs 
+            : userJobs.filter(job => job.status === filter);
+
+        return filtered.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }, [jobs, user, activeTab, filter]);
+
+    // ใช้ useMemo สำหรับ job counts
+    const jobCounts = useMemo(() => {
+        const userJobs = user.role === 'supervisor' || user.role === 'admin' 
+            ? jobs 
+            : jobs.filter(job => job.user_id === user.id.toString() && job.status !== 'approved');
+            
+        return {
+            all: userJobs.length,
+            pending: userJobs.filter(job => job.status === 'pending').length,
+            assigned: userJobs.filter(job => job.status === 'assigned').length,
+            in_progress: userJobs.filter(job => job.status === 'in_progress').length,
+            completed: userJobs.filter(job => job.status === 'completed').length,
+            approved: jobs.filter(job => job.user_id === user.id.toString() && job.status === 'approved').length,
+            rejected: userJobs.filter(job => job.status === 'rejected').length,
+        };
+    }, [jobs, user]);
+
+    // ใช้ useCallback สำหรับ handleUpdateStatus
+    const handleUpdateStatus = useCallback((jobId: number, status: JobStatus) => {
         if (onUpdateStatus) {
             onUpdateStatus(jobId, status);
         } else {
@@ -39,58 +96,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                 }
             }
         }
-    };
-
-    // กรองงานตามบทบาทของผู้ใช้
-    const getUserJobs = () => {
-        if (user.role === 'supervisor' || user.role === 'admin') {
-            return jobs;
-        } else {
-            return jobs.filter(job => 
-                job.user_id === user.id.toString() && 
-                job.status !== 'approved'
-            );
-        }
-    };
-
-    // กรองงานตามแท็บและฟิลเตอร์
-    const getFilteredJobs = () => {
-        const userJobs = getUserJobs();
-        
-        if (activeTab === 'history') {
-            return jobs.filter(job => 
-                job.user_id === user.id.toString() && job.status === 'approved'
-            ).sort((a, b) => 
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-        }
-
-        const filteredJobs = filter === 'all' 
-            ? userJobs 
-            : userJobs.filter(job => job.status === filter);
-
-        return filteredJobs.sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-    };
-
-    const filteredJobs = getFilteredJobs();
-
-    // นับจำนวนงานตามสถานะ
-    const getJobCounts = () => {
-        const userJobs = getUserJobs();
-        return {
-            all: userJobs.length,
-            pending: userJobs.filter(job => job.status === 'pending').length,
-            assigned: userJobs.filter(job => job.status === 'assigned').length,
-            in_progress: userJobs.filter(job => job.status === 'in_progress').length,
-            completed: userJobs.filter(job => job.status === 'completed').length,
-            approved: jobs.filter(job => job.user_id === user.id.toString() && job.status === 'approved').length,
-            rejected: userJobs.filter(job => job.status === 'rejected').length,
-        };
-    };
-
-    const jobCounts = getJobCounts();
+    }, [onUpdateStatus, jobs, setJobs, addPartsUsageLog]);
 
     return (
         <div className={styles.dashboard}>
@@ -112,6 +118,26 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                         <span className="btn-icon">⚙️</span> แดชบอร์ดผู้ดูแล
                     </button>
                 )}
+            </div>
+
+            {/* Data Statistics */}
+            <div className={styles.dataStats}>
+                <div className={styles.statCard}>
+                    <div className={styles.statNumber}>{dataStats.jobs}</div>
+                    <div className={styles.statLabel}>งานทั้งหมด</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statNumber}>{dataStats.vehicles}</div>
+                    <div className={styles.statLabel}>รถกอล์ฟ</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statNumber}>{dataStats.golfCourses}</div>
+                    <div className={styles.statLabel}>สนามกอล์ฟ</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statNumber}>{dataStats.users}</div>
+                    <div className={styles.statLabel}>ผู้ใช้งาน</div>
+                </div>
             </div>
 
             {/* Page Header */}

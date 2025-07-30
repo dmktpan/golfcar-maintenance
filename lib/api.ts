@@ -10,36 +10,74 @@ interface ApiResponse<T> {
   data: T;
 }
 
-// Helper function for API calls
-async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+// Helper function for API calls with timeout and retry mechanism
+async function apiCall<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  retries: number = 3,
+  timeout: number = 10000
+): Promise<ApiResponse<T>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error(`API error for ${endpoint}:`, {
-        status: response.status,
-        statusText: response.statusText,
-        data: data
-      });
+  const makeRequest = async (attempt: number): Promise<ApiResponse<T>> => {
+    try {
+      console.log(`🌐 API Call (attempt ${attempt}/${retries + 1}): ${endpoint}`);
       
-      // ส่ง error message จาก API ถ้ามี
-      const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
-      throw new Error(errorMessage);
-    }
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
 
-    return data;
-  } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
-    throw error;
-  }
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error(`❌ API Error ${response.status}: ${endpoint}`, {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+        
+        // ส่ง error message จาก API ถ้ามี
+        const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      console.log(`✅ API Success: ${endpoint} (${data.data?.length || 'N/A'} items)`);
+      return data;
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error(`⏰ API Timeout: ${endpoint} (${timeout}ms)`);
+          throw new Error(`Request timeout after ${timeout}ms`);
+        }
+        
+        console.error(`❌ API Error (attempt ${attempt}): ${endpoint}`, error.message);
+        
+        // Retry logic
+        if (attempt < retries) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.log(`🔄 Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return makeRequest(attempt + 1);
+        }
+        
+        throw error;
+      }
+      
+      throw new Error('Unknown error occurred');
+    }
+  };
+
+  return makeRequest(1);
 }
 
 // Golf Courses API

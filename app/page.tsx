@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, Job, Part, GolfCourse, Vehicle, PartsUsageLog, SerialHistoryEntry, View, JobStatus } from '@/lib/data';
 import { golfCoursesApi, usersApi, vehiclesApi, partsApi, jobsApi, partsUsageLogsApi, serialHistoryApi } from '@/lib/api';
 import LoginScreen from '@/components/LoginScreen';
@@ -43,14 +43,69 @@ export default function HomePage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [selectedJobForForm, setSelectedJobForForm] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // โหลดข้อมูลเริ่มต้นจาก API
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         setLoading(true);
+        setLoadingError('');
+        setConnectionStatus('checking');
+        setLoadingProgress(0);
+        
+        console.log('🚀 เริ่มโหลดข้อมูล...');
+        console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080/api' : 'http://localhost:3000/api');
+        
+        // ทดสอบการเชื่อมต่อก่อน
+        setLoadingProgress(10);
+        try {
+          console.log('🔍 ทดสอบการเชื่อมต่อเซิร์ฟเวอร์...');
+          const healthCheck = await fetch(`${process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080' : 'http://localhost:3000'}/api/users`, {
+            method: 'HEAD'
+          });
+          if (healthCheck.ok) {
+            setConnectionStatus('connected');
+            console.log('✅ การเชื่อมต่อเซิร์ฟเวอร์สำเร็จ');
+          } else {
+            throw new Error(`Server responded with status: ${healthCheck.status}`);
+          }
+        } catch (error) {
+          setConnectionStatus('disconnected');
+          console.error('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:', error);
+          // Don't throw error here, let the app continue and try to load data
+          console.log('⚠️ จะข้ามการตรวจสอบการเชื่อมต่อและลองโหลดข้อมูลต่อไป');
+        }
+
+        setLoadingProgress(20);
         
         // โหลดข้อมูลพื้นฐานทั้งหมดพร้อมกัน
+        console.log('📡 กำลังเรียก API ทั้งหมด...');
+        const apiCalls = [
+          golfCoursesApi.getAll(),
+          usersApi.getAll(),
+          vehiclesApi.getAll(),
+          partsApi.getAll(),
+          jobsApi.getAll(),
+          partsUsageLogsApi.getAll(),
+          serialHistoryApi.getAll()
+        ];
+
+        const results = [];
+        for (let i = 0; i < apiCalls.length; i++) {
+          try {
+            const result = await apiCalls[i];
+            results.push({ status: 'fulfilled', value: result });
+            setLoadingProgress(20 + ((i + 1) / apiCalls.length) * 60);
+            console.log(`✅ API ${i + 1}/${apiCalls.length} สำเร็จ`);
+          } catch (error) {
+            results.push({ status: 'rejected', reason: error });
+            console.error(`❌ API ${i + 1}/${apiCalls.length} ล้มเหลว:`, error);
+          }
+        }
+
         const [
           golfCoursesResult,
           usersResult,
@@ -59,42 +114,119 @@ export default function HomePage() {
           jobsResult,
           partsUsageLogResult,
           serialHistoryResult
-        ] = await Promise.all([
-          golfCoursesApi.getAll(),
-          usersApi.getAll(),
-          vehiclesApi.getAll(),
-          partsApi.getAll(),
-          jobsApi.getAll(),
-          partsUsageLogsApi.getAll(),
-          serialHistoryApi.getAll()
-        ]);
+        ] = results;
+
+        setLoadingProgress(85);
+
+        console.log('📊 ผลลัพธ์การโหลดข้อมูล:', {
+          golfCourses: golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success,
+          users: usersResult.status === 'fulfilled' && usersResult.value?.success,
+          vehicles: vehiclesResult.status === 'fulfilled' && vehiclesResult.value?.success,
+          parts: partsResult.status === 'fulfilled' && partsResult.value?.success,
+          jobs: jobsResult.status === 'fulfilled' && jobsResult.value?.success,
+          partsUsageLog: partsUsageLogResult.status === 'fulfilled' && partsUsageLogResult.value?.success,
+          serialHistory: serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value?.success
+        });
+
+        // แสดง error details ถ้ามี
+        [golfCoursesResult, usersResult, vehiclesResult, partsResult, jobsResult, partsUsageLogResult, serialHistoryResult].forEach((result, index) => {
+          const names = ['golfCourses', 'users', 'vehicles', 'parts', 'jobs', 'partsUsageLog', 'serialHistory'];
+          if (result.status === 'rejected') {
+            console.error(`❌ ${names[index]} failed:`, result.reason);
+          } else if (result.status === 'fulfilled' && !result.value?.success) {
+            console.error(`❌ ${names[index]} API error:`, result.value);
+          }
+        });
 
         // ตั้งค่าข้อมูลที่โหลดได้
-        if (golfCoursesResult.success) setGolfCourses(golfCoursesResult.data as GolfCourse[]);
-        if (usersResult.success) setUsers(usersResult.data as User[]);
-        if (vehiclesResult.success) setVehicles(vehiclesResult.data as Vehicle[]);
-        if (partsResult.success) setParts(partsResult.data as Part[]);
-        if (jobsResult.success) setJobs(jobsResult.data as Job[]);
-        if (partsUsageLogResult.success) setPartsUsageLog(partsUsageLogResult.data as PartsUsageLog[]);
-        if (serialHistoryResult.success) setSerialHistory(serialHistoryResult.data as SerialHistoryEntry[]);
+        if (golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success) {
+          setGolfCourses(golfCoursesResult.value.data as GolfCourse[]);
+          console.log('✅ โหลด Golf Courses สำเร็จ:', (golfCoursesResult.value.data as GolfCourse[]).length, 'รายการ');
+        }
+        if (usersResult.status === 'fulfilled' && usersResult.value?.success) {
+          setUsers(usersResult.value.data as User[]);
+          console.log('✅ โหลด Users สำเร็จ:', (usersResult.value.data as User[]).length, 'รายการ');
+        }
+        if (vehiclesResult.status === 'fulfilled' && vehiclesResult.value?.success) {
+          setVehicles(vehiclesResult.value.data as Vehicle[]);
+          console.log('✅ โหลด Vehicles สำเร็จ:', (vehiclesResult.value.data as Vehicle[]).length, 'รายการ');
+        }
+        if (partsResult.status === 'fulfilled' && partsResult.value?.success) {
+          setParts(partsResult.value.data as Part[]);
+          console.log('✅ โหลด Parts สำเร็จ:', (partsResult.value.data as Part[]).length, 'รายการ');
+        }
+        if (jobsResult.status === 'fulfilled' && jobsResult.value?.success) {
+          setJobs(jobsResult.value.data as Job[]);
+          console.log('✅ โหลด Jobs สำเร็จ:', (jobsResult.value.data as Job[]).length, 'รายการ');
+        }
+        if (partsUsageLogResult.status === 'fulfilled' && partsUsageLogResult.value?.success) {
+          setPartsUsageLog(partsUsageLogResult.value.data as PartsUsageLog[]);
+          console.log('✅ โหลด Parts Usage Log สำเร็จ:', (partsUsageLogResult.value.data as PartsUsageLog[]).length, 'รายการ');
+        }
+        if (serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value?.success) {
+          setSerialHistory(serialHistoryResult.value.data as SerialHistoryEntry[]);
+          console.log('✅ โหลด Serial History สำเร็จ:', (serialHistoryResult.value.data as SerialHistoryEntry[]).length, 'รายการ');
+        }
+
+        setLoadingProgress(95);
+
+        // ตรวจสอบว่ามีข้อมูลสำคัญหรือไม่
+        const usersLoaded = usersResult.status === 'fulfilled' && usersResult.value?.success;
+        const golfCoursesLoaded = golfCoursesResult.status === 'fulfilled' && golfCoursesResult.value?.success;
+        
+        if (!usersLoaded || !golfCoursesLoaded) {
+          const errorMsg = 'ไม่สามารถโหลดข้อมูลสำคัญได้ กรุณาตรวจสอบการเชื่อมต่อ';
+          console.error('❌', errorMsg);
+          setLoadingError(errorMsg);
+          setConnectionStatus('disconnected');
+        } else {
+          console.log('🎉 โหลดข้อมูลสำคัญสำเร็จ!');
+          setConnectionStatus('connected');
+        }
 
         // โหลดข้อมูลผู้ใช้ที่ล็อกอินจาก localStorage
         if (typeof window !== 'undefined') {
           const savedUser = localStorage.getItem('currentUser');
           if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              setUser(parsedUser);
+              console.log('👤 โหลดข้อมูลผู้ใช้จาก localStorage:', parsedUser.name);
+            } catch (err) {
+              console.error('❌ Error parsing saved user:', err);
+              localStorage.removeItem('currentUser');
+            }
+          } else {
+            console.log('👤 ไม่พบข้อมูลผู้ใช้ใน localStorage');
           }
           
           const savedView = localStorage.getItem('currentView');
           if (savedView) {
             setView(savedView as View);
+            console.log('📱 โหลด view จาก localStorage:', savedView);
           }
         }
 
+        setLoadingProgress(100);
+        console.log('✨ การโหลดข้อมูลเริ่มต้นเสร็จสิ้น');
+        
+        // Debug: แสดงจำนวนข้อมูลที่โหลดได้
+        console.log('📊 สรุปข้อมูลที่โหลดได้:');
+        console.log('- Users:', users.length);
+        console.log('- Golf Courses:', golfCourses.length);
+        console.log('- Vehicles:', vehicles.length);
+        console.log('- Jobs:', jobs.length);
+        console.log('- Parts:', parts.length);
+        console.log('- Loading state will be set to false');
+
       } catch (error) {
-        console.error('Error loading initial data:', error);
+        console.error('💥 Error loading initial data:', error);
+        setLoadingError('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + (error as Error).message);
+        setConnectionStatus('disconnected');
       } finally {
+        console.log('🏁 เข้าสู่ finally block - กำลังตั้งค่า loading เป็น false');
         setLoading(false);
+        console.log('✅ Loading state ถูกตั้งค่าเป็น false แล้ว');
       }
     };
 
@@ -113,6 +245,24 @@ export default function HomePage() {
   useEffect(() => {
     localStorage.setItem('currentView', view);
   }, [view]);
+
+  // Debug: Monitor loading state changes
+  useEffect(() => {
+    console.log('🔄 Loading state changed to:', loading);
+    if (!loading) {
+      console.log('✅ Loading completed! Current state:');
+      console.log('- User:', user ? `${user.name} (${user.role})` : 'null');
+      console.log('- Connection Status:', connectionStatus);
+      console.log('- Loading Error:', loadingError || 'none');
+      console.log('- Data counts:', {
+        users: users.length,
+        golfCourses: golfCourses.length,
+        vehicles: vehicles.length,
+        jobs: jobs.length,
+        parts: parts.length
+      });
+    }
+  }, [loading]);
 
   // ระบบ Session Timeout - ออกจากระบบอัตโนมัติหลังจากไม่ได้ใช้งาน 5 นาที
   useEffect(() => {
@@ -272,9 +422,9 @@ export default function HomePage() {
     }
   };
   
-  const handleSetView = (newView: View) => {
+  const handleSetView = useCallback((newView: View) => {
     setView(newView);
-  };
+  }, []);
 
   const handleFillJobForm = (job: Job) => {
     setSelectedJobForForm(job);
@@ -484,14 +634,115 @@ export default function HomePage() {
   // แสดง loading screen ขณะโหลดข้อมูล
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px'
-      }}>
-        กำลังโหลดข้อมูล...
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          {/* Glowing Ring Spinner */}
+          <div className="relative inline-flex items-center justify-center w-32 h-32 mb-8">
+            {/* Outer glow */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 opacity-20 blur-xl animate-pulse"></div>
+            {/* Main spinning ring */}
+            <div className="relative w-24 h-24 rounded-full border-4 border-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 animate-spin">
+              <div className="absolute inset-1 rounded-full bg-slate-900"></div>
+            </div>
+            {/* Inner glow */}
+            <div className="absolute inset-6 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 opacity-30 blur-md animate-pulse"></div>
+            {/* Progress percentage in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">{loadingProgress}%</span>
+            </div>
+          </div>
+          
+          {/* Loading Text */}
+          <h2 className="text-2xl font-light text-white tracking-wider mb-6">
+            Loading...
+          </h2>
+
+          {/* Progress Bar */}
+          <div className="mb-8 max-w-xs mx-auto">
+            <div className="w-full bg-slate-800/50 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out relative"
+                style={{ width: `${loadingProgress}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
+              </div>
+            </div>
+            <div className="flex justify-between text-xs text-cyan-300 mt-2 font-medium">
+              <span>0%</span>
+              <span className="text-white">{loadingProgress}%</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          {/* Loading Steps with Icons */}
+          <div className="space-y-3 text-sm max-w-sm mx-auto">
+            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+              loadingProgress >= 10 
+                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
+                : 'bg-slate-800/30 text-slate-400'
+            }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                loadingProgress >= 10 
+                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
+                  : 'bg-slate-700 text-slate-400'
+              }`}>
+                {loadingProgress >= 10 ? '✓' : '1'}
+              </div>
+              <span className="font-medium">เชื่อมต่อเซิร์ฟเวอร์</span>
+            </div>
+            
+            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+              loadingProgress >= 50 
+                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
+                : 'bg-slate-800/30 text-slate-400'
+            }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                loadingProgress >= 50 
+                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
+                  : 'bg-slate-700 text-slate-400'
+              }`}>
+                {loadingProgress >= 50 ? '✓' : '2'}
+              </div>
+              <span className="font-medium">ดึงข้อมูลจาก API</span>
+            </div>
+            
+            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
+              loadingProgress >= 95 
+                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
+                : 'bg-slate-800/30 text-slate-400'
+            }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                loadingProgress >= 95 
+                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
+                  : 'bg-slate-700 text-slate-400'
+              }`}>
+                {loadingProgress >= 95 ? '✓' : '3'}
+              </div>
+              <span className="font-medium">ประมวลผลข้อมูล</span>
+            </div>
+          </div>
+          
+          {/* Error Display - แสดงเฉพาะเมื่อมี error */}
+          {loadingError && (
+            <div className="mt-8 p-4 bg-red-900/50 border border-red-500/30 rounded-xl backdrop-blur-sm max-w-sm mx-auto">
+              <div className="flex items-center justify-center space-x-3 mb-4">
+                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-red-300 font-medium">เกิดข้อผิดพลาด</span>
+              </div>
+              <p className="text-red-200 text-sm mb-4">{loadingError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                โหลดใหม่
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
