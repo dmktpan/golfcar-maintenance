@@ -57,13 +57,13 @@ export default function HomePage() {
         setLoadingProgress(0);
         
         console.log('🚀 เริ่มโหลดข้อมูล...');
-        console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080/api' : 'http://localhost:3000/api');
+        console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080/api' : 'http://localhost:8080/api');
         
         // ทดสอบการเชื่อมต่อก่อน
         setLoadingProgress(10);
         try {
           console.log('🔍 ทดสอบการเชื่อมต่อเซิร์ฟเวอร์...');
-          const healthCheck = await fetch(`${process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080' : 'http://localhost:3000'}/api/users`, {
+          const healthCheck = await fetch(`${process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080' : 'http://localhost:8080'}/api/users`, {
             method: 'HEAD'
           });
           if (healthCheck.ok) {

@@ -1,7 +1,7 @@
 // lib/api.ts
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'http://192.168.1.54:8080/api' 
-  : 'http://localhost:3000/api'
+export const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'http://192.168.1.54:8080/api'
+  : 'http://localhost:8080/api'
 
 // Generic API response type
 interface ApiResponse<T> {

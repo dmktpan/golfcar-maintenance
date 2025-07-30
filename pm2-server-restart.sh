@@ -74,7 +74,7 @@ module.exports = {
     max_memory_restart: '1G',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 8080
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
@@ -113,7 +113,7 @@ echo "   คำสั่งหยุด: pm2 stop golfcar-maintenance"
 
 echo ""
 echo "✅ PM2 Server Management เสร็จสิ้น!"
-echo "🌐 แอปพลิเคชันควรทำงานที่: http://localhost:3000"
+echo "🌐 แอปพลิเคชันควรทำงานที่: http://localhost:8080"
 
 # แสดง logs สำหรับ 10 วินาทีแรก
 echo ""
