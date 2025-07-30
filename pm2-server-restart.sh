@@ -48,10 +48,6 @@ echo "📦 ติดตั้ง dependencies ใหม่..."
 npm install
 
 echo ""
-echo "🔨 สร้าง Prisma client ใหม่..."
-npx prisma generate
-
-echo ""
 echo "🏗️  Build แอปพลิเคชัน..."
 npm run build
 
