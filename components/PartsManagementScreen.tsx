@@ -2,8 +2,9 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { PartsUsageLog, Vehicle, GolfCourse, View } from '../lib/data';
+import { Vehicle, PartsUsageLog, View, GolfCourse } from '@/lib/data';
 import PartsHistoryModal from './PartsHistoryModal';
+import * as XLSX from 'xlsx';
 
 interface PartsManagementScreenProps {
     partsUsageLog: PartsUsageLog[];
@@ -34,6 +35,12 @@ function PartsManagementScreen({
     
     const [sortBy, setSortBy] = useState<'serial' | 'vehicle' | 'golfCourse' | 'partsCount' | 'lastUpdate'>('lastUpdate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    
+    // State สำหรับ Export Options
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportType, setExportType] = useState<'all' | 'serial' | 'golfCourse'>('all');
+    const [selectedExportSerial, setSelectedExportSerial] = useState('');
+    const [selectedExportGolfCourse, setSelectedExportGolfCourse] = useState('');
 
     // ดึง Serial Numbers ที่มีประวัติการใช้อะไหล่
     const serialsWithHistory = useMemo(() => {
@@ -171,49 +178,121 @@ function PartsManagementScreen({
         setSelectedSerial('');
     };
 
-    const exportToCSV = () => {
-        if (serialsWithHistory.length === 0) {
-            alert('ไม่มีข้อมูลสำหรับ export');
+    // ฟังก์ชัน Export ข้อมูลเป็น Excel
+    const exportToExcel = () => {
+        let dataToExport: any[] = [];
+        let fileName = '';
+        
+        // กรองข้อมูลตามประเภทการ Export
+        if (exportType === 'all') {
+            // Export ทั้งหมด
+            dataToExport = partsUsageLog.map(log => {
+                const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
+                const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
+                
+                return {
+                    'ID': log.id,
+                    'Serial Number': log.vehicleSerial,
+                    'หมายเลขรถ': vehicle?.vehicle_number || 'ไม่ระบุ',
+                    'สนามกอล์ฟ': golfCourse?.name || 'ไม่ระบุ',
+                    'รายการอะไหล่': log.partName,
+                    'จำนวน': log.quantityUsed,
+                    'รายงาน': log.notes || '-',
+                    'วันที่บันทึก': formatDateForExcel(log.usedDate),
+                    'โดย': log.usedBy || 'ไม่ระบุ'
+                };
+            });
+            fileName = `ประวัติอะไหล่_ทั้งหมด_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+            
+        } else if (exportType === 'serial') {
+            // Export ตาม Serial Number
+            dataToExport = partsUsageLog
+                .filter(log => log.vehicleSerial === selectedExportSerial)
+                .map(log => {
+                    const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
+                    const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
+                    
+                    return {
+                        'ID': log.id,
+                        'Serial Number': log.vehicleSerial,
+                        'หมายเลขรถ': vehicle?.vehicle_number || 'ไม่ระบุ',
+                        'สนามกอล์ฟ': golfCourse?.name || 'ไม่ระบุ',
+                        'รายการอะไหล่': log.partName,
+                        'จำนวน': log.quantityUsed,
+                        'รายงาน': log.notes || '-',
+                        'วันที่บันทึก': formatDateForExcel(log.usedDate),
+                        'โดย': log.usedBy || 'ไม่ระบุ'
+                    };
+                });
+            fileName = `ประวัติอะไหล่_${selectedExportSerial}_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+            
+        } else if (exportType === 'golfCourse') {
+            // Export ตามสนามกอล์ฟ
+            const golfCourseVehicles = vehicles.filter(v => {
+                const golfCourse = golfCourses.find(gc => gc.id === v.golf_course_id);
+                return golfCourse?.name === selectedExportGolfCourse;
+            });
+            const golfCourseSerials = golfCourseVehicles.map(v => v.serial_number);
+            
+            dataToExport = partsUsageLog
+                .filter(log => golfCourseSerials.includes(log.vehicleSerial))
+                .map(log => {
+                    const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
+                    const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
+                    
+                    return {
+                        'ID': log.id,
+                        'Serial Number': log.vehicleSerial,
+                        'หมายเลขรถ': vehicle?.vehicle_number || 'ไม่ระบุ',
+                        'สนามกอล์ฟ': golfCourse?.name || 'ไม่ระบุ',
+                        'รายการอะไหล่': log.partName,
+                        'จำนวน': log.quantityUsed,
+                        'รายงาน': log.notes || '-',
+                        'วันที่บันทึก': formatDateForExcel(log.usedDate),
+                        'โดย': log.usedBy || 'ไม่ระบุ'
+                    };
+                });
+            fileName = `ประวัติอะไหล่_${selectedExportGolfCourse}_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+        }
+
+        if (dataToExport.length === 0) {
+            alert('ไม่มีข้อมูลสำหรับ Export');
             return;
         }
 
-        const headers = [
-            'Serial Number',
-            'หมายเลขรถ',
-            'สนามกอล์ฟ',
-            'จำนวนรายการอะไหล่',
-            'วันที่อัปเดตล่าสุด'
+        // สร้าง Excel file
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'ประวัติอะไหล่');
+        
+        // ตั้งค่าความกว้างของคอลัมน์
+        const colWidths = [
+            { wch: 8 },  // ID
+            { wch: 20 }, // Serial Number
+            { wch: 12 }, // หมายเลขรถ
+            { wch: 20 }, // สนามกอล์ฟ
+            { wch: 25 }, // รายการอะไหล่
+            { wch: 8 },  // จำนวน
+            { wch: 30 }, // รายงาน
+            { wch: 20 }, // วันที่บันทึก
+            { wch: 15 }  // โดย
         ];
+        ws['!cols'] = colWidths;
+        
+        // Export file
+        XLSX.writeFile(wb, fileName);
+        setShowExportModal(false);
+    };
 
-        const csvContent = [
-            headers.join(','),
-            ...serialsWithHistory.map(serial => {
-                const vehicle = getVehicleBySerial(serial);
-                const golfCourseName = getGolfCourseNameByVehicle(vehicle);
-                const partsCount = getPartsCountBySerial(serial);
-                const latestLog = partsUsageLog
-                    .filter(log => log.vehicleSerial === serial)
-                    .sort((a, b) => new Date(b.usedDate).getTime() - new Date(a.usedDate).getTime())[0];
-                
-                return [
-                    serial,
-                    vehicle?.vehicle_number || 'ไม่ระบุ',
-                    golfCourseName,
-                    partsCount,
-                    latestLog ? formatDate(latestLog.usedDate) : 'ไม่มีข้อมูล'
-                ].join(',');
-            })
-        ].join('\n');
-
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `serial_parts_summary_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const formatDateForExcel = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('th-TH', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     const formatDate = (dateString: string) => {
@@ -231,8 +310,8 @@ function PartsManagementScreen({
             <div className="parts-log-header">
                 <h2>🔧 ประวัติการใช้อะไหล่ตาม Serial</h2>
                 <div className="parts-log-header-actions">
-                    <button className="btn-primary" onClick={exportToCSV}>
-                        📊 Export สรุป
+                    <button className="btn-primary" onClick={() => setShowExportModal(true)}>
+                        📊 Export Excel
                     </button>
                     <button className="btn-outline" onClick={() => setView('admin_dashboard')}>
                         ← กลับไปหน้าหลัก
@@ -419,7 +498,7 @@ function PartsManagementScreen({
                                             <span className="info-value">{golfCourseName}</span>
                                         </div>
                                         <div className="info-row">
-                                            <span className="info-label">📅 อัปเดตล่าสุด:</span>
+                                            <span className="info-label">📅 วันที่บันทึก:</span>
                                             <span className="info-value">
                                                 {latestLog ? formatDate(latestLog.usedDate) : 'ไม่มีข้อมูล'}
                                             </span>
@@ -448,6 +527,113 @@ function PartsManagementScreen({
                     partsUsageLog={partsUsageLog}
                     onClose={handleCloseModal}
                 />
+            )}
+
+            {/* Modal สำหรับเลือกประเภทการ Export */}
+            {showExportModal && (
+                <div className="modal-overlay">
+                    <div className="export-modal">
+                        <div className="export-modal-header">
+                            <h3>📊 Export ประวัติอะไหล่เป็น Excel</h3>
+                            <button 
+                                className="close-button"
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        
+                        <div className="export-modal-body">
+                            <div className="export-option">
+                                <label className="export-radio-label">
+                                    <input
+                                        type="radio"
+                                        name="exportType"
+                                        value="all"
+                                        checked={exportType === 'all'}
+                                        onChange={(e) => setExportType(e.target.value as any)}
+                                    />
+                                    <span className="radio-custom"></span>
+                                    📋 Export ทั้งหมด
+                                </label>
+                                <p className="export-description">Export ประวัติการใช้อะไหล่ทั้งหมดในระบบ</p>
+                            </div>
+
+                            <div className="export-option">
+                                <label className="export-radio-label">
+                                    <input
+                                        type="radio"
+                                        name="exportType"
+                                        value="serial"
+                                        checked={exportType === 'serial'}
+                                        onChange={(e) => setExportType(e.target.value as any)}
+                                    />
+                                    <span className="radio-custom"></span>
+                                    🏷️ Export ตาม Serial Number
+                                </label>
+                                <p className="export-description">Export ประวัติการใช้อะไหล่ของรถคันใดคันหนึ่ง</p>
+                                {exportType === 'serial' && (
+                                    <select
+                                        value={selectedExportSerial}
+                                        onChange={(e) => setSelectedExportSerial(e.target.value)}
+                                        className="export-select"
+                                    >
+                                        <option value="">เลือก Serial Number</option>
+                                        {serialsWithHistory.map(serial => (
+                                            <option key={serial} value={serial}>{serial}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+
+                            <div className="export-option">
+                                <label className="export-radio-label">
+                                    <input
+                                        type="radio"
+                                        name="exportType"
+                                        value="golfCourse"
+                                        checked={exportType === 'golfCourse'}
+                                        onChange={(e) => setExportType(e.target.value as any)}
+                                    />
+                                    <span className="radio-custom"></span>
+                                    🏌️ Export ตามสนามกอล์ฟ
+                                </label>
+                                <p className="export-description">Export ประวัติการใช้อะไหล่ของสนามกอล์ฟใดสนามหนึ่ง</p>
+                                {exportType === 'golfCourse' && (
+                                    <select
+                                        value={selectedExportGolfCourse}
+                                        onChange={(e) => setSelectedExportGolfCourse(e.target.value)}
+                                        className="export-select"
+                                    >
+                                        <option value="">เลือกสนามกอล์ฟ</option>
+                                        {uniqueGolfCourses.map(course => (
+                                            <option key={course} value={course}>{course}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="export-modal-footer">
+                            <button 
+                                className="btn-cancel"
+                                onClick={() => setShowExportModal(false)}
+                            >
+                                ยกเลิก
+                            </button>
+                            <button 
+                                className="btn-export"
+                                onClick={exportToExcel}
+                                disabled={
+                                    (exportType === 'serial' && !selectedExportSerial) ||
+                                    (exportType === 'golfCourse' && !selectedExportGolfCourse)
+                                }
+                            >
+                                📊 Export Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <style jsx>{`
@@ -787,6 +973,185 @@ function PartsManagementScreen({
                 .no-data p {
                     margin: 0;
                     font-size: 1rem;
+                }
+
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+
+                .export-modal {
+                    background: white;
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 500px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                }
+
+                .export-modal-header {
+                    padding: 20px 24px 16px;
+                    border-bottom: 1px solid #e5e7eb;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .export-modal-header h3 {
+                    margin: 0;
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .close-button {
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    cursor: pointer;
+                    color: #6b7280;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+
+                .close-button:hover {
+                    background: #f3f4f6;
+                    color: #374151;
+                }
+
+                .export-modal-body {
+                    padding: 20px 24px;
+                }
+
+                .export-option {
+                    margin-bottom: 20px;
+                    padding: 16px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+
+                .export-option:hover {
+                    border-color: #3b82f6;
+                    background: #f8fafc;
+                }
+
+                .export-radio-label {
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    font-weight: 500;
+                    color: #1f2937;
+                    margin-bottom: 8px;
+                }
+
+                .export-radio-label input[type="radio"] {
+                    display: none;
+                }
+
+                .radio-custom {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #d1d5db;
+                    border-radius: 50%;
+                    margin-right: 12px;
+                    position: relative;
+                    transition: all 0.2s;
+                }
+
+                .export-radio-label input[type="radio"]:checked + .radio-custom {
+                    border-color: #3b82f6;
+                    background: #3b82f6;
+                }
+
+                .export-radio-label input[type="radio"]:checked + .radio-custom::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 8px;
+                    height: 8px;
+                    background: white;
+                    border-radius: 50%;
+                }
+
+                .export-description {
+                    margin: 0 0 12px 32px;
+                    font-size: 14px;
+                    color: #6b7280;
+                }
+
+                .export-select {
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    margin-left: 32px;
+                    margin-top: 8px;
+                    background: white;
+                }
+
+                .export-select:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .export-modal-footer {
+                    padding: 16px 24px 20px;
+                    border-top: 1px solid #e5e7eb;
+                    display: flex;
+                    gap: 12px;
+                    justify-content: flex-end;
+                }
+
+                .btn-cancel {
+                    padding: 8px 16px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    color: #374151;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+
+                .btn-cancel:hover {
+                    background: #f9fafb;
+                    border-color: #9ca3af;
+                }
+
+                .btn-export {
+                    padding: 8px 16px;
+                    background: #10b981;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+
+                .btn-export:hover:not(:disabled) {
+                    background: #059669;
+                }
+
+                .btn-export:disabled {
+                    background: #d1d5db;
+                    cursor: not-allowed;
                 }
             `}</style>
         </div>

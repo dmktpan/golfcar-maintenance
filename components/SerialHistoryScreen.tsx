@@ -35,15 +35,63 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Helper functions
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateInput: string | Date | undefined | null) => {
+    try {
+      // ตรวจสอบว่ามีข้อมูลวันที่หรือไม่
+      if (!dateInput) {
+        return 'ไม่ระบุวันที่';
+      }
+
+      let date: Date;
+      
+      // ถ้าเป็น Date object อยู่แล้ว
+      if (dateInput instanceof Date) {
+        date = dateInput;
+      }
+      // ถ้าเป็น string
+      else if (typeof dateInput === 'string') {
+        // ตรวจสอบว่าเป็น string ว่างหรือไม่
+        if (dateInput.trim() === '') {
+          return 'ไม่ระบุวันที่';
+        }
+        
+        // ถ้าเป็น timestamp (number string)
+        if (/^\d+$/.test(dateInput)) {
+          date = new Date(parseInt(dateInput));
+        } else {
+          date = new Date(dateInput);
+        }
+      } else {
+        return 'รูปแบบวันที่ไม่รู้จัก';
+      }
+
+      // ตรวจสอบว่าวันที่ถูกต้องหรือไม่
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', dateInput);
+        return 'วันที่ไม่ถูกต้อง';
+      }
+
+      // ตรวจสอบว่าวันที่อยู่ในช่วงที่สมเหตุสมผลหรือไม่
+      const now = new Date();
+      const minDate = new Date('2020-01-01');
+      const maxDate = new Date(now.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 ปีข้างหน้า
+
+      if (date < minDate || date > maxDate) {
+        console.warn('Date out of reasonable range:', dateInput, date);
+        return 'วันที่ไม่อยู่ในช่วงที่เหมาะสม';
+      }
+
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, dateInput);
+      return 'ข้อผิดพลาดในการแสดงวันที่';
+    }
   };
 
   const getSystemDisplayName = (system: string) => {
@@ -517,7 +565,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                   <th>🔋 ซีเรียลแบต</th>
                   <th>⚙️ ประเภท</th>
                   <th>📝 รายละเอียด</th>
-                  <th>👤 ผู้ดำเนินการ</th>
+                  <th>👤 ผู้รับผิดชอบ</th>
                   <th>🏌️ สนามกอล์ฟ</th>
                   <th>📊 สถานะ</th>
                   <th>🔧 การดำเนินการ</th>

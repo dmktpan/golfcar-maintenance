@@ -60,7 +60,7 @@ if [ ! -f "ecosystem.config.js" ]; then
     cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
-    name: 'golfcar-maintenance',
+    name: 'golfcart-app',
     script: 'npm',
     args: 'start',
     cwd: './',

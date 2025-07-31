@@ -263,56 +263,52 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
                 <p>ไม่มีข้อมูลการใช้อะไหล่สำหรับ Serial นี้ หรือไม่ตรงกับเงื่อนไขการค้นหา</p>
               </div>
             ) : (
-              <div className="grouped-logs">
-                {Object.entries(groupedLogs).map(([date, logs]) => (
-                  <div key={date} className="date-group">
-                    <div className="date-header">
-                      <span className="date-badge">📅 {date}</span>
-                      <span className="date-count">{logs.length} รายการ</span>
-                    </div>
-                    
-                    <div className="logs-list">
-                      {logs.map((log) => (
-                        <div key={log.id} className="log-item">
-                          <div className="log-header">
-                            <div className="part-info">
-                              <span className="part-name">🔧 {log.partName}</span>
-                              <span className="quantity-badge">×{log.quantityUsed}</span>
-                            </div>
-                            <div className="job-info">
-                              <span className={`job-type-badge ${log.jobType.toLowerCase()}`}>
-                                {getJobTypeIcon(log.jobType)} {getJobTypeLabel(log.jobType)}
-                              </span>
-                            </div>
+              <div className="table-container">
+                <table className="parts-history-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Serial Number</th>
+                      <th>หมายเลขรถ</th>
+                      <th>สนามกอล์ฟ</th>
+                      <th>รายการอะไหล่</th>
+                      <th>จำนวน</th>
+                      <th>หน่วย</th>
+                      <th>รายการงาน</th>
+                      <th>วันที่บันทึก</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLogs.map((log, index) => (
+                      <tr key={log.id}>
+                        <td>{index + 1}</td>
+                        <td>{log.vehicleSerial}</td>
+                        <td>{log.vehicleNumber}</td>
+                        <td>{log.golfCourseName}</td>
+                        <td>
+                          <div className="part-name-cell">
+                            {getSystemIcon(log.system)} {log.partName}
                           </div>
-                          
-                          <div className="log-details">
-                            <div className="detail-row">
-                              <span className="detail-label">{getSystemIcon(log.system)} ระบบ:</span>
-                              <span className="detail-value">{log.system}</span>
-                            </div>
-                            <div className="detail-row">
-                              <span className="detail-label">👤 ผู้ใช้:</span>
-                              <span className="detail-value">{log.usedBy}</span>
-                            </div>
-                            <div className="detail-row">
-                              <span className="detail-label">🚗 หมายเลขรถ:</span>
-                              <span className="detail-value">{log.vehicleNumber}</span>
-                            </div>
-                            <div className="detail-row">
-                              <span className="detail-label">🏌️ สนาม:</span>
-                              <span className="detail-value">{log.golfCourseName}</span>
-                            </div>
-                            <div className="detail-row">
-                              <span className="detail-label">⏰ เวลา:</span>
-                              <span className="detail-value">{formatDate(log.usedDate)}</span>
-                            </div>
+                        </td>
+                        <td>
+                          <span className="quantity-cell">{log.quantityUsed}</span>
+                        </td>
+                        <td>ชิ้น</td>
+                        <td>
+                          <span className={`job-type-badge ${log.jobType.toLowerCase()}`}>
+                            {getJobTypeIcon(log.jobType)} {getJobTypeLabel(log.jobType)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="date-cell">
+                            <div className="date-main">{formatDate(log.usedDate)}</div>
+                            <div className="date-sub">โดย: {log.usedBy}</div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -522,6 +518,83 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
         .parts-history-content {
           max-height: 400px;
           overflow-y: auto;
+        }
+
+        .table-container {
+          overflow-x: auto;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .parts-history-table {
+          width: 100%;
+          border-collapse: collapse;
+          background: white;
+          font-size: 0.9rem;
+        }
+
+        .parts-history-table th {
+          background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+          color: white;
+          padding: 12px 8px;
+          text-align: left;
+          font-weight: 600;
+          border-bottom: 2px solid #2b6cb0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+        }
+
+        .parts-history-table td {
+          padding: 10px 8px;
+          border-bottom: 1px solid #e2e8f0;
+          vertical-align: middle;
+        }
+
+        .parts-history-table tbody tr:hover {
+          background: #f7fafc;
+        }
+
+        .parts-history-table tbody tr:nth-child(even) {
+          background: #f8f9fa;
+        }
+
+        .parts-history-table tbody tr:nth-child(even):hover {
+          background: #e2e8f0;
+        }
+
+        .part-name-cell {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 500;
+        }
+
+        .quantity-cell {
+          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 0.8rem;
+          display: inline-block;
+          min-width: 30px;
+          text-align: center;
+        }
+
+        .date-cell {
+          text-align: center;
+        }
+
+        .date-main {
+          font-weight: 600;
+          color: #2d3748;
+          margin-bottom: 2px;
+        }
+
+        .date-sub {
+          font-size: 0.75rem;
+          color: #718096;
         }
 
         .grouped-logs {

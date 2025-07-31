@@ -561,7 +561,7 @@ export default function HomePage() {
             vehicleSerial: vehicle?.serial_number || 'ไม่ระบุ',
             golfCourseName: golfCourse?.name || 'ไม่ระบุ',
             usedBy: job.userName,
-            usedDate: new Date().toISOString().split('T')[0],
+            usedDate: job.updated_at || new Date().toISOString().split('T')[0],
             notes: partsNotes || job.remarks || 'ไม่มีหมายเหตุ',
             jobType: job.type,
             system: job.system || 'ไม่ระบุ'
@@ -886,82 +886,129 @@ export default function HomePage() {
   // แสดง loading screen ขณะโหลดข้อมูล
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
+      <div 
+        className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center z-50 overflow-hidden"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'linear-gradient(135deg, #06122AFF 0%, #210A4DFF 50%, #031E43FF 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="text-center relative z-10 px-8 flex flex-col items-center justify-center">
           {/* Golf Cart Icon */}
-          <div className="mb-8">
-            <svg 
-              width="80" 
-              height="80" 
-              viewBox="0 0 100 100" 
-              className="mx-auto text-white"
-              fill="currentColor"
-            >
-              {/* Golf Cart Body */}
-              <rect x="20" y="40" width="50" height="25" rx="3" fill="white"/>
-              {/* Golf Cart Roof */}
-              <rect x="15" y="25" width="60" height="20" rx="5" fill="white"/>
-              {/* Golf Cart Wheels */}
-              <circle cx="30" cy="70" r="8" fill="white"/>
-              <circle cx="60" cy="70" r="8" fill="white"/>
-              {/* Golf Cart Details */}
-              <rect x="25" y="45" width="15" height="15" rx="2" fill="black"/>
-              <rect x="50" y="45" width="15" height="15" rx="2" fill="black"/>
-            </svg>
+          <div className="mb-12 transform hover:scale-110 transition-transform duration-300">
+            <div className="relative">
+              <svg 
+                width="120" 
+                height="120" 
+                viewBox="0 0 100 100" 
+                className="mx-auto text-white drop-shadow-2xl"
+                fill="currentColor"
+              >
+                {/* Golf Cart Body */}
+                <rect x="20" y="40" width="50" height="25" rx="3" fill="white"/>
+                {/* Golf Cart Roof */}
+                <rect x="15" y="25" width="60" height="20" rx="5" fill="white"/>
+                {/* Golf Cart Wheels */}
+                <circle cx="30" cy="70" r="8" fill="white"/>
+                <circle cx="60" cy="70" r="8" fill="white"/>
+                {/* Golf Cart Details */}
+                <rect x="25" y="45" width="15" height="15" rx="2" fill="black"/>
+                <rect x="50" y="45" width="15" height="15" rx="2" fill="black"/>
+              </svg>
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-cyan-400 rounded-full blur-xl opacity-20 animate-pulse"></div>
+            </div>
           </div>
 
           {/* Loading Text */}
-          <div className="mb-8">
-            <h2 className="text-gray-400 text-lg font-medium tracking-wider">
-              LOADING...
+          <div className="mb-10">
+            <h2 className="text-gray-300 text-2xl font-light tracking-[0.3em] mb-2">
+              LOADING
             </h2>
+            <div className="flex justify-center space-x-1">
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+            </div>
           </div>
 
           {/* Percentage */}
-          <div className="mb-8">
-            <span className="text-cyan-400 text-4xl font-bold">
+          <div className="mb-12">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 text-6xl font-bold tracking-wider">
               {Math.floor(loadingProgress)}%
             </span>
           </div>
 
           {/* Circular Progress */}
-          <div className="relative w-32 h-32 mx-auto">
+          <div className="relative w-40 h-40 mx-auto mb-8">
+            {/* Outer Glow Ring */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 opacity-20 blur-md"></div>
+            
             {/* Background Circle */}
-            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+            <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
+              {/* Gradient Definition - ต้องอยู่ก่อน circle ที่ใช้งาน */}
+              <defs>
+                <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+              
               <circle
                 cx="50"
                 cy="50"
-                r="45"
+                r="42"
                 stroke="rgba(55, 65, 81, 0.3)"
-                strokeWidth="3"
+                strokeWidth="2"
                 fill="none"
               />
+              
               {/* Progress Circle */}
               <circle
                 cx="50"
                 cy="50"
-                r="45"
-                stroke="#06b6d4"
-                strokeWidth="3"
+                r="42"
+                stroke="url(#loadingGradient)"
+                strokeWidth="4"
                 fill="none"
                 strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 45}`}
-                strokeDashoffset={`${2 * Math.PI * 45 * (1 - loadingProgress / 100)}`}
-                className="transition-all duration-300 ease-out"
+                strokeDasharray={`${2 * Math.PI * 42}`}
+                strokeDashoffset={`${2 * Math.PI * 42 * (1 - loadingProgress / 100)}`}
+                className="transition-all duration-500 ease-out"
                 style={{
-                  filter: 'drop-shadow(0 0 8px #06b6d4)'
+                  filter: 'drop-shadow(0 0 12px #06b6d4)',
+                  opacity: 1
                 }}
               />
             </svg>
+            
+            {/* Center Dot */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full animate-pulse"></div>
           </div>
 
           {/* Error Display */}
           {loadingError && (
-            <div className="mt-8 p-4 bg-red-900/20 border border-red-500/30 rounded-lg max-w-md mx-auto">
-              <p className="text-red-400 mb-4">{loadingError}</p>
+            <div className="mt-8 p-6 bg-gradient-to-r from-red-900/30 to-red-800/30 backdrop-blur-sm border border-red-500/30 rounded-xl max-w-md mx-auto shadow-2xl">
+              <p className="text-red-300 mb-6 text-lg">{loadingError}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
                 โหลดใหม่
               </button>
