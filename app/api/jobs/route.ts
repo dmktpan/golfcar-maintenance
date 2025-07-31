@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         await tx.serialHistoryEntry.create({
           data: {
             serial_number: vehicle.serial_number,
-            vehicle_number: vehicle_number,
+            vehicle_number: vehicle_number || vehicle.vehicle_number || '',
             action_type: 'maintenance',
             action_date: new Date(),
             details: `สร้างงาน ${type} ใหม่ - สถานะ: ${status}${system ? `, ระบบ: ${system}` : ''}${assigned_to ? `, ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
@@ -165,6 +165,134 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: false,
       message: 'Failed to create job',
+      error: errorMessage
+    }, { status: 500 });
+  }
+}
+
+// PUT - อัพเดทงาน
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { 
+      id,
+      type, 
+      status, 
+      vehicle_id, 
+      vehicle_number, 
+      golf_course_id, 
+      user_id, 
+      userName, 
+      system, 
+      subTasks, 
+      remarks, 
+      bmCause, 
+      battery_serial, 
+      assigned_to,
+      parts,
+      partsNotes,
+      images
+    } = body;
+
+    // Validation
+    if (!id) {
+      return NextResponse.json({
+        success: false,
+        message: 'Job ID is required'
+      }, { status: 400 });
+    }
+
+    if (status && !['pending', 'in_progress', 'completed', 'assigned', 'approved', 'rejected'].includes(status)) {
+      return NextResponse.json({
+        success: false,
+        message: 'Status must be pending, in_progress, completed, assigned, approved, or rejected'
+      }, { status: 400 });
+    }
+
+    // สร้างข้อมูลสำหรับอัพเดท
+    const updateData: any = {};
+    
+    if (type !== undefined) updateData.type = type;
+    if (status !== undefined) updateData.status = status;
+    if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id;
+    if (vehicle_number !== undefined) updateData.vehicle_number = vehicle_number?.trim();
+    if (golf_course_id !== undefined) updateData.golf_course_id = golf_course_id;
+    if (user_id !== undefined) updateData.user_id = user_id;
+    if (userName !== undefined) updateData.userName = userName?.trim();
+    if (system !== undefined) updateData.system = system?.trim();
+    if (subTasks !== undefined) updateData.subTasks = subTasks;
+    if (remarks !== undefined) updateData.remarks = remarks?.trim();
+    if (bmCause !== undefined) updateData.bmCause = bmCause;
+     if (battery_serial !== undefined) updateData.battery_serial = battery_serial?.trim();
+     if (assigned_to !== undefined) updateData.assigned_to = assigned_to || null;
+     if (partsNotes !== undefined) updateData.partsNotes = partsNotes?.trim();
+     if (images !== undefined) updateData.images = images;
+
+    updateData.updatedAt = new Date();
+
+    // ใช้ transaction เพื่ออัพเดทงานและบันทึก Serial History
+    const job = await prisma.$transaction(async (tx) => {
+      // ดึงข้อมูลงานเดิมก่อนอัพเดท
+      const existingJob = await tx.job.findUnique({
+        where: { id: id },
+        include: { parts: true }
+      });
+
+      if (!existingJob) {
+        throw new Error('Job not found');
+      }
+
+      // อัพเดทงาน
+      const updatedJob = await tx.job.update({
+        where: { id: id },
+        data: updateData,
+        include: { parts: true }
+      });
+
+      // บันทึก Serial History หากมีการเปลี่ยนแปลงสถานะ
+      if (status && status !== existingJob.status) {
+        const vehicle = await tx.vehicle.findUnique({
+          where: { id: updatedJob.vehicle_id }
+        });
+
+        if (vehicle) {
+          await tx.serialHistoryEntry.create({
+            data: {
+              serial_number: vehicle.serial_number,
+              vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number || '',
+              action_type: 'status_change',
+              action_date: new Date(),
+              details: `เปลี่ยนสถานะงาน ${updatedJob.type} จาก ${existingJob.status} เป็น ${status}${assigned_to ? `, ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
+              is_active: true,
+              status: status,
+              job_type: updatedJob.type,
+              golf_course_name: vehicle.golf_course_name,
+              vehicle_id: vehicle.id,
+              performed_by_id: user_id || updatedJob.user_id,
+              related_job_id: updatedJob.id
+            }
+          });
+        }
+      }
+
+      return updatedJob;
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Job updated successfully',
+      data: job
+    }, { status: 200 });
+
+  } catch (error: unknown) {
+    console.error('Error updating job:', error);
+    let errorMessage = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to update job',
       error: errorMessage
     }, { status: 500 });
   }

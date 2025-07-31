@@ -437,7 +437,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                     <h4>งานย่อยที่เพิ่ม:</h4>
                                     <ul>
                                         {subTasks.map((task: string, index: number) => (
-                                            <li key={index}>
+                                            <li key={`subtask-${index}-${task.slice(0, 10)}`}>
                                                 {task}
                                                 <button 
                                                     type="button" 
@@ -562,7 +562,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 <strong>งานย่อยที่เลือก:</strong>
                                 <ul className="subtasks-list">
                                     {subTasks.map((task, index) => (
-                                        <li key={index}>{task}</li>
+                                        <li key={`summary-task-${index}-${task.slice(0, 10)}`}>{task}</li>
                                     ))}
                                 </ul>
                             </div>

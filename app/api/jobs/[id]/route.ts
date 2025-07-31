@@ -61,6 +61,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    console.log('🏠 PUT /api/jobs/[id] - Job ID:', id);
     
     // ตรวจสอบ ObjectID
     if (!isValidObjectId(id)) {
@@ -71,7 +72,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
     
     const body = await request.json();
-    console.log('Received job update data:', body);
+    console.log('📝 Local API Request body:', JSON.stringify(body, null, 2));
 
     const { 
       type, 
@@ -92,7 +93,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       images
     } = body;
 
-    console.log('Extracted required fields:', {
+    console.log('🔍 Extracted fields:', {
       type,
       status,
       vehicle_id,
@@ -190,11 +191,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
       console.log('Final update data:', finalData);
 
-      // Validation หลังจากรวมข้อมูลเดิม
-      if (!finalData.type || !finalData.status || !finalData.vehicle_id || 
-          !finalData.golf_course_id || !finalData.user_id) {
-        console.log('Validation failed after merging with old data');
-        throw new Error('Missing required fields even after merging with existing data');
+      // Validation หลังจากรวมข้อมูลเดิม - ตรวจสอบเฉพาะฟิลด์ที่สำคัญ
+      if (!finalData.type || !finalData.status || !finalData.vehicle_id) {
+        console.log('Validation failed - missing critical fields:', {
+          type: finalData.type,
+          status: finalData.status,
+          vehicle_id: finalData.vehicle_id
+        });
+        throw new Error('Missing critical fields: type, status, or vehicle_id');
       }
 
       // อัปเดตงานก่อน

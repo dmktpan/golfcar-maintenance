@@ -229,7 +229,18 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
         <div className="card">
             <div className="page-header">
                 <h2>มอบหมายงานหลายรายการ</h2>
-                <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                <div className="header-actions">
+                    <button 
+                        className="btn-outline" 
+                        onClick={() => setView('view_assigned_jobs')}
+                        style={{ marginRight: '10px' }}
+                    >
+                        ดูงานที่มอบหมาย
+                    </button>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>
+                        กลับไปหน้าหลัก
+                    </button>
+                </div>
             </div>
             
             {successMessage && (
@@ -241,7 +252,19 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             <form onSubmit={handleSubmit}>
                 {assignments.map((assignment, index) => (
                     <div key={assignment.id} className="assignment-item">
-                        <h3>รายการที่ {index + 1}</h3>
+                        <div className="assignment-header">
+                            <h3>รายการที่ {index + 1}</h3>
+                            {assignments.length > 1 && (
+                                <button 
+                                    type="button" 
+                                    className="btn-danger btn-sm" 
+                                    onClick={() => removeAssignment(assignment.id)}
+                                    title="ลบรายการนี้"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
                         <div className="form-grid">
                             {/* ขั้นตอนที่ 1: เลือกสนาม */}
                             <div className="form-group">
@@ -343,8 +366,8 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                         required
                                     >
                                         <option value="">-- เลือกระบบ --</option>
-                                        {Object.keys(MOCK_SYSTEMS).map(system => (
-                                            <option key={system} value={system}>{system}</option>
+                                        {MOCK_SYSTEMS.map(system => (
+                                            <option key={system.id} value={system.id}>{system.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -361,23 +384,12 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                 />
                             </div>
                         </div>
-                        
-                        <div className="assignment-actions">
-                            <button 
-                                type="button" 
-                                className="btn-danger" 
-                                onClick={() => removeAssignment(assignment.id)}
-                                disabled={assignments.length <= 1}
-                            >
-                                ลบรายการนี้
-                            </button>
-                        </div>
                     </div>
                 ))}
                 
                 <div className="form-actions">
                     <button type="button" className="btn-secondary" onClick={addAssignment}>
-                        เพิ่มรายการ
+                        + เพิ่มรายการ
                     </button>
                     <button type="submit" className="btn-success">
                         มอบหมายงาน

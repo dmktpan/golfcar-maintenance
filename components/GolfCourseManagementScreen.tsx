@@ -115,7 +115,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleAddCourse = async () => {
     if (newCourse.name && newCourse.location) {
       try {
-        const response = await fetch('/api/golf-courses', {
+        const response = await fetch('/api/proxy/golf-courses', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleUpdateCourse = async () => {
     if (editingCourse) {
       try {
-        const response = await fetch(`/api/golf-courses/${editingCourse.id}`, {
+        const response = await fetch(`/api/proxy/golf-courses/${editingCourse.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -175,7 +175,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const handleDeleteCourse = async (id: string) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบสนามนี้?')) {
       try {
-        const response = await fetch(`/api/golf-courses/${id}`, {
+        const response = await fetch(`/api/proxy/golf-courses/${id}`, {
           method: 'DELETE'
         });
 
@@ -228,7 +228,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       };
 
       try {
-        const response = await fetch('/api/vehicles', {
+        const response = await fetch('/api/proxy/vehicles', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -495,7 +495,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       }
 
       // เรียก API เพื่อย้ายรถ
-      const response = await fetch('/api/vehicles/transfer', {
+      const response = await fetch('/api/proxy/vehicles/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -819,10 +819,10 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {filteredVehicles.map(vehicle => {
+                {filteredVehicles.map((vehicle, index) => {
                   const course = golfCourses.find(c => c.id === vehicle.golf_course_id);
                   return (
-                    <tr key={vehicle.id}>
+                    <tr key={`vehicle-${vehicle.id}-${index}`}>
                       <td>
                         <input
                           type="checkbox"
@@ -954,7 +954,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                   <h4>ข้อผิดพลาด:</h4>
                   <ul>
                     {bulkUploadErrors.map((error, index) => (
-                      <li key={index} className="error-item">{error}</li>
+                      <li key={`error-${index}-${error.slice(0, 10)}`} className="error-item">{error}</li>
                     ))}
                   </ul>
                 </div>
@@ -975,7 +975,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                       {bulkUploadData.slice(0, 5).map((item, index) => {
                         const course = golfCourses.find(c => c.id === item.golf_course_id);
                         return (
-                          <tr key={index}>
+                          <tr key={`upload-${index}-${item.serial_number}`}>
                             <td>{item.serial_number}</td>
                             <td>{item.vehicle_number}</td>
                             <td>{course?.name || 'ไม่พบสนาม'}</td>

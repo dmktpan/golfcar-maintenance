@@ -5,16 +5,18 @@ import Image from 'next/image';
 import { Job, GolfCourse, User, Vehicle, PARTS_BY_SYSTEM_DISPLAY } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './JobDetailsModal.module.css';
+import { getSystemDisplayName, getSystemIcon } from '../lib/systemUtils';
 
 interface JobDetailsModalProps {
   job: Job;
   golfCourses: GolfCourse[]; // เพิ่ม props
   users: User[];
   vehicles: Vehicle[];
+  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
   onClose: () => void;
 }
 
-const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDetailsModalProps) => {
+const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = [], onClose }: JobDetailsModalProps) => {
   // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
   const getPartName = (part: { part_id: string; part_name?: string }) => {
     if (part.part_name) {
@@ -31,7 +33,24 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
     return `อะไหล่ ID: ${part.part_id}`;
   };
 
-  const getGolfCourseName = (courseId: string) => {
+  // ฟังก์ชันสำหรับดึงข้อมูลอะไหล่จาก PartsUsageLog
+  const getPartsFromUsageLog = () => {
+    if (!partsUsageLog || partsUsageLog.length === 0) return [];
+    
+    return partsUsageLog
+      .filter(log => log.jobId === parseInt(job.id))
+      .map(log => ({
+        part_name: log.partName,
+        part_id: log.partId,
+        quantity_used: log.quantityUsed
+      }));
+  };
+
+  // ใช้ข้อมูลอะไหล่จาก job.parts หรือจาก PartsUsageLog
+  const partsToDisplay = (job.parts && job.parts.length > 0) ? job.parts : getPartsFromUsageLog();
+
+  const getGolfCourseName = (courseId: string | undefined) => {
+    if (!courseId) return 'ไม่ระบุ';
     const course = golfCourses.find(c => c.id === courseId);
     return course ? course.name : 'ไม่ระบุ';
   };
@@ -65,28 +84,6 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
       'Recondition': 'Recondition'
     };
     return typeLabels[type] || type;
-  };
-
-  const getSystemLabel = (system?: string) => {
-    if (!system) return 'ไม่ระบุ';
-    const systemLabels: Record<string, string> = {
-      'brake': 'ระบบเบรก',
-      'steering': 'ระบบพวงมาลัย',
-      'motor': 'ระบบมอเตอร์',
-      'electric': 'ระบบไฟฟ้า'
-    };
-    return systemLabels[system] || system;
-  };
-
-  const getSystemIcon = (system?: string) => {
-    if (!system) return '🔧';
-    const systemIcons: Record<string, string> = {
-      'brake': '🛑',
-      'steering': '🎯',
-      'motor': '⚙️',
-      'electric': '⚡'
-    };
-    return systemIcons[system] || '🔧';
   };
 
   const getJobTypeIcon = (type: string) => {
@@ -159,10 +156,10 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
               </div>
               <div className={styles['info-item']}>
                 <label>
-                  <span className={styles['label-icon']}>{getSystemIcon(job.system)}</span>
+                  <span className={styles['label-icon']}>{getSystemIcon(job.system || '')}</span>
                   ระบบที่ซ่อม:
                 </label>
-                <span>{getSystemLabel(job.system)}</span>
+                <span>{getSystemDisplayName(job.system || '')}</span>
               </div>
               {job.type === 'BM' && job.bmCause && (
                 <div className={styles['info-item']}>
@@ -217,7 +214,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
               </h3>
               <ul className={styles['subtasks-list']}>
                 {job.subTasks.map((task, index) => (
-                  <li key={index} className={styles['subtask-item']}>
+                  <li key={`subtask-${index}-${task.slice(0, 10)}`} className={styles['subtask-item']}>
                     <span className={styles['task-number']}>{index + 1}</span>
                     {task}
                   </li>
@@ -227,7 +224,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
           )}
 
           {/* อะไหล่ที่ใช้ */}
-          {job.parts && job.parts.length > 0 && (
+          {partsToDisplay && partsToDisplay.length > 0 && (
             <div className={styles['job-info-section']}>
               <h3>
                 <span className={styles['section-icon']}>🔧</span>
@@ -248,14 +245,14 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
                     </tr>
                   </thead>
                   <tbody>
-                    {job.parts.map((part, index) => (
-                      <tr key={index}>
+                    {partsToDisplay.map((part, index) => (
+                      <tr key={`part-${index}-${getPartName(part).slice(0, 10)}`}>
                         <td>{getPartName(part)}</td>
                         <td>
-                          <span className={styles['quantity-badge']}>
-                            {part.quantity_used}
-                          </span>
-                        </td>
+                            <span className={styles['quantity-badge']}>
+                              {part.quantity_used || 'ไม่ระบุ'}
+                            </span>
+                          </td>
                       </tr>
                     ))}
                   </tbody>
@@ -301,7 +298,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, onClose }: JobDeta
               </h3>
               <div className={styles['image-gallery']}>
                 {job.images.map((image, index) => (
-                  <div key={index} className={styles['image-item']}>
+                  <div key={`image-${index}-${image.slice(-10)}`} className={styles['image-item']}>
                     <Image 
                       src={image} 
                       alt={`รูปภาพงาน ${index + 1}`} 

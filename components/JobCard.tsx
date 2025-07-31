@@ -5,6 +5,7 @@ import { Job, JobStatus, User, Vehicle, GolfCourse } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
 import styles from './JobCard.module.css';
+import { getSystemDisplayName } from '../lib/systemUtils';
 
 interface JobCardProps {
   job: Job;
@@ -12,16 +13,23 @@ interface JobCardProps {
   vehicles: Vehicle[];
   golfCourses: GolfCourse[];
   users: User[];
-  onUpdateStatus: (jobId: number, status: JobStatus) => void;
+  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
+  onUpdateStatus: (jobId: string, status: JobStatus) => void;
   onFillJobForm?: (job: Job) => void;
   isHistory?: boolean;
 }
 
-const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFillJobForm }: JobCardProps) => {
+const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], onUpdateStatus, onFillJobForm }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
     
     // ดึงข้อมูลรถจาก vehicles prop แทน MOCK_VEHICLES
     const vehicleInfo = vehicles.find(v => v.id === job.vehicle_id);
+    
+    // ฟังก์ชันสำหรับดึงชื่อสนามกอล์ฟ
+    const getGolfCourseName = (courseId: string) => {
+        const course = golfCourses.find(c => c.id === courseId);
+        return course ? course.name : 'ไม่ระบุ';
+    };
     
     // แปลงวันที่ให้อยู่ในรูปแบบที่อ่านง่าย
     const formatDate = (dateString: string) => {
@@ -71,7 +79,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
                 <button 
                     key="complete"
                     className={`${styles.actionButton} ${styles.success}`} 
-                    onClick={() => onUpdateStatus(parseInt(job.id), 'completed')}
+                    onClick={() => onUpdateStatus(job.id, 'completed')}
                 >
                     <span className="btn-icon">✓</span> เสร็จสิ้น
                 </button>
@@ -101,16 +109,31 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
                 <button 
                     key="approve"
                     className={`${styles.actionButton} ${styles.success}`} 
-                    onClick={() => onUpdateStatus(parseInt(job.id), 'approved')}
+                    onClick={() => onUpdateStatus(job.id, 'approved')}
                 >
                     <span className="btn-icon">✓</span> อนุมัติ
                 </button>,
                 <button 
                     key="reject"
                     className={`${styles.actionButton} ${styles.danger}`} 
-                    onClick={() => onUpdateStatus(parseInt(job.id), 'rejected')}
+                    onClick={() => onUpdateStatus(job.id, 'rejected')}
                 >
                     <span className="btn-icon">✕</span> ไม่อนุมัติ
+                </button>
+            );
+        }
+
+        // ปุ่มดูและแก้ไขสำหรับหัวหน้างานและผู้ดูแลระบบในงานที่มอบหมายแล้ว
+        if ((user.role === 'supervisor' || user.role === 'admin') && 
+            (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed') && 
+            onFillJobForm) {
+            buttons.push(
+                <button 
+                    key="view-edit"
+                    className={`${styles.actionButton} ${styles.secondary}`} 
+                    onClick={() => onFillJobForm(job)}
+                >
+                    <span className="btn-icon">✏️</span> ดู/แก้ไข
                 </button>
             );
         }
@@ -132,12 +155,16 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
                 <div className={styles.jobCardBody}>
                     <div className={styles.jobSummary}>
                         <div className={styles.summaryItem}>
+                            <span className={styles.summaryLabel}>สนามกอล์ฟ:</span>
+                            <span className={styles.summaryValue}>{getGolfCourseName(job.golf_course_id)}</span>
+                        </div>
+                        <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>ซีเรียลแบต:</span>
                             <span className={styles.summaryValue}>{job.battery_serial || vehicleInfo?.battery_serial || '-'}</span>
                         </div>
                         <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>ระบบ:</span>
-                            <span className={styles.summaryValue}>{job.system}</span>
+                            <span className={styles.summaryValue}>{job.system ? getSystemDisplayName(job.system) : '-'}</span>
                         </div>
                         {job.type === 'BM' && job.bmCause && (
                             <div className={styles.summaryItem}>
@@ -175,6 +202,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, onUpdateStatus, onFi
                     golfCourses={golfCourses}
                     users={users}
                     vehicles={vehicles}
+                    partsUsageLog={partsUsageLog}
                     onClose={() => setShowDetails(false)} 
                 />
             )}

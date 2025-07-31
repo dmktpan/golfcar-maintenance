@@ -137,7 +137,16 @@ export async function GET() {
           data: {
             jobId: testData.testJob.id.toString(),
             partId: testData.testPart.id.toString(),
-            quantity: 1
+            partName: testData.testPart.name,
+            quantityUsed: 1,
+            vehicleNumber: testData.testVehicle.vehicle_number,
+            vehicleSerial: testData.testVehicle.serial_number,
+            golfCourseName: testData.testGolfCourse.name,
+            usedBy: testData.testUser.name,
+            usedDate: new Date().toISOString(),
+            notes: 'Test usage log',
+            jobType: testData.testJob.type,
+            system: testData.testJob.system || 'Test System'
           }
         })
       })

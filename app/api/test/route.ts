@@ -18,8 +18,8 @@ export async function GET() {
     }
     
     const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000/api' 
-      : `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api`;
+      ? 'http://golfcar.go2kt.com:8080/api' 
+      : `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://golfcar.go2kt.com:8080'}/api`;
     
     // ทดสอบ API users
     const usersResponse = await fetch(`${baseUrl}/users`, {

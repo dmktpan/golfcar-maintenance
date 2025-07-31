@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Job, JobStatus, User, GolfCourse, Vehicle } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './SupervisorPendingJobsScreen.module.css';
+import { getSystemDisplayName } from '../lib/systemUtils';
+
+
 
 interface SupervisorPendingJobsScreenProps {
     user: User;
@@ -11,9 +14,10 @@ interface SupervisorPendingJobsScreenProps {
     golfCourses: GolfCourse[];
     users: User[];
     vehicles: Vehicle[];
-    onUpdateStatus: (jobId: number, status: JobStatus) => void;
+    partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
+    onUpdateStatus: (jobId: string, status: JobStatus) => void;
     onFillJobForm?: (job: Job) => void;
-    addPartsUsageLog?: (jobId: number, partsNotes?: string, jobData?: Job) => Promise<void>;
+    addPartsUsageLog?: (jobId: string, partsNotes?: string, jobData?: Job) => Promise<void>;
 }
 
 function SupervisorPendingJobsScreen({ 
@@ -22,6 +26,7 @@ function SupervisorPendingJobsScreen({
     golfCourses, 
     users, 
     vehicles,
+    partsUsageLog = [],
     onUpdateStatus,
     onFillJobForm,
     addPartsUsageLog 
@@ -32,7 +37,15 @@ function SupervisorPendingJobsScreen({
 
     // Filter jobs based on user permissions and selected course
     useEffect(() => {
+        console.log('🔍 SupervisorPendingJobsScreen: Filtering jobs...');
+        console.log('📊 Total jobs received:', jobs.length);
+        console.log('📋 Jobs by status:', jobs.reduce((acc, job) => {
+            acc[job.status] = (acc[job.status] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>));
+
         let filtered = jobs.filter(job => job.status === 'pending');
+        console.log('⏳ Jobs with pending status:', filtered.length);
 
         // Filter by golf course if user is not admin
         if (user.role !== 'admin') {
@@ -55,6 +68,7 @@ function SupervisorPendingJobsScreen({
             filtered = filtered.filter(job => job.type === selectedJobType);
         }
 
+        console.log('✅ Final filtered jobs:', filtered.length);
         setFilteredJobs(filtered);
     }, [jobs, user, selectedCourseId, selectedJobType]);
 
@@ -152,44 +166,122 @@ function SupervisorPendingJobsScreen({
     };
 
     const handleApprove = async (jobId: string) => {
+        console.log('🔄 handleApprove called:', { jobId, timestamp: new Date().toISOString() });
+        
+        // ตรวจสอบว่างานยังมีอยู่ในรายการหรือไม่
+        const jobToApprove = jobs.find(job => job.id === jobId);
+        if (!jobToApprove) {
+            console.error('❌ Job not found for approval:', { jobId, availableJobs: jobs.map(j => j.id) });
+            alert('ไม่พบงานที่ต้องการอนุมัติ กรุณารีเฟรชหน้าเว็บ');
+            return;
+        }
+        
+        console.log('📋 Job to approve:', {
+            id: jobToApprove.id,
+            status: jobToApprove.status,
+            vehicleNumber: jobToApprove.vehicle_number,
+            type: jobToApprove.type
+        });
+        
+        if (jobToApprove.status !== 'pending') {
+            console.warn('⚠️ Job is not in pending status:', { 
+                jobId, 
+                currentStatus: jobToApprove.status 
+            });
+            alert(`งานนี้มีสถานะ "${jobToApprove.status}" อยู่แล้ว ไม่สามารถอนุมัติได้`);
+            return;
+        }
+        
         if (confirm('ยืนยันการอนุมัติงานนี้?')) {
             try {
+                console.log('✅ User confirmed approval, calling onUpdateStatus...');
+                
                 // ใช้ onUpdateStatus ที่จะจัดการทั้ง UI update และ API call
                 if (onUpdateStatus) {
-                    await onUpdateStatus(parseInt(jobId), 'approved');
+                    await onUpdateStatus(jobId, 'approved');
                     
-                    // เพิ่ม Log การใช้อะไหล่เมื่องานได้รับการอนุมัติ
-                    const job = jobs.find(j => j.id === jobId);
-                    if (addPartsUsageLog && job) {
-                        try {
-                            await addPartsUsageLog(parseInt(jobId), job.partsNotes, job);
-                        } catch (logError) {
-                            console.error('Error adding parts usage log:', logError);
-                            // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ log ไม่สำเร็จ
-                        }
-                    }
+                    // Force update filtered jobs immediately
+                    console.log('🔄 Force updating filtered jobs after approval');
+                    const updatedFiltered = jobs.filter(job => 
+                        job.status === 'pending' && job.id !== jobId
+                    );
+                    setFilteredJobs(updatedFiltered);
                     
-                    alert('อนุมัติงานเรียบร้อยแล้ว');
+                    console.log('✅ Job approval completed successfully');
+                } else {
+                    console.error('❌ onUpdateStatus function is not available');
+                    alert('ฟังก์ชันอัปเดตสถานะไม่พร้อมใช้งาน');
                 }
             } catch (error) {
-                console.error('Error approving job:', error);
-                alert('เกิดข้อผิดพลาดในการอนุมัติงาน');
+                console.error('❌ Error approving job:', {
+                    error,
+                    jobId,
+                    errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                });
+                alert('เกิดข้อผิดพลาดในการอนุมัติงาน กรุณาลองใหม่อีกครั้ง');
             }
+        } else {
+            console.log('❌ User cancelled approval');
         }
     };
 
     const handleReject = async (jobId: string) => {
+        console.log('🔄 handleReject called:', { jobId, timestamp: new Date().toISOString() });
+        
+        // ตรวจสอบว่างานยังมีอยู่ในรายการหรือไม่
+        const jobToReject = jobs.find(job => job.id === jobId);
+        if (!jobToReject) {
+            console.error('❌ Job not found for rejection:', { jobId, availableJobs: jobs.map(j => j.id) });
+            alert('ไม่พบงานที่ต้องการไม่อนุมัติ กรุณารีเฟรชหน้าเว็บ');
+            return;
+        }
+        
+        console.log('📋 Job to reject:', {
+            id: jobToReject.id,
+            status: jobToReject.status,
+            vehicleNumber: jobToReject.vehicle_number,
+            type: jobToReject.type
+        });
+        
+        if (jobToReject.status !== 'pending') {
+            console.warn('⚠️ Job is not in pending status:', { 
+                jobId, 
+                currentStatus: jobToReject.status 
+            });
+            alert(`งานนี้มีสถานะ "${jobToReject.status}" อยู่แล้ว ไม่สามารถไม่อนุมัติได้`);
+            return;
+        }
+        
         if (confirm('ยืนยันการไม่อนุมัติงานนี้?')) {
             try {
+                console.log('✅ User confirmed rejection, calling onUpdateStatus...');
+                
                 // ใช้ onUpdateStatus ที่จะจัดการทั้ง UI update และ API call
                 if (onUpdateStatus) {
-                    await onUpdateStatus(parseInt(jobId), 'rejected');
-                    alert('ไม่อนุมัติงานเรียบร้อยแล้ว');
+                    await onUpdateStatus(jobId, 'rejected');
+                    
+                    // Force update filtered jobs immediately
+                    console.log('🔄 Force updating filtered jobs after rejection');
+                    const updatedFiltered = jobs.filter(job => 
+                        job.status === 'pending' && job.id !== jobId
+                    );
+                    setFilteredJobs(updatedFiltered);
+                    
+                    console.log('✅ Job rejection completed successfully');
+                } else {
+                    console.error('❌ onUpdateStatus function is not available');
+                    alert('ฟังก์ชันอัปเดตสถานะไม่พร้อมใช้งาน');
                 }
             } catch (error) {
-                console.error('Error rejecting job:', error);
-                alert('เกิดข้อผิดพลาดในการไม่อนุมัติงาน');
+                console.error('❌ Error rejecting job:', {
+                    error,
+                    jobId,
+                    errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                });
+                alert('เกิดข้อผิดพลาดในการไม่อนุมัติงาน กรุณาลองใหม่อีกครั้ง');
             }
+        } else {
+            console.log('❌ User cancelled rejection');
         }
     };
 
@@ -314,7 +406,7 @@ function SupervisorPendingJobsScreen({
                                         <div className={styles.detailItem}>
                                             <span className={styles.detailLabel}>ระบบ:</span>
                                             <span className={styles.detailValue}>
-                                                {job.system || '-'}
+                                                {job.system ? getSystemDisplayName(job.system) : '-'}
                                             </span>
                                         </div>
                                         {job.type === 'BM' && job.bmCause && (
@@ -416,7 +508,7 @@ function SupervisorPendingJobsScreen({
                                     </div>
                                     <div className={styles.detailItem}>
                                         <span className={styles.detailLabel}>ระบบ:</span>
-                                        <span className={styles.detailValue}>{selectedJobForDetails.system || '-'}</span>
+                                        <span className={styles.detailValue}>{selectedJobForDetails.system ? getSystemDisplayName(selectedJobForDetails.system) : '-'}</span>
                                     </div>
                                     {selectedJobForDetails.type === 'BM' && selectedJobForDetails.bmCause && (
                                         <div className={styles.detailItem}>
@@ -436,7 +528,7 @@ function SupervisorPendingJobsScreen({
                                     <h4>งานย่อย</h4>
                                     <ul className={styles.tasksList}>
                                         {selectedJobForDetails.subTasks.map((task, index) => (
-                                            <li key={index} className={styles.taskItem}>{task}</li>
+                                            <li key={`task-${index}-${task.slice(0, 10)}`} className={styles.taskItem}>{task}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -447,7 +539,7 @@ function SupervisorPendingJobsScreen({
                                     <h4>อะไหล่ที่ใช้</h4>
                                     <div className={styles.partsList}>
                                         {selectedJobForDetails.parts.map((part, index) => (
-                                            <div key={index} className={styles.partItem}>
+                                            <div key={`part-${index}-${part.part_name.slice(0, 10)}`} className={styles.partItem}>
                                                 <span className={styles.partName}>{part.part_name}</span>
                                                 <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
                                             </div>
@@ -476,7 +568,7 @@ function SupervisorPendingJobsScreen({
                                     <div className={styles.imagesGrid}>
                                         {selectedJobForDetails.images.map((image, index) => (
                                             <img 
-                                                key={index} 
+                                                key={`image-${index}-${image.slice(-10)}`} 
                                                 src={image} 
                                                 alt={`รูปภาพงาน ${index + 1}`}
                                                 className={styles.jobImage}

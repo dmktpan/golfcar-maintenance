@@ -91,7 +91,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         try {
             if (editMode && editUserId !== null) {
                 // Update existing user
-                const response = await fetch(`/api/users/${editUserId}`, {
+                const response = await fetch(`/api/proxy/users/${editUserId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                 setEditUserId(null);
             } else {
                 // Add new user
-                const response = await fetch('/api/users', {
+                const response = await fetch('/api/proxy/users', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
     const handleDeleteUser = async (userId: number) => {
         if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
             try {
-                const response = await fetch(`/api/users/${userId}`, {
+                const response = await fetch(`/api/proxy/users/${userId}`, {
                     method: 'DELETE'
                 });
 

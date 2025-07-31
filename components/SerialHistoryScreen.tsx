@@ -13,9 +13,10 @@ interface SerialHistoryScreenProps {
   serialHistory: SerialHistoryEntry[];
   golfCourses: GolfCourse[];
   users: User[];
+  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
 }
 
-const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, golfCourses, users }: SerialHistoryScreenProps) => {
+const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, golfCourses, users, partsUsageLog = [] }: SerialHistoryScreenProps) => {
   // Search and filter states
   const [searchSerial, setSearchSerial] = useState('');
   const [searchVehicleNumber, setSearchVehicleNumber] = useState('');
@@ -107,7 +108,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         vehicle_number: vehicle.vehicle_number,
         action_type: 'maintenance',
         action_date: job.updated_at || job.created_at,
-        details: `งาน${job.type === 'PM' ? 'ซ่อมบำรุงตามแผน' : job.type === 'BM' ? 'ซ่อมแซม' : 'ปรับปรุงสภาพ'} (${job.type})${job.system ? ` - ระบบ${getSystemDisplayName(job.system)}` : ''}${job.subTasks && job.subTasks.length > 0 ? `: ${job.subTasks.join(', ')}` : ''}${job.parts && job.parts.length > 0 ? ` | อะไหล่ที่ใช้: ${job.parts.map(p => `${p.part_name || 'ไม่ระบุ'} (${p.quantity_used})`).join(', ')}` : ''}`,
+        details: `งาน${job.type === 'PM' ? 'ซ่อมบำรุงตามแผน' : job.type === 'BM' ? 'ซ่อมแซม' : 'ปรับปรุงสภาพ'} (${job.type})${job.system ? ` - ระบบ${getSystemDisplayName(job.system)}` : ''}${job.subTasks && job.subTasks.length > 0 ? `: ${job.subTasks.join(', ')}` : ''}`,
         performed_by: job.userName,
         performed_by_id: job.user_id,
         golf_course_id: vehicle.golf_course_id,
@@ -116,7 +117,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         related_job_id: job.id,
         job_type: job.type,
         system: job.system,
-        parts_used: job.parts?.map(p => p.part_name || 'ไม่ระบุ') || [],
+        parts_used: job.parts?.map(p => `${p.part_name || 'ไม่ระบุ'} (${p.quantity_used || 0} ชิ้น)`) || [],
         status: job.status === 'rejected' ? undefined : job.status as 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned'
       };
 
@@ -236,7 +237,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         return false;
       }
 
-      if (filterGolfCourse && entry.golf_course_id.toString() !== filterGolfCourse) {
+      if (filterGolfCourse && filterGolfCourse !== '' && entry.golf_course_id.toString() !== filterGolfCourse) {
         return false;
       }
 
@@ -560,8 +561,12 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                         <p className="details-text">{entry.details}</p>
                         {entry.parts_used && entry.parts_used.length > 0 && (
                           <div className="parts-info">
-                            <span className="info-label">🔧 อะไหล่:</span> 
-                            <span className="parts-list">{entry.parts_used.join(', ')}</span>
+                            <span className="info-label">🔧 อะไหล่ที่ใช้:</span>
+                            <div className="parts-list">
+                              {entry.parts_used.map((part, index) => (
+                                <span key={`part-${entry.id}-${index}-${part.slice(0, 5)}`} className="part-item">{part}</span>
+                              ))}
+                            </div>
                           </div>
                         )}
                         {entry.system && (
@@ -624,6 +629,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           golfCourses={golfCourses}
           users={users}
           vehicles={vehicles}
+          partsUsageLog={partsUsageLog}
           onClose={handleCloseModal}
         />
       )}
@@ -992,6 +998,16 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
         }
 
+        .battery-badge {
+          background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-weight: 600;
+          font-size: 0.9rem;
+          box-shadow: 0 2px 8px rgba(159, 122, 234, 0.3);
+        }
+
         .action-badge {
           padding: 8px 16px;
           border-radius: 20px;
@@ -1035,6 +1051,24 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
 
         .parts-list, .system-name {
           color: #718096;
+        }
+
+        .parts-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+
+        .part-item {
+          background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+          color: #234e52;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          border: 1px solid #81e6d9;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .performer-name {

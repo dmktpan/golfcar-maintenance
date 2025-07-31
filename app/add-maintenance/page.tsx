@@ -42,7 +42,7 @@ const AddMaintenancePage: React.FC = () => {
         userName: 'ช่างบำรุงรักษา'
       };
 
-      const response = await fetch('/api/maintenance', {
+      const response = await fetch('/api/proxy/maintenance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ const AddMaintenancePage: React.FC = () => {
               <h4>รูปภาพที่อัปโหลดแล้ว ({images.length})</h4>
               <div className={styles.imageGrid}>
                 {images.map((imagePath, index) => (
-                  <div key={index} className={styles.imageItem}>
+                  <div key={`image-${index}-${imagePath.slice(-10)}`} className={styles.imageItem}>
                     <Image
                       src={imagePath}
                       alt={`Uploaded ${index + 1}`}

@@ -57,20 +57,21 @@ export default function HomePage() {
         setLoadingProgress(0);
         
         console.log('🚀 เริ่มโหลดข้อมูล...');
-        console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080/api' : 'http://localhost:8080/api');
+        console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://golfcar.go2kt.com:8080/api' : 'http://golfcar.go2kt.com:8080/api');
         
         // ทดสอบการเชื่อมต่อก่อน
         setLoadingProgress(10);
         try {
           console.log('🔍 ทดสอบการเชื่อมต่อเซิร์ฟเวอร์...');
-          const healthCheck = await fetch(`${process.env.NODE_ENV === 'production' ? 'http://192.168.1.54:8080' : 'http://localhost:8080'}/api/users`, {
-            method: 'HEAD'
-          });
-          if (healthCheck.ok) {
+          // ใช้ API function แทนการเรียก fetch โดยตรง
+          const healthCheck = await usersApi.getAll();
+          if (healthCheck.success) {
             setConnectionStatus('connected');
             console.log('✅ การเชื่อมต่อเซิร์ฟเวอร์สำเร็จ');
+            // เก็บข้อมูล users ที่ได้จากการทดสอบการเชื่อมต่อ
+            setUsers(healthCheck.data as User[]);
           } else {
-            throw new Error(`Server responded with status: ${healthCheck.status}`);
+            throw new Error(`Server responded with error: ${healthCheck.message}`);
           }
         } catch (error) {
           setConnectionStatus('disconnected');
@@ -86,7 +87,6 @@ export default function HomePage() {
         
         // เรียง API calls ตามความสำคัญ - เรียกข้อมูลสำคัญก่อน
         const criticalApiCalls = [
-          { name: 'users', call: usersApi.getAll() },
           { name: 'golfCourses', call: golfCoursesApi.getAll() }
         ];
         
@@ -106,9 +106,7 @@ export default function HomePage() {
             
             if (result.success) {
               // Handle different data types for critical API calls
-              if (criticalApiCalls[i].name === 'users') {
-                setUsers(result.data as User[]);
-              } else if (criticalApiCalls[i].name === 'golfCourses') {
+              if (criticalApiCalls[i].name === 'golfCourses') {
                 setGolfCourses(result.data as GolfCourse[]);
               }
               console.log(`✅ ข้อมูลสำคัญ ${criticalApiCalls[i].name} โหลดสำเร็จ:`, (result.data as any[]).length, 'รายการ');
@@ -289,6 +287,72 @@ export default function HomePage() {
     };
   }, [user]); // dependency เฉพาะ user เพื่อให้ reset เมื่อ login/logout
 
+  // ฟังก์ชันสำหรับ Force Refresh ข้อมูลทั้งหมด
+  const forceRefreshAllData = async () => {
+    try {
+      console.log('🔄 Force refreshing all data...');
+      
+      // โหลดข้อมูลทั้งหมดใหม่แบบ parallel
+      const [
+        jobsResult,
+        serialHistoryResult,
+        partsUsageLogsResult,
+        vehiclesResult,
+        usersResult
+      ] = await Promise.allSettled([
+        jobsApi.getAll(),
+        serialHistoryApi.getAll(),
+        partsUsageLogsApi.getAll(),
+        vehiclesApi.getAll(),
+        usersApi.getAll()
+      ]);
+
+      // อัพเดต Jobs
+      if (jobsResult.status === 'fulfilled' && jobsResult.value.success) {
+        setJobs(jobsResult.value.data as Job[]);
+        console.log('✅ Jobs data force refreshed:', (jobsResult.value.data as Job[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh jobs data');
+      }
+
+      // อัพเดต Serial History
+      if (serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value.success) {
+        setSerialHistory(serialHistoryResult.value.data as SerialHistoryEntry[]);
+        console.log('✅ Serial history data force refreshed:', (serialHistoryResult.value.data as SerialHistoryEntry[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh serial history data');
+      }
+
+      // อัพเดต Parts Usage Logs
+      if (partsUsageLogsResult.status === 'fulfilled' && partsUsageLogsResult.value.success) {
+        setPartsUsageLog(partsUsageLogsResult.value.data as PartsUsageLog[]);
+        console.log('✅ Parts usage logs data force refreshed:', (partsUsageLogsResult.value.data as PartsUsageLog[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh parts usage logs data');
+      }
+
+      // อัพเดต Vehicles
+      if (vehiclesResult.status === 'fulfilled' && vehiclesResult.value.success) {
+        setVehicles(vehiclesResult.value.data as Vehicle[]);
+        console.log('✅ Vehicles data force refreshed:', (vehiclesResult.value.data as Vehicle[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh vehicles data');
+      }
+
+      // อัพเดต Users
+      if (usersResult.status === 'fulfilled' && usersResult.value.success) {
+        setUsers(usersResult.value.data as User[]);
+        console.log('✅ Users data force refreshed:', (usersResult.value.data as User[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh users data');
+      }
+
+      console.log('✅ Force refresh completed');
+    } catch (error) {
+      console.error('❌ Error during force refresh:', error);
+    }
+  };
+
   // ฟังก์ชันสำหรับบันทึก Serial History Entry
   const addSerialHistoryEntry = async (entry: Omit<SerialHistoryEntry, 'id'>): Promise<SerialHistoryEntry | null> => {
     try {
@@ -306,7 +370,7 @@ export default function HomePage() {
 
   const handleLogin = async (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/proxy/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -448,7 +512,7 @@ export default function HomePage() {
         
         // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
         if (updated.status === 'approved') {
-          await addPartsUsageLog(parseInt(updated.id), updated.partsNotes, updated);
+          await addPartsUsageLog(updated.id, updated.partsNotes, updated);
         }
         
         setJobs(prev => prev.map(job => job.id === updated.id ? updated : job));
@@ -476,9 +540,9 @@ export default function HomePage() {
     }
   };
 
-  const addPartsUsageLog = async (jobId: number, partsNotes?: string, jobData?: Job) => {
+  const addPartsUsageLog = async (jobId: string, partsNotes?: string, jobData?: Job) => {
     try {
-      const job = jobData || jobs.find(j => j.id === jobId.toString());
+      const job = jobData || jobs.find(j => j.id === jobId);
       if (!job || job.status !== 'approved') {
         return;
       }
@@ -489,7 +553,7 @@ export default function HomePage() {
       if (job.parts && job.parts.length > 0) {
         for (const part of job.parts) {
           const logData = {
-            jobId: jobId,
+            jobId: parseInt(jobId),
             partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
             partId: `PART-${part.part_id}`,
             quantityUsed: part.quantity_used,
@@ -514,27 +578,106 @@ export default function HomePage() {
     }
   };
 
-  // ฟังก์ชันสำหรับอัปเดตสถานะงาน
-  const onUpdateStatus = async (jobId: number, status: JobStatus) => {
+  // ฟังก์ชันสำหรับสร้าง Serial History Entry เมื่อ Job เสร็จสิ้น
+  const createSerialHistoryForJob = async (jobId: string, jobData?: Job) => {
     try {
+      const job = jobData || jobs.find(j => j.id === jobId);
+      if (!job || job.status !== 'approved') {
+        return;
+      }
+
+      const vehicle = vehicles.find(v => v.id.toString() === job.vehicle_id.toString());
+      const golfCourse = golfCourses.find(gc => gc.id.toString() === job.golf_course_id.toString());
+      const user = users.find(u => u.id.toString() === job.user_id.toString());
+
+      if (!vehicle || !golfCourse || !user) {
+        console.error('Missing required data for serial history:', { vehicle, golfCourse, user });
+        return;
+      }
+
+      const serialHistoryData = {
+        serial_number: vehicle.serial_number,
+        vehicle_id: parseInt(job.vehicle_id),
+        vehicle_number: job.vehicle_number,
+        action_type: 'maintenance',
+        action_date: new Date().toISOString(),
+        details: `${job.type} - ${job.system || 'ไม่ระบุระบบ'}: ${job.remarks || 'ไม่มีหมายเหตุ'}`,
+        performed_by: user.name,
+        performed_by_id: parseInt(job.user_id),
+        golf_course_id: parseInt(job.golf_course_id),
+        golf_course_name: golfCourse.name,
+        is_active: true,
+        related_job_id: parseInt(jobId),
+        job_type: job.type,
+        status: 'completed',
+        change_type: 'status_change'
+      };
+
+      console.log('🔄 Creating serial history entry:', serialHistoryData);
+
+      const result = await serialHistoryApi.create(serialHistoryData);
+      if (result.success) {
+        setSerialHistory(prev => [result.data as SerialHistoryEntry, ...prev]);
+        console.log('✅ Serial history entry created successfully');
+      } else {
+        console.error('❌ Failed to create serial history entry:', result);
+      }
+    } catch (error) {
+      console.error('Error adding serial history entry:', error);
+    }
+  };
+
+  // ฟังก์ชันสำหรับอัปเดตสถานะงาน
+  const onUpdateStatus = async (jobId: string, status: JobStatus) => {
+    try {
+      console.log('🔄 onUpdateStatus called:', { jobId, status, timestamp: new Date().toISOString() });
+      
       // หาข้อมูลงานปัจจุบัน
-      const currentJob = jobs.find(job => job.id === jobId.toString());
+      const currentJob = jobs.find(job => job.id === jobId);
       if (!currentJob) {
-        console.error('Job not found:', jobId);
+        console.error('❌ Job not found in local state:', { 
+          jobId, 
+          searchedId: jobId,
+          availableJobs: jobs.map(j => ({ id: j.id, status: j.status })) 
+        });
+        alert('ไม่พบงานที่ต้องการอัปเดตในระบบ กรุณาลองรีเฟรชหน้าเว็บ');
+        return;
+      }
+
+      console.log('📋 Current job before update:', { 
+        id: currentJob.id, 
+        currentStatus: currentJob.status, 
+        newStatus: status,
+        vehicleNumber: currentJob.vehicle_number,
+        userName: currentJob.userName
+      });
+
+      // ตรวจสอบว่าสถานะใหม่ต่างจากสถานะเดิมหรือไม่
+      if (currentJob.status === status) {
+        console.log('⚠️ Status is already the same, skipping update');
+        alert(`งานนี้มีสถานะ "${status}" อยู่แล้ว`);
         return;
       }
 
       // อัปเดต jobs state โดยตรงเพื่อให้ UI อัปเดตทันที
-      setJobs(prevJobs => 
-        prevJobs.map(job => 
-          job.id === jobId.toString() 
+      setJobs(prevJobs => {
+        const updatedJobs = prevJobs.map(job => 
+          job.id === jobId 
             ? { ...job, status } 
             : job
-        )
-      );
+        );
+        
+        console.log('🔄 Jobs state updated. Job statuses:', updatedJobs.reduce((acc, job) => {
+          acc[job.status] = (acc[job.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>));
+        
+        return updatedJobs;
+      });
 
       // เตรียมข้อมูลที่จำเป็นสำหรับ API
       const updateData = {
+        id: currentJob.id, // เพิ่ม id เพื่อให้ External API รู้ว่าต้องอัปเดตงานไหน
         status,
         type: currentJob.type,
         vehicle_id: currentJob.vehicle_id,
@@ -549,11 +692,22 @@ export default function HomePage() {
         battery_serial: currentJob.battery_serial,
         assigned_to: currentJob.assigned_to,
         partsNotes: currentJob.partsNotes,
-        images: currentJob.images
+        images: currentJob.images,
+        parts: currentJob.parts, // เพิ่มข้อมูลอะไหล่
+        created_at: currentJob.created_at,
+        updated_at: new Date().toISOString() // อัปเดต timestamp
       };
 
+      console.log('📤 Sending API request to update job status...', {
+        url: `/api/proxy/jobs/${currentJob.id}`, // ใช้ currentJob.id แทน jobId
+        method: 'PUT',
+        dataKeys: Object.keys(updateData),
+        statusChange: `${currentJob.status} → ${status}`,
+        jobId: currentJob.id
+      });
+
       // เรียก API เพื่อบันทึกการเปลี่ยนแปลงลงฐานข้อมูล
-      const response = await fetch(`/api/jobs/${jobId}`, {
+      const response = await fetch(`/api/proxy/jobs/${currentJob.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -561,34 +715,152 @@ export default function HomePage() {
         body: JSON.stringify(updateData),
       });
 
-      const result = await response.json();
+      console.log('🌐 API response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('📥 API response data:', result);
+      } catch (parseError) {
+        console.error('❌ Failed to parse API response:', parseError);
+        throw new Error('ไม่สามารถอ่านข้อมูลตอบกลับจากเซิร์ฟเวอร์ได้');
+      }
       
-      if (!result.success) {
+      if (!response.ok || !result.success) {
+        const errorMessage = result?.message || result?.details || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('❌ API update failed:', {
+          message: errorMessage,
+          jobId: currentJob.id,
+          attemptedStatus: status,
+          originalStatus: currentJob.status,
+          responseStatus: response.status,
+          result
+        });
+        
         // หากการอัปเดตใน API ล้มเหลว ให้กลับสถานะเดิม
         setJobs(prevJobs => 
           prevJobs.map(job => 
-            job.id === jobId.toString() 
+            job.id === jobId 
               ? { ...job, status: currentJob.status } // กลับสถานะเดิม
               : job
           )
         );
-        console.error('Failed to update job status:', result.message);
-        alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${result.message}`);
+        
+        // แสดงข้อความ error ที่เข้าใจง่าย
+        if (response.status === 404) {
+          alert('ไม่พบงานที่ต้องการอัปเดตในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
+        } else if (response.status >= 500) {
+          alert('เซิร์ฟเวอร์ขัดข้อง กรุณาลองใหม่อีกครั้ง');
+        } else {
+          alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${errorMessage}`);
+        }
+        return;
+      } else {
+        console.log('✅ Job status updated successfully in database', {
+          jobId: currentJob.id,
+          oldStatus: currentJob.status,
+          newStatus: status,
+          timestamp: new Date().toISOString()
+        });
+        
+        // เพิ่ม Log การใช้อะไหล่และ Serial History เมื่องานได้รับการอนุมัติ
+        if (status === 'approved') {
+          console.log('🔧 Adding parts usage log and serial history for approved job...', {
+            jobId: currentJob.id,
+            partsNotes: currentJob.partsNotes,
+            hasParts: currentJob.parts && currentJob.parts.length > 0
+          });
+          
+          try {
+            // เพิ่ม Parts Usage Log
+            await addPartsUsageLog(jobId, currentJob.partsNotes, { ...currentJob, status });
+            console.log('✅ Parts usage log added successfully');
+          } catch (logError) {
+            console.error('❌ Error adding parts usage log:', logError);
+            // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ log ไม่สำเร็จ
+          }
+
+          try {
+            // เพิ่ม Serial History Entry
+            await createSerialHistoryForJob(jobId, { ...currentJob, status });
+            console.log('✅ Serial history entry added successfully');
+          } catch (historyError) {
+            console.error('❌ Error adding serial history entry:', historyError);
+            // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ history ไม่สำเร็จ
+          }
+        }
+        
+        // โหลดข้อมูลงานใหม่จากฐานข้อมูลเพื่อให้แน่ใจว่าข้อมูลอัปเดต
+        console.log('🔄 Refreshing jobs data from database...');
+        try {
+          const jobsResult = await jobsApi.getAll();
+          if (jobsResult.success) {
+            setJobs(jobsResult.data as Job[]);
+            console.log('✅ Jobs data refreshed successfully', {
+              totalJobs: (jobsResult.data as Job[]).length,
+              updatedJob: (jobsResult.data as Job[]).find(j => j.id === currentJob.id)
+            });
+          }
+          
+          // โหลดข้อมูล Serial History ใหม่
+          const serialHistoryResult = await serialHistoryApi.getAll();
+          if (serialHistoryResult.success) {
+            setSerialHistory(serialHistoryResult.data as SerialHistoryEntry[]);
+            console.log('✅ Serial history data refreshed successfully');
+          }
+          
+          // โหลดข้อมูล Parts Usage Logs ใหม่
+          const partsUsageLogsResult = await partsUsageLogsApi.getAll();
+          if (partsUsageLogsResult.success) {
+            setPartsUsageLog(partsUsageLogsResult.data as PartsUsageLog[]);
+            console.log('✅ Parts usage logs data refreshed successfully');
+          }
+        } catch (refreshError) {
+          console.error('❌ Error refreshing data:', refreshError);
+        }
+        
+        // แสดงข้อความสำเร็จ
+        const statusText = status === 'approved' ? 'อนุมัติ' : 
+                          status === 'rejected' ? 'ไม่อนุมัติ' : 
+                          status === 'completed' ? 'เสร็จสิ้น' : status;
+        alert(`${statusText}งานเรียบร้อยแล้ว`);
       }
     } catch (error) {
-      console.error('Error updating job status:', error);
+      console.error('💥 Error updating job status:', {
+        error,
+        jobId,
+        status,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       // กลับสถานะเดิมในกรณีเกิดข้อผิดพลาด
-      const currentJob = jobs.find(job => job.id === jobId.toString());
+      const currentJob = jobs.find(job => job.id === jobId);
       if (currentJob) {
+        console.log('🔄 Reverting job status to original state:', {
+          jobId,
+          revertingTo: currentJob.status
+        });
         setJobs(prevJobs => 
           prevJobs.map(job => 
-            job.id === jobId.toString() 
+            job.id === jobId 
               ? { ...job, status: currentJob.status }
               : job
           )
         );
       }
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+      
+      // แสดงข้อความ error ที่เข้าใจง่าย
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+      if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        alert('การเชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่');
+      } else {
+        alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${errorMessage}`);
+      }
     }
   };
 
@@ -614,109 +886,82 @@ export default function HomePage() {
   // แสดง loading screen ขณะโหลดข้อมูล
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          {/* Glowing Ring Spinner */}
-          <div className="relative inline-flex items-center justify-center w-32 h-32 mb-8">
-            {/* Outer glow */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 opacity-20 blur-xl animate-pulse"></div>
-            {/* Main spinning ring */}
-            <div className="relative w-24 h-24 rounded-full border-4 border-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 animate-spin">
-              <div className="absolute inset-1 rounded-full bg-slate-900"></div>
-            </div>
-            {/* Inner glow */}
-            <div className="absolute inset-6 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 opacity-30 blur-md animate-pulse"></div>
-            {/* Progress percentage in center */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">{loadingProgress}%</span>
-            </div>
+          {/* Golf Cart Icon */}
+          <div className="mb-8">
+            <svg 
+              width="80" 
+              height="80" 
+              viewBox="0 0 100 100" 
+              className="mx-auto text-white"
+              fill="currentColor"
+            >
+              {/* Golf Cart Body */}
+              <rect x="20" y="40" width="50" height="25" rx="3" fill="white"/>
+              {/* Golf Cart Roof */}
+              <rect x="15" y="25" width="60" height="20" rx="5" fill="white"/>
+              {/* Golf Cart Wheels */}
+              <circle cx="30" cy="70" r="8" fill="white"/>
+              <circle cx="60" cy="70" r="8" fill="white"/>
+              {/* Golf Cart Details */}
+              <rect x="25" y="45" width="15" height="15" rx="2" fill="black"/>
+              <rect x="50" y="45" width="15" height="15" rx="2" fill="black"/>
+            </svg>
           </div>
-          
+
           {/* Loading Text */}
-          <h2 className="text-2xl font-light text-white tracking-wider mb-6">
-            Loading...
-          </h2>
-
-          {/* Progress Bar */}
-          <div className="mb-8 max-w-xs mx-auto">
-            <div className="w-full bg-slate-800/50 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-              <div 
-                className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out relative"
-                style={{ width: `${loadingProgress}%` }}
-              >
-                <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full"></div>
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-cyan-300 mt-2 font-medium">
-              <span>0%</span>
-              <span className="text-white">{loadingProgress}%</span>
-              <span>100%</span>
-            </div>
+          <div className="mb-8">
+            <h2 className="text-gray-400 text-lg font-medium tracking-wider">
+              LOADING...
+            </h2>
           </div>
 
-          {/* Loading Steps with Icons */}
-          <div className="space-y-3 text-sm max-w-sm mx-auto">
-            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
-              loadingProgress >= 10 
-                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
-                : 'bg-slate-800/30 text-slate-400'
-            }`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                loadingProgress >= 10 
-                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
-                  : 'bg-slate-700 text-slate-400'
-              }`}>
-                {loadingProgress >= 10 ? '✓' : '1'}
-              </div>
-              <span className="font-medium">เชื่อมต่อเซิร์ฟเวอร์</span>
-            </div>
-            
-            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
-              loadingProgress >= 50 
-                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
-                : 'bg-slate-800/30 text-slate-400'
-            }`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                loadingProgress >= 50 
-                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
-                  : 'bg-slate-700 text-slate-400'
-              }`}>
-                {loadingProgress >= 50 ? '✓' : '2'}
-              </div>
-              <span className="font-medium">ดึงข้อมูลจาก API</span>
-            </div>
-            
-            <div className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 ${
-              loadingProgress >= 95 
-                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' 
-                : 'bg-slate-800/30 text-slate-400'
-            }`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                loadingProgress >= 95 
-                  ? 'bg-cyan-500 text-slate-900 shadow-lg shadow-cyan-500/30' 
-                  : 'bg-slate-700 text-slate-400'
-              }`}>
-                {loadingProgress >= 95 ? '✓' : '3'}
-              </div>
-              <span className="font-medium">ประมวลผลข้อมูล</span>
-            </div>
+          {/* Percentage */}
+          <div className="mb-8">
+            <span className="text-cyan-400 text-4xl font-bold">
+              {Math.floor(loadingProgress)}%
+            </span>
           </div>
-          
-          {/* Error Display - แสดงเฉพาะเมื่อมี error */}
+
+          {/* Circular Progress */}
+          <div className="relative w-32 h-32 mx-auto">
+            {/* Background Circle */}
+            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="rgba(55, 65, 81, 0.3)"
+                strokeWidth="3"
+                fill="none"
+              />
+              {/* Progress Circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                stroke="#06b6d4"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 45}`}
+                strokeDashoffset={`${2 * Math.PI * 45 * (1 - loadingProgress / 100)}`}
+                className="transition-all duration-300 ease-out"
+                style={{
+                  filter: 'drop-shadow(0 0 8px #06b6d4)'
+                }}
+              />
+            </svg>
+          </div>
+
+          {/* Error Display */}
           {loadingError && (
-            <div className="mt-8 p-4 bg-red-900/50 border border-red-500/30 rounded-xl backdrop-blur-sm max-w-sm mx-auto">
-              <div className="flex items-center justify-center space-x-3 mb-4">
-                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span className="text-red-300 font-medium">เกิดข้อผิดพลาด</span>
-              </div>
-              <p className="text-red-200 text-sm mb-4">{loadingError}</p>
+            <div className="mt-8 p-4 bg-red-900/20 border border-red-500/30 rounded-lg max-w-md mx-auto">
+              <p className="text-red-400 mb-4">{loadingError}</p>
               <button
                 onClick={() => window.location.reload()}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
               >
                 โหลดใหม่
               </button>
@@ -749,6 +994,7 @@ export default function HomePage() {
             vehicles={vehicles}
             golfCourses={golfCourses}
             users={users}
+            partsUsageLog={partsUsageLog}
           />
         )}
         {view === 'create_job' && (
@@ -786,6 +1032,8 @@ export default function HomePage() {
             vehicles={vehicles}
             parts={parts}
             jobs={jobs}
+            users={users}
+            golfCourses={golfCourses}
           />
         )}
         {view === 'multi_assign' && (
@@ -808,6 +1056,7 @@ export default function HomePage() {
             serialHistory={serialHistory}
             golfCourses={golfCourses}
             users={users}
+            partsUsageLog={partsUsageLog}
           />
         )}
         {view === 'admin_management' && (
@@ -848,16 +1097,20 @@ export default function HomePage() {
             golfCourses={golfCourses}
             users={users}
             vehicles={vehicles}
+            partsUsageLog={partsUsageLog}
             onUpdateStatus={onUpdateStatus}
+            onFillJobForm={handleFillJobForm}
           />
         )}
         {view === 'supervisor_pending_jobs' && (
           <SupervisorPendingJobsScreen 
+            key={`supervisor-pending-${jobs.filter(j => j.status === 'pending').length}`}
             user={user} 
             jobs={jobs}
             golfCourses={golfCourses}
             users={users}
             vehicles={vehicles}
+            partsUsageLog={partsUsageLog}
             onUpdateStatus={onUpdateStatus}
             addPartsUsageLog={addPartsUsageLog}
           />

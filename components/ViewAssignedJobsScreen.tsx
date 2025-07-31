@@ -10,7 +10,8 @@ interface ViewAssignedJobsScreenProps {
   golfCourses: GolfCourse[];
   users: User[];
   vehicles: Vehicle[];
-  onUpdateStatus: (jobId: number, status: JobStatus) => void;
+  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
+  onUpdateStatus: (jobId: string, status: JobStatus) => void;
   onFillJobForm?: (job: Job) => void;
 }
 
@@ -20,6 +21,7 @@ function ViewAssignedJobsScreen({
   golfCourses, 
   users, 
   vehicles,
+  partsUsageLog = [],
   onUpdateStatus,
   onFillJobForm 
 }: ViewAssignedJobsScreenProps) {
@@ -135,6 +137,7 @@ function ViewAssignedJobsScreen({
                             golfCourses={golfCourses}
                             users={users}
                             vehicles={vehicles}
+                            partsUsageLog={partsUsageLog}
                             onUpdateStatus={onUpdateStatus}
                             onFillJobForm={onFillJobForm}
                         />

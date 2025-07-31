@@ -222,3 +222,59 @@ host_vars/
 # Backup and restore scripts with credentials
 backup-with-credentials.sh
 restore-with-credentials.sh
+
+# ⚠️ SECURITY: Files with sensitive data that MUST be ignored
+# Environment files with real credentials
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+
+# Test files with sensitive data
+test_output.json
+*_output.json
+test-results.json
+
+# Database connection test files
+check-db.js
+test-direct-connection.js
+remove-user-collection.js
+find-integer-golf-course-id.js
+test-direct-login.js
+test-prisma-direct.js
+
+# Scripts with hardcoded credentials
+*-with-credentials.*
+*-secrets.*
+production-config.*
+
+# PM2 ecosystem files (may contain sensitive data)
+ecosystem.config.js
+pm2.config.js
+
+# Any files containing "password" or "secret" in filename
+*password*
+*secret*
+*credential*
+
+# Backup files that might contain sensitive data
+*.backup
+*.bak
+*.dump
+*.sql
+
+# Log files that might contain sensitive information
+*.log
+logs/
+app.log
+error.log
+access.log
+combined.log
+
+# Temporary files that might contain sensitive data
+.tmp/
+.temp/
+temp/
+tmp/

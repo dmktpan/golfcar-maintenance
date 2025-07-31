@@ -393,7 +393,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 <div className="additional-subtasks-list">
                                     <h5>งานย่อยเพิ่มเติม:</h5>
                                     {additionalSubTasks.map((task, index) => (
-                                        <div key={index} className="subtask-item">
+                                        <div key={`subtask-${index}-${task.slice(0, 10)}`} className="subtask-item">
                                             <span>{task}</span>
                                             <button 
                                                 type="button" 
@@ -433,7 +433,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         {selectedParts.length > 0 && (
                             <div className="selected-parts-list">
                                 {selectedParts.map((part, index) => (
-                                    <div key={index} className="selected-part-item">
+                                    <div key={`part-${part.id}-${index}`} className="selected-part-item">
                                         <span>{part.name} (จำนวน: {part.quantity} {part.unit})</span>
                                         <button 
                                             type="button" 
@@ -492,7 +492,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 <strong>งานย่อยที่เลือก:</strong>
                                 <ul className="subtasks-list">
                                     {[...subTasks, ...additionalSubTasks].map((task, index) => (
-                                        <li key={index}>{task}</li>
+                                        <li key={`task-${index}-${task.slice(0, 10)}`}>{task}</li>
                                     ))}
                                 </ul>
                             </div>
@@ -506,7 +506,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             <em>อะไหล่ที่เลือกจากระบบ:</em>
                                             <ul className="parts-list">
                                                 {selectedParts.map((part, index) => (
-                                                    <li key={index}>{part.name} - จำนวน: {part.quantity} {part.unit}</li>
+                                                    <li key={`part-summary-${part.id}-${index}`}>{part.name} - จำนวน: {part.quantity} {part.unit}</li>
                                                 ))}
                                             </ul>
                                         </div>

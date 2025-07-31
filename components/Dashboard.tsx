@@ -12,24 +12,17 @@ interface DashboardProps {
     vehicles: Vehicle[];
     golfCourses: GolfCourse[];
     users: User[];
+    partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
     setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
     setView: (view: View) => void;
     onFillJobForm?: (job: Job) => void;
-    addPartsUsageLog?: (jobId: number, partsNotes?: string) => void;
-    onUpdateStatus?: (jobId: number, status: JobStatus) => void;
+    addPartsUsageLog?: (jobId: string, partsNotes?: string) => void;
+    onUpdateStatus?: (jobId: string, status: JobStatus) => void;
 }
 
-const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus }: DashboardProps) => {
+const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [], setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
-    
-    // สถิติข้อมูลที่โหลดมา
-    const dataStats = useMemo(() => ({
-        jobs: jobs.length,
-        vehicles: vehicles.length,
-        golfCourses: golfCourses.length,
-        users: users.length
-    }), [jobs.length, vehicles.length, golfCourses.length, users.length]);
     
     // ใช้ useMemo เพื่อลด re-calculation
     const filteredJobs = useMemo(() => {
@@ -81,14 +74,14 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
     }, [jobs, user]);
 
     // ใช้ useCallback สำหรับ handleUpdateStatus
-    const handleUpdateStatus = useCallback((jobId: number, status: JobStatus) => {
+    const handleUpdateStatus = useCallback((jobId: string, status: JobStatus) => {
         if (onUpdateStatus) {
             onUpdateStatus(jobId, status);
         } else {
-            const updatedJob = jobs.find(job => job.id === jobId.toString());
+            const updatedJob = jobs.find(job => job.id === jobId);
             if (updatedJob) {
                 const newJob = { ...updatedJob, status };
-                setJobs(jobs.map(job => job.id === jobId.toString() ? newJob : job));
+                setJobs(jobs.map(job => job.id === jobId ? newJob : job));
                 
                 // เพิ่ม Log การใช้อะไหล่เมื่อสถานะเปลี่ยนเป็น approved
                 if (status === 'approved' && addPartsUsageLog) {
@@ -118,26 +111,6 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                         <span className="btn-icon">⚙️</span> แดชบอร์ดผู้ดูแล
                     </button>
                 )}
-            </div>
-
-            {/* Data Statistics */}
-            <div className={styles.dataStats}>
-                <div className={styles.statCard}>
-                    <div className={styles.statNumber}>{dataStats.jobs}</div>
-                    <div className={styles.statLabel}>งานทั้งหมด</div>
-                </div>
-                <div className={styles.statCard}>
-                    <div className={styles.statNumber}>{dataStats.vehicles}</div>
-                    <div className={styles.statLabel}>รถกอล์ฟ</div>
-                </div>
-                <div className={styles.statCard}>
-                    <div className={styles.statNumber}>{dataStats.golfCourses}</div>
-                    <div className={styles.statLabel}>สนามกอล์ฟ</div>
-                </div>
-                <div className={styles.statCard}>
-                    <div className={styles.statNumber}>{dataStats.users}</div>
-                    <div className={styles.statLabel}>ผู้ใช้งาน</div>
-                </div>
             </div>
 
             {/* Page Header */}
@@ -177,34 +150,16 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                 <div className={styles.filterControls}>
                     <div className={styles.filterButtons}>
                         <button 
-                            className={`${styles.filterButton} ${filter === 'all' ? styles.active : ''}`}
-                            onClick={() => setFilter('all')}
-                        >
-                            ทั้งหมด ({jobCounts.all})
-                        </button>
-                        <button 
-                            className={`${styles.filterButton} ${filter === 'pending' ? styles.active : ''}`}
-                            onClick={() => setFilter('pending')}
-                        >
-                            รอตรวจสอบ ({jobCounts.pending})
-                        </button>
-                        <button 
                             className={`${styles.filterButton} ${filter === 'assigned' ? styles.active : ''}`}
                             onClick={() => setFilter('assigned')}
                         >
                             ได้รับมอบหมาย ({jobCounts.assigned})
                         </button>
                         <button 
-                            className={`${styles.filterButton} ${filter === 'in_progress' ? styles.active : ''}`}
-                            onClick={() => setFilter('in_progress')}
+                            className={`${styles.filterButton} ${filter === 'pending' ? styles.active : ''}`}
+                            onClick={() => setFilter('pending')}
                         >
-                            กำลังดำเนินการ ({jobCounts.in_progress})
-                        </button>
-                        <button 
-                            className={`${styles.filterButton} ${filter === 'completed' ? styles.active : ''}`}
-                            onClick={() => setFilter('completed')}
-                        >
-                            เสร็จสิ้น ({jobCounts.completed})
+                            รอตรวจสอบ ({jobCounts.pending})
                         </button>
                         <button 
                             className={`${styles.filterButton} ${filter === 'rejected' ? styles.active : ''}`}
@@ -247,6 +202,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, setJobs, setView,
                             vehicles={vehicles}
                             golfCourses={golfCourses}
                             users={users}
+                            partsUsageLog={partsUsageLog}
                             onUpdateStatus={handleUpdateStatus}
                             onFillJobForm={onFillJobForm}
                             isHistory={activeTab === 'history'}

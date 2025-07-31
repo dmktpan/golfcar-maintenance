@@ -1,7 +1,7 @@
 // app/api/health/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { withDatabaseConnection, handlePrismaError } from '@/lib/middleware/database'
-import { db } from '@/lib/db'
+import { db, prisma } from '@/lib/db'
 
 async function healthHandler(req: NextRequest): Promise<NextResponse> {
   try {
@@ -18,8 +18,8 @@ async function healthHandler(req: NextRequest): Promise<NextResponse> {
       }, { status: 503 })
     }
 
-    // ทดสอบ query ง่ายๆ
-    const userCount = await db.users.findByGolfCourse('').then(() => 0).catch(() => 0)
+    // ทดสอบ query ง่ายๆ - ใช้ count แทนการ query ที่ต้องการ ObjectID
+    const userCount = await prisma.user.count().then(() => 0).catch(() => 0)
     
     return NextResponse.json({
       success: true,
