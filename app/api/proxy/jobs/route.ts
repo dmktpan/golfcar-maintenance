@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(`${EXTERNAL_API_BASE}/jobs`, {
+    // เพิ่ม query parameter เพื่อขอข้อมูล parts ด้วย
+    const url = new URL(`${EXTERNAL_API_BASE}/jobs`);
+    url.searchParams.append('include', 'parts');
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -28,6 +32,17 @@ export async function GET(request: NextRequest) {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ External API success');
+      
+      // Debug: ตรวจสอบข้อมูล parts ที่ได้รับ
+      if (data && data.data && Array.isArray(data.data)) {
+        const jobsWithParts = data.data.filter((job: any) => job.parts && job.parts.length > 0);
+        console.log('🔍 Jobs with parts:', {
+          totalJobs: data.data.length,
+          jobsWithParts: jobsWithParts.length,
+          sampleJobWithParts: jobsWithParts[0] || null
+        });
+      }
+      
       return NextResponse.json(data);
     } else {
       console.log('❌ External API failed with status:', response.status);
@@ -64,8 +79,18 @@ export async function POST(request: NextRequest) {
     console.log('🔄 POST /api/proxy/jobs - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
     
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const jobData = {
+      ...body,
+      // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
+      parts: body.parts || [],
+      parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
+      system: body.system || 'job'
+    };
+    
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
+    console.log('📝 Job data with parts:', JSON.stringify(jobData, null, 2));
     
     // เพิ่ม timeout
     const controller = new AbortController();
@@ -76,7 +101,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(jobData),
       signal: controller.signal,
     });
 
@@ -122,8 +147,18 @@ export async function PUT(request: NextRequest) {
     console.log('🔄 PUT /api/proxy/jobs - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
     
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const jobData = {
+      ...body,
+      // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
+      parts: body.parts || [],
+      parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
+      system: body.system || 'job'
+    };
+    
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
+    console.log('📝 Job data with parts:', JSON.stringify(jobData, null, 2));
     
     // เพิ่ม timeout
     const controller = new AbortController();
@@ -134,7 +169,7 @@ export async function PUT(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(jobData),
       signal: controller.signal,
     });
 

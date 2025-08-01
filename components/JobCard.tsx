@@ -39,7 +39,8 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
         });
     };
 
@@ -180,7 +181,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                         </div>
                         <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>วันที่:</span>
-                            <span className={styles.summaryValue}>{formatDate(job.created_at)}</span>
+                            <span className={styles.summaryValue}>{formatDate((job as any).createdAt)}</span>
                         </div>
                         {job.assigned_by_name && (
                             <div className={styles.summaryItem}>

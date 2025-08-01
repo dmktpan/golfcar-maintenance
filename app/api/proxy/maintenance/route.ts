@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(`${EXTERNAL_API_BASE}/maintenance`, {
+    // เพิ่ม query parameter เพื่อขอข้อมูล parts ด้วย
+    const url = new URL(`${EXTERNAL_API_BASE}/maintenance`);
+    url.searchParams.append('include', 'parts');
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -62,8 +66,17 @@ export async function PUT(request: NextRequest) {
     console.log('🔄 PUT /api/proxy/maintenance - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
     
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const maintenanceData = {
+      ...body,
+      // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
+      parts_used: body.parts_used || body.parts || [],
+      system: body.system || 'maintenance'
+    };
+    
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
+    console.log('📝 Maintenance data with parts:', JSON.stringify(maintenanceData, null, 2));
     
     // เพิ่ม timeout
     const controller = new AbortController();
@@ -74,7 +87,7 @@ export async function PUT(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(maintenanceData),
       signal: controller.signal,
     });
 
@@ -118,8 +131,17 @@ export async function POST(request: NextRequest) {
     console.log('🔄 POST /api/proxy/maintenance - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
     
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const maintenanceData = {
+      ...body,
+      // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
+      parts_used: body.parts_used || body.parts || [],
+      system: body.system || 'maintenance'
+    };
+    
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
+    console.log('📝 Maintenance data with parts:', JSON.stringify(maintenanceData, null, 2));
     
     // เพิ่ม timeout
     const controller = new AbortController();
@@ -130,7 +152,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(maintenanceData),
       signal: controller.signal,
     });
 

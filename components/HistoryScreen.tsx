@@ -2,20 +2,19 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Job, Vehicle, Part, View, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse } from '@/lib/data';
+import { Job, Vehicle, Part, View, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse, SerialHistoryEntry } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import * as XLSX from 'xlsx';
 
 interface HistoryScreenProps {
-    setView: (view: View) => void;
     vehicles: Vehicle[];
-    parts: Part[];
     jobs: Job[];
     users: User[];
     golfCourses: GolfCourse[];
+    serialHistory: SerialHistoryEntry[];
 }
 
-const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: HistoryScreenProps) => {
+const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVehicle, setFilterVehicle] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
@@ -76,7 +75,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
             const userMatch = filterUser === '' || job.user_id === filterUser;
             
             // Date range filter
-            const jobDate = new Date(job.created_at);
+            const jobDate = new Date((job as any).createdAt || job.created_at);
             const fromDate = filterDateFrom ? new Date(filterDateFrom) : null;
             const toDate = filterDateTo ? new Date(filterDateTo) : null;
             
@@ -93,8 +92,8 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
             
             switch (sortField) {
                 case 'created_at':
-                    aValue = new Date(a.created_at).getTime();
-                    bValue = new Date(b.created_at).getTime();
+                    aValue = new Date((a as any).createdAt || a.created_at).getTime();
+                    bValue = new Date((b as any).createdAt || b.created_at).getTime();
                     break;
                 case 'vehicle_number':
                     aValue = a.vehicle_number;
@@ -109,8 +108,8 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                     bValue = b.status;
                     break;
                 default:
-                    aValue = a.created_at;
-                    bValue = b.created_at;
+                    aValue = (a as any).createdAt || a.created_at;
+                    bValue = (b as any).createdAt || b.created_at;
             }
             
             if (sortDirection === 'asc') {
@@ -132,41 +131,67 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
         
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
         for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
-            const partInfo = system.find(p => p.id === parseInt(part.part_id));
+            const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
             if (partInfo) {
                 return partInfo.name;
             }
         }
         
-        // สุดท้ายค้นหาจาก parts prop
-        const partFromProps = parts.find(p => p.id === part.part_id);
-        if (partFromProps) {
-            return partFromProps.name;
-        }
-        
         return 'ไม่ระบุ';
     };
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('th-TH', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    const formatDate = (dateString: string | undefined) => {
+        try {
+            // ตรวจสอบว่า dateString มีค่าหรือไม่
+            if (!dateString || dateString === 'null' || dateString === 'undefined') {
+                return 'ไม่ระบุวันที่';
+            }
+            
+            const date = new Date(dateString);
+            
+            // ตรวจสอบว่าเป็น valid date หรือไม่
+            if (isNaN(date.getTime())) {
+                return 'วันที่ไม่ถูกต้อง';
+            }
+            
+            return date.toLocaleDateString('th-TH', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
+            });
+        } catch (error) {
+            console.error('Error formatting date:', error, 'Input:', dateString);
+            return 'วันที่ไม่ถูกต้อง';
+        }
     };
 
-    const formatDateForExcel = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('th-TH', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    const formatDateForExcel = (dateString: string | undefined) => {
+        try {
+            if (!dateString || dateString === 'null' || dateString === 'undefined') {
+                return 'ไม่ระบุวันที่';
+            }
+            
+            const date = new Date(dateString);
+            
+            if (isNaN(date.getTime())) {
+                return 'วันที่ไม่ถูกต้อง';
+            }
+            
+            return date.toLocaleDateString('th-TH', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
+            });
+        } catch (error) {
+            console.error('Error formatting date for Excel:', error, 'Input:', dateString);
+            return 'วันที่ไม่ถูกต้อง';
+        }
     };
 
     // ฟังก์ชันแปลงชื่อระบบให้เป็นภาษาไทย
@@ -227,21 +252,21 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
 
     const exportToExcel = () => {
         const exportData = filteredAndSortedJobs.map(job => ({
-            'วันที่': formatDateForExcel(job.created_at),
+            'วันที่': formatDateForExcel((job as any).createdAt || job.created_at),
             'เบอร์รถ': job.vehicle_number,
             'Serial รถ': getVehicleSerial(job.vehicle_id),
             'Serial แบต': job.battery_serial || getVehicleSerial(job.vehicle_id),
             'สนาม': getGolfCourseName(job.golf_course_id),
             'ประเภทงาน': job.type,
             'ระบบ': job.system ? getSystemDisplayName(job.system) : '-',
+            'อะไหล่ที่ใช้': job.parts && job.parts.length > 0 ? 
+                job.parts.map(p => `${getPartName(p)} (จำนวน ${p.quantity_used})`).join(', ') : '-',
+            'บันทึกอะไหล่': job.partsNotes || '-',
             'ผู้ดำเนินการ': job.userName,
             'สถานะ': getStatusText(job.status),
-            'งานย่อย': job.subTasks ? job.subTasks.join(', ') : '-',
-            'อะไหล่ที่ใช้': job.parts ? job.parts.map(p => `${getPartName(p)} (${p.quantity_used})`).join(', ') : '-',
-            'บันทึกอะไหล่': job.partsNotes || '-',
             'หมายเหตุ': job.remarks || '-',
             'มอบหมายโดย': job.assigned_by_name || '-',
-            'วันที่อัปเดต': job.updated_at && job.updated_at !== job.created_at ? formatDateForExcel(job.updated_at) : '-'
+            'วันที่อัปเดต': ((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) ? formatDateForExcel((job as any).updatedAt || job.updated_at) : '-'
         }));
 
         const ws = XLSX.utils.json_to_sheet(exportData);
@@ -257,18 +282,17 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
             { wch: 20 }, // สนาม
             { wch: 12 }, // ประเภทงาน
             { wch: 20 }, // ระบบ
+            { wch: 35 }, // อะไหล่ที่ใช้
+            { wch: 25 }, // บันทึกอะไหล่
             { wch: 20 }, // ผู้ดำเนินการ
             { wch: 12 }, // สถานะ
-            { wch: 30 }, // งานย่อย
-            { wch: 30 }, // อะไหล่ที่ใช้
-            { wch: 25 }, // บันทึกอะไหล่
             { wch: 25 }, // หมายเหตุ
             { wch: 20 }, // มอบหมายโดย
             { wch: 15 }  // วันที่อัปเดต
         ];
         ws['!cols'] = colWidths;
 
-        const fileName = `ประวัติการซ่อมบำรุง_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+        const fileName = `ประวัติการซ่อมบำรุง_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
         XLSX.writeFile(wb, fileName);
     };
 
@@ -288,9 +312,6 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                         disabled={filteredAndSortedJobs.length === 0}
                     >
                         📊 Export Excel
-                    </button>
-                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>
-                        กลับไปหน้าหลัก
                     </button>
                 </div>
             </div>
@@ -413,6 +434,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                                     ประเภท {getSortIcon('type')}
                                 </th>
                                 <th>ระบบ</th>
+                                <th>อะไหล่ที่ใช้</th>
                                 <th>ผู้ดำเนินการ</th>
                                 <th 
                                     className="sortable" 
@@ -435,7 +457,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                                                 {expandedRows.has(job.id) ? '▼' : '▶'}
                                             </button>
                                         </td>
-                                        <td>{formatDate(job.created_at)}</td>
+                                        <td>{formatDate((job as any).createdAt || job.created_at)}</td>
                                         <td className="vehicle-number">{job.vehicle_number}</td>
                                         <td>{getVehicleSerial(job.vehicle_id)}</td>
                                         <td>{getGolfCourseName(job.golf_course_id)}</td>
@@ -445,6 +467,22 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                                             </span>
                                         </td>
                                         <td>{job.system ? getSystemDisplayName(job.system) : '-'}</td>
+                                        <td className="parts-summary">
+                                            {job.parts && job.parts.length > 0 ? (
+                                                <div className="parts-preview">
+                                                    {job.parts.slice(0, 2).map((part, index) => (
+                                                        <span key={`${job.id}-${part.part_id}-${index}`} className="part-item">
+                                                            {getPartName(part)} ({part.quantity_used})
+                                                        </span>
+                                                    ))}
+                                                    {job.parts.length > 2 && (
+                                                        <span className="more-parts">และอีก {job.parts.length - 2} รายการ</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="no-parts">-</span>
+                                            )}
+                                        </td>
                                         <td>{job.userName}</td>
                                         <td>
                                             <StatusBadge status={job.status} />
@@ -460,7 +498,7 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                                     
                                     {expandedRows.has(job.id) && (
                                         <tr className="expanded-row">
-                                            <td colSpan={10}>
+                                            <td colSpan={11}>
                                                 <div className="expanded-content">
                                                     <div className="detail-grid">
                                                         <div className="detail-section">
@@ -483,11 +521,11 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
                                                                     <strong>มอบหมายโดย:</strong> {job.assigned_by_name}
                                                                 </div>
                                                             )}
-                                                            {job.updated_at && job.updated_at !== job.created_at && (
-                                                                <div className="detail-item">
-                                                                    <strong>อัปเดตล่าสุด:</strong> {formatDate(job.updated_at)}
-                                                                </div>
-                                                            )}
+                                                            {((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) && (
+                                                <div className="detail-item">
+                                                    <strong>อัปเดตล่าสุด:</strong> {formatDate((job as any).updatedAt || job.updated_at)}
+                                                </div>
+                                            )}
                                                         </div>
 
                                                         {job.parts && job.parts.length > 0 && (
@@ -668,6 +706,38 @@ const HistoryScreen = ({ setView, vehicles, parts, jobs, users, golfCourses }: H
 
                 .parts-list li {
                     margin-bottom: 4px;
+                }
+
+                .parts-summary {
+                    max-width: 200px;
+                }
+
+                .parts-preview {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+
+                .part-item {
+                    font-size: 12px;
+                    background: #e3f2fd;
+                    color: #1565c0;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    display: inline-block;
+                    margin-right: 4px;
+                    margin-bottom: 2px;
+                }
+
+                .more-parts {
+                    font-size: 11px;
+                    color: #6c757d;
+                    font-style: italic;
+                }
+
+                .no-parts {
+                    color: #6c757d;
+                    font-style: italic;
                 }
 
                 .image-gallery {

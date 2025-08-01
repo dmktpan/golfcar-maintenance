@@ -11,7 +11,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const response = await fetch(`${EXTERNAL_API_BASE}/jobs/${id}`, {
+    // เพิ่ม query parameter เพื่อขอข้อมูล parts ด้วย
+    const url = new URL(`${EXTERNAL_API_BASE}/jobs/${id}`);
+    url.searchParams.append('include', 'parts');
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -67,6 +71,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       body.id = id;
     }
     
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const jobData = {
+      ...body,
+      // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
+      parts: body.parts || [],
+      parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
+      system: body.system || 'job'
+    };
+    
+    console.log('📝 Job data with parts:', JSON.stringify(jobData, null, 2));
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
@@ -75,7 +90,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(jobData),
       signal: controller.signal,
     });
 

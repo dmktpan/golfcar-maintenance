@@ -55,7 +55,9 @@ export async function POST(request: Request) {
       related_job_id, 
       job_type, 
       status, 
-      change_type
+      change_type,
+      parts_used,  // เพิ่มฟิลด์อะไหล่
+      system       // เพิ่มฟิลด์ระบบ
     } = body;
 
     // Validation
@@ -107,6 +109,8 @@ export async function POST(request: Request) {
         status: status || null,
         job_type: job_type || null,
         golf_course_name: golf_course_name.trim(),
+        parts_used: parts_used || [],  // บันทึกข้อมูลอะไหล่
+        system: system || null,        // บันทึกข้อมูลระบบ
         vehicle_id: vehicle_id.toString(),
         performed_by_id: performed_by_id.toString(),
         related_job_id: related_job_id ? related_job_id.toString() : null,

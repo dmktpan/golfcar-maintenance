@@ -5,6 +5,9 @@ import { prisma } from '@/lib/db/prisma';
 export async function GET() {
   try {
     const jobs = await prisma.job.findMany({
+      include: {
+        parts: true
+      },
       orderBy: {
         createdAt: 'desc'
       }
@@ -128,6 +131,11 @@ export async function POST(request: Request) {
       });
 
       if (vehicle) {
+        // เตรียมข้อมูลอะไหล่สำหรับ Serial History
+        const partsUsed = parts && Array.isArray(parts) && parts.length > 0 
+          ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
+          : [];
+
         // บันทึก Serial History สำหรับการสร้างงานใหม่
         await tx.serialHistoryEntry.create({
           data: {
@@ -140,6 +148,8 @@ export async function POST(request: Request) {
             status: status,
             job_type: type,
             golf_course_name: vehicle.golf_course_name,
+            parts_used: partsUsed,  // เพิ่มข้อมูลอะไหล่
+            system: system,         // เพิ่มข้อมูลระบบ
             vehicle_id: vehicle.id,
             performed_by_id: user_id,
             related_job_id: newJob.id
@@ -256,6 +266,13 @@ export async function PUT(request: Request) {
         });
 
         if (vehicle) {
+          // เตรียมข้อมูลอะไหล่สำหรับ Serial History (ใช้ข้อมูลจาก parts ที่ส่งมาหรือจากงานที่มีอยู่)
+          const partsUsed = parts && Array.isArray(parts) && parts.length > 0 
+            ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
+            : updatedJob.parts && updatedJob.parts.length > 0
+            ? updatedJob.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used})`)
+            : [];
+
           await tx.serialHistoryEntry.create({
             data: {
               serial_number: vehicle.serial_number,
@@ -267,6 +284,8 @@ export async function PUT(request: Request) {
               status: status,
               job_type: updatedJob.type,
               golf_course_name: vehicle.golf_course_name,
+              parts_used: partsUsed,  // เพิ่มข้อมูลอะไหล่
+              system: system || updatedJob.system,  // เพิ่มข้อมูลระบบ
               vehicle_id: vehicle.id,
               performed_by_id: user_id || updatedJob.user_id,
               related_job_id: updatedJob.id

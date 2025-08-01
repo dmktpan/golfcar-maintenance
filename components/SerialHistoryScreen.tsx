@@ -26,6 +26,10 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showInactive, setShowInactive] = useState(true);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50); // เริ่มต้นที่ 50 รายการต่อหน้า
+  
   // Sort states
   const [sortBy] = useState<'date' | 'serial' | 'action'>('date');
     const [sortOrder] = useState<'asc' | 'desc'>('desc');
@@ -86,7 +90,8 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
       });
     } catch (error) {
       console.error('Error formatting date:', error, dateInput);
@@ -331,6 +336,18 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     return filtered;
   }, [allSerialHistory, user, searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder]);
 
+  // Pagination logic
+  const totalItems = filteredEntries.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive]);
+
   // Event handlers
   const handleViewJob = (jobId: string) => {
     const job = jobs.find(j => j.id === jobId);
@@ -361,6 +378,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     setFilterDateFrom('');
     setFilterDateTo('');
     setShowInactive(true);
+    setCurrentPage(1); // Reset pagination
   };
 
   // Calculate summary statistics
@@ -572,7 +590,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                 </tr>
               </thead>
               <tbody>
-                {filteredEntries.map((entry) => (
+                {paginatedEntries.map((entry) => (
                   <tr key={entry.id} className={`table-row ${!entry.is_active ? 'inactive-row' : ''}`}>
                     <td className="date-col">
                       <div className="date-display">
@@ -612,7 +630,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                             <span className="info-label">🔧 อะไหล่ที่ใช้:</span>
                             <div className="parts-list">
                               {entry.parts_used.map((part, index) => (
-                                <span key={`part-${entry.id}-${index}-${part.slice(0, 5)}`} className="part-item">{part}</span>
+                                <span key={`part-${entry.id}-${index}-${part.replace(/[^a-zA-Z0-9]/g, '')}`} className="part-item">{part}</span>
                               ))}
                             </div>
                           </div>

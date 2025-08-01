@@ -165,6 +165,8 @@ model SerialHistoryEntry {
   status               String?
   job_type             String?
   golf_course_name     String?
+  parts_used           String[]   // เพิ่มฟิลด์สำหรับเก็บรายการอะไหล่ที่ใช้
+  system               String?    // เพิ่มฟิลด์สำหรับเก็บระบบที่ซ่อม
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
   

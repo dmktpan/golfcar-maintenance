@@ -17,37 +17,137 @@ interface JobDetailsModalProps {
 }
 
 const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = [], onClose }: JobDetailsModalProps) => {
-  // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
-  const getPartName = (part: { part_id: string; part_name?: string }) => {
+  
+  // ปรับปรุงฟังก์ชัน getPartName ให้รองรับข้อมูลจากหลายแหล่ง
+  const getPartName = (part: any) => {
+    // ลำดับความสำคัญ: name > part_name > ค้นหาจาก part_id
+    if (part.name) {
+      return part.name;
+    }
+    
     if (part.part_name) {
       return part.part_name;
     }
     
-    for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
-      const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
-      if (partInfo) {
-        return partInfo.name;
+    // ถ้ามี part_id ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
+    if (part.part_id) {
+      for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
+        const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
+        if (partInfo) {
+          return partInfo.name;
+        }
       }
+      return `อะไหล่ ID: ${part.part_id}`;
     }
     
-    return `อะไหล่ ID: ${part.part_id}`;
+    // ถ้าไม่มีข้อมูลใดๆ
+    return 'ไม่ระบุชื่ออะไหล่';
   };
 
   // ฟังก์ชันสำหรับดึงข้อมูลอะไหล่จาก PartsUsageLog
   const getPartsFromUsageLog = () => {
-    if (!partsUsageLog || partsUsageLog.length === 0) return [];
+    if (!partsUsageLog || partsUsageLog.length === 0) {
+      return [];
+    }
     
-    return partsUsageLog
-      .filter(log => log.jobId === parseInt(job.id))
-      .map(log => ({
-        part_name: log.partName,
-        part_id: log.partId,
-        quantity_used: log.quantityUsed
-      }));
+    // หา logs ที่เกี่ยวข้องกับ job นี้
+    // ตรวจสอบทั้ง jobId ที่ตรงกันทั้งหมด และ jobId ที่เป็นส่วนหน้าของ ObjectId
+    let jobUsageLogs = partsUsageLog.filter(log => {
+      // ตรวจสอบว่า jobId ตรงกันทั้งหมด
+      const exactMatch = log.jobId === job.id;
+      // ตรวจสอบว่า job.id เริ่มต้นด้วย log.jobId หรือไม่ (สำหรับกรณีที่ jobId เป็นส่วนหน้า)
+      const startsWithJobId = job.id.startsWith(log.jobId.toString());
+      // ตรวจสอบว่า log.jobId เริ่มต้นด้วย job.id หรือไม่ (สำหรับกรณีที่ job.id เป็นส่วนหน้า)
+      const logStartsWithJobId = log.jobId.toString().startsWith(job.id);
+      
+      return exactMatch || startsWithJobId || logStartsWithJobId;
+    });
+    
+    // ถ้ายังไม่เจอ ให้ลองค้นหาจาก vehicleNumber
+    if (jobUsageLogs.length === 0) {
+      jobUsageLogs = partsUsageLog.filter(log => 
+        log.vehicleNumber === job.vehicle_number ||
+        log.vehicleSerial === job.vehicle_number
+      );
+    }
+    
+    if (!jobUsageLogs || jobUsageLogs.length === 0) {
+      return [];
+    }
+    
+    // แปลง PartsUsageLog เป็น format ที่ใช้แสดงผล
+    const parts = jobUsageLogs.map(log => ({
+      name: log.partName, // ใช้ partName แทน name
+      quantity_used: log.quantityUsed,
+      system: log.system
+    }));
+    
+    return parts;
   };
 
-  // ใช้ข้อมูลอะไหล่จาก job.parts หรือจาก PartsUsageLog
-  const partsToDisplay = (job.parts && job.parts.length > 0) ? job.parts : getPartsFromUsageLog();
+  // ใช้ข้อมูลอะไหล่จาก job.parts หรือจาก PartsUsageLog หรือจาก job.parts_used
+  let partsToDisplay = [];
+  
+  // ลำดับความสำคัญขึ้นอยู่กับสถานะงาน:
+  // - สำหรับงาน pending: job.parts > job.parts_used
+  // - สำหรับงาน approved/completed: PartsUsageLog > job.parts > job.parts_used
+  if (job.status === 'approved' || job.status === 'completed') {
+    // สำหรับงานที่อนุมัติแล้ว ใช้ข้อมูลจาก PartsUsageLog ก่อน
+    const partsFromUsageLog = getPartsFromUsageLog();
+    if (partsFromUsageLog.length > 0) {
+      partsToDisplay = partsFromUsageLog;
+    } else if (job.parts && job.parts.length > 0) {
+      partsToDisplay = job.parts;
+    } else if ((job as any).parts_used && (job as any).parts_used.length > 0) {
+      // แปลง parts_used string array เป็น object format
+      partsToDisplay = (job as any).parts_used.map((partString: string, index: number) => {
+        // แยกชื่อและจำนวนจาก string เช่น "แป้นเบรค (จำนวน: 1)"
+        const match = partString.match(/^(.+?)\s*\(จำนวน:\s*(\d+)\)$/);
+        if (match) {
+          return {
+            name: match[1].trim(),
+            quantity_used: parseInt(match[2]),
+            part_name: match[1].trim()
+          };
+        } else {
+          return {
+            name: partString,
+            quantity_used: 1,
+            part_name: partString
+          };
+        }
+      });
+    }
+  } else {
+    // สำหรับงาน pending ใช้ข้อมูลจาก job.parts ก่อน
+    if (job.parts && job.parts.length > 0) {
+      partsToDisplay = job.parts;
+    } else {
+      const partsFromUsageLog = getPartsFromUsageLog();
+      if (partsFromUsageLog.length > 0) {
+        partsToDisplay = partsFromUsageLog;
+      } else if ((job as any).parts_used && (job as any).parts_used.length > 0) {
+        // แปลง parts_used string array เป็น object format
+        partsToDisplay = (job as any).parts_used.map((partString: string, index: number) => {
+          // แยกชื่อและจำนวนจาก string เช่น "แป้นเบรค (จำนวน: 1)"
+          const match = partString.match(/^(.+?)\s*\(จำนวน:\s*(\d+)\)$/);
+          if (match) {
+            return {
+              name: match[1].trim(),
+              quantity_used: parseInt(match[2]),
+              part_name: match[1].trim()
+            };
+          } else {
+            return {
+              name: partString,
+              quantity_used: 1,
+              part_name: partString
+            };
+          }
+        });
+      }
+    }
+  }
 
   const getGolfCourseName = (courseId: string | undefined) => {
     if (!courseId) return 'ไม่ระบุ';
@@ -117,7 +217,8 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
       });
     } catch (error) {
       console.error('Error formatting date:', error, dateInput);
@@ -239,7 +340,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                   <span className={styles['label-icon']}>📅</span>
                   วันที่สร้าง:
                 </label>
-                <span>{formatDate(job.created_at)}</span>
+                <span>{formatDate((job as any).createdAt)}</span>
               </div>
               {job.updated_at && (
                 <div className={styles['info-item']}>
@@ -272,7 +373,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
           )}
 
           {/* อะไหล่ที่ใช้ */}
-          {partsToDisplay && partsToDisplay.length > 0 && (
+          {partsToDisplay && partsToDisplay.length > 0 ? (
             <div className={styles['job-info-section']}>
               <h3>
                 <span className={styles['section-icon']}>🔧</span>
@@ -293,7 +394,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                     </tr>
                   </thead>
                   <tbody>
-                    {partsToDisplay.map((part, index) => (
+                    {partsToDisplay.map((part: any, index: number) => (
                       <tr key={`part-${index}-${getPartName(part).slice(0, 10)}`}>
                         <td>{getPartName(part)}</td>
                         <td>
@@ -306,6 +407,18 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                   </tbody>
                 </table>
               </div>
+            </div>
+          ) : (
+            <div className={styles['job-info-section']}>
+              <h3>
+                <span className={styles['section-icon']}>🔧</span>
+                อะไหล่ที่ใช้
+              </h3>
+              <div className={styles['notes-container']}>
+                <div className={styles['notes-icon']}>ℹ️</div>
+                <p className={styles['notes-text']}>ไม่มีข้อมูลอะไหล่ที่ใช้ในงานนี้</p>
+              </div>
+
             </div>
           )}
 

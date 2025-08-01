@@ -534,24 +534,77 @@ function SupervisorPendingJobsScreen({
                                 </div>
                             )}
 
-                            {selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0 && (
-                                <div className={styles.detailsSection}>
-                                    <h4>อะไหล่ที่ใช้</h4>
-                                    <div className={styles.partsList}>
-                                        {selectedJobForDetails.parts.map((part, index) => (
-                                            <div key={`part-${index}-${part.part_name.slice(0, 10)}`} className={styles.partItem}>
-                                                <span className={styles.partName}>{part.part_name}</span>
-                                                <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {selectedJobForDetails.partsNotes && (
-                                        <div className={styles.partsNotes}>
-                                            <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            {(() => {
+                // สำหรับงาน pending: ใช้ข้อมูลอะไหล่จาก job.parts (ที่เลือกตอนสร้างงาน)
+                let partsToDisplay = [];
+                
+                // Debug: แสดงข้อมูลที่ได้รับ
+                console.log('SupervisorPendingJobsScreen - Job parts data:', {
+                    jobId: selectedJobForDetails.id,
+                    parts: selectedJobForDetails.parts,
+                    parts_used: (selectedJobForDetails as any).parts_used,
+                    partsNotes: selectedJobForDetails.partsNotes
+                });
+                
+                // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
+                // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
+                // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
+                if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
+                    partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
+                        part_name: part.part_name,
+                        quantity_used: part.quantity_used,
+                        id: part.part_id,
+                        source: 'parts'
+                    }));
+                } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
+                    // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
+                    partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
+                        part_name: partString,
+                        quantity_used: 1,
+                        id: `parts_used-${index}`,
+                        source: 'parts_used'
+                    }));
+                }
+
+                return partsToDisplay.length > 0 ? (
+                    <div className={styles.detailsSection}>
+                        <h4>อะไหล่ที่ใช้</h4>
+                        <div className={styles.partsList}>
+                             {partsToDisplay.map((part: any, index: number) => (
+                                 <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
+                                     <span className={styles.partName}>{part.part_name}</span>
+                                     <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
+                                     {part.source && (
+                                         <span className={styles.partSource}>({part.source})</span>
+                                     )}
+                                 </div>
+                             ))}
+                        </div>
+                        {selectedJobForDetails.partsNotes && (
+                            <div className={styles.partsNotes}>
+                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className={styles.detailsSection}>
+                        <h4>อะไหล่ที่ใช้</h4>
+                        <div className={styles.noPartsMessage}>
+                            ไม่มีข้อมูลอะไหล่ที่เลือก
+                            <br />
+                            <small>
+                                Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ, 
+                                parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
+                            </small>
+                        </div>
+                        {selectedJobForDetails.partsNotes && (
+                            <div className={styles.partsNotes}>
+                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
                             {selectedJobForDetails.remarks && (
                                 <div className={styles.detailsSection}>

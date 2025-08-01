@@ -202,7 +202,7 @@ function PartsManagementScreen({
                     'โดย': log.usedBy || 'ไม่ระบุ'
                 };
             });
-            fileName = `ประวัติอะไหล่_ทั้งหมด_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+            fileName = `ประวัติอะไหล่_ทั้งหมด_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
             
         } else if (exportType === 'serial') {
             // Export ตาม Serial Number
@@ -224,7 +224,7 @@ function PartsManagementScreen({
                         'โดย': log.usedBy || 'ไม่ระบุ'
                     };
                 });
-            fileName = `ประวัติอะไหล่_${selectedExportSerial}_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
+            fileName = `ประวัติอะไหล่_${selectedExportSerial}_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
             
         } else if (exportType === 'golfCourse') {
             // Export ตามสนามกอล์ฟ
@@ -291,7 +291,8 @@ function PartsManagementScreen({
             month: '2-digit', 
             day: '2-digit',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
         });
     };
 
@@ -301,7 +302,8 @@ function PartsManagementScreen({
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
         });
     };
 

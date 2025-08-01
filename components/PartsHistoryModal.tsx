@@ -79,7 +79,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
     const groups: { [date: string]: PartsUsageLog[] } = {};
     
     filteredLogs.forEach(log => {
-      const dateKey = new Date(log.usedDate).toLocaleDateString('th-TH');
+      const dateKey = new Date(log.usedDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' });
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -94,14 +94,26 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
   }, [serialPartsLogs]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      
+      // ตรวจสอบว่าเป็น valid date หรือไม่
+      if (isNaN(date.getTime())) {
+        return 'วันที่ไม่ถูกต้อง';
+      }
+      
+      return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, 'Input:', dateString);
+      return 'วันที่ไม่ถูกต้อง';
+    }
   };
 
   const getJobTypeLabel = (type: string) => {

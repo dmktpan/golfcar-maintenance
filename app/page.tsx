@@ -141,9 +141,21 @@ export default function HomePage() {
                   break;
                 case 'jobs':
                   setJobs(result.data as Job[]);
+                  console.log('💼 Jobs sample data:', (result.data as Job[]).slice(0, 3).map(job => ({
+                    id: job.id,
+                    vehicle_number: job.vehicle_number,
+                    status: job.status
+                  })));
+                  console.log('💼 Jobs total count:', (result.data as Job[]).length);
                   break;
                 case 'partsUsageLog':
                   setPartsUsageLog(result.data as PartsUsageLog[]);
+                  console.log('🔧 PartsUsageLog sample data:', (result.data as PartsUsageLog[]).slice(0, 3));
+                  console.log('🔧 PartsUsageLog total count:', (result.data as PartsUsageLog[]).length);
+                  
+                  // แสดง jobId ทั้งหมดใน PartsUsageLog
+                  const jobIds = Array.from(new Set((result.data as PartsUsageLog[]).map(log => log.jobId)));
+                  console.log('🔧 Unique jobIds in PartsUsageLog:', jobIds);
                   break;
                 case 'serialHistory':
                   setSerialHistory(result.data as SerialHistoryEntry[]);
@@ -195,6 +207,8 @@ export default function HomePage() {
         console.log('- Vehicles:', vehicles.length);
         console.log('- Jobs:', jobs.length);
         console.log('- Parts:', parts.length);
+        console.log('- Parts Usage Log:', partsUsageLog.length);
+        console.log('- Serial History:', serialHistory.length);
         console.log('- Loading state will be set to false');
 
       } catch (error) {
@@ -237,7 +251,9 @@ export default function HomePage() {
         golfCourses: golfCourses.length,
         vehicles: vehicles.length,
         jobs: jobs.length,
-        parts: parts.length
+        parts: parts.length,
+        partsUsageLog: partsUsageLog.length,
+        serialHistory: serialHistory.length
       });
     }
   }, [loading]);
@@ -287,9 +303,17 @@ export default function HomePage() {
     };
   }, [user]); // dependency เฉพาะ user เพื่อให้ reset เมื่อ login/logout
 
-  // ฟังก์ชันสำหรับ Force Refresh ข้อมูลทั้งหมด
+  // ฟังก์ชันสำหรับ Force Refresh ข้อมูลทั้งหมด (with debounce)
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const forceRefreshAllData = async () => {
+    // ป้องกันการเรียกซ้ำๆ
+    if (isRefreshing) {
+      console.log('⏳ Already refreshing data, skipping...');
+      return;
+    }
+    
     try {
+      setIsRefreshing(true);
       console.log('🔄 Force refreshing all data...');
       
       // โหลดข้อมูลทั้งหมดใหม่แบบ parallel
@@ -350,6 +374,8 @@ export default function HomePage() {
       console.log('✅ Force refresh completed');
     } catch (error) {
       console.error('❌ Error during force refresh:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -551,9 +577,14 @@ export default function HomePage() {
       const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
 
       if (job.parts && job.parts.length > 0) {
+        // Get current Thailand time
+        const now = new Date();
+        const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
+        const usedDate = thailandTime.toISOString();
+        
         for (const part of job.parts) {
           const logData = {
-            jobId: parseInt(jobId),
+            jobId: jobId, // เก็บเป็น string แทน parseInt
             partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
             partId: `PART-${part.part_id}`,
             quantityUsed: part.quantity_used,
@@ -561,7 +592,7 @@ export default function HomePage() {
             vehicleSerial: vehicle?.serial_number || 'ไม่ระบุ',
             golfCourseName: golfCourse?.name || 'ไม่ระบุ',
             usedBy: job.userName,
-            usedDate: job.updated_at || new Date().toISOString().split('T')[0],
+            usedDate: usedDate,
             notes: partsNotes || job.remarks || 'ไม่มีหมายเหตุ',
             jobType: job.type,
             system: job.system || 'ไม่ระบุ'
@@ -595,12 +626,22 @@ export default function HomePage() {
         return;
       }
 
+      // เตรียมข้อมูลอะไหล่จาก job.parts
+      const partsUsed = job.parts && job.parts.length > 0 
+        ? job.parts.map(part => `${part.part_name} (จำนวน: ${part.quantity_used})`)
+        : [];
+
+      // Get current Thailand time
+      const now = new Date();
+      const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
+      const actionDate = thailandTime.toISOString();
+
       const serialHistoryData = {
         serial_number: vehicle.serial_number,
         vehicle_id: parseInt(job.vehicle_id),
         vehicle_number: job.vehicle_number,
         action_type: 'maintenance',
-        action_date: new Date().toISOString(),
+        action_date: actionDate,
         details: `${job.type} - ${job.system || 'ไม่ระบุระบบ'}: ${job.remarks || 'ไม่มีหมายเหตุ'}`,
         performed_by: user.name,
         performed_by_id: parseInt(job.user_id),
@@ -610,7 +651,9 @@ export default function HomePage() {
         related_job_id: parseInt(jobId),
         job_type: job.type,
         status: 'completed',
-        change_type: 'status_change'
+        change_type: 'status_change',
+        parts_used: partsUsed,  // เพิ่มข้อมูลอะไหล่
+        system: job.system      // เพิ่มข้อมูลระบบ
       };
 
       console.log('🔄 Creating serial history entry:', serialHistoryData);
@@ -676,6 +719,11 @@ export default function HomePage() {
       });
 
       // เตรียมข้อมูลที่จำเป็นสำหรับ API
+      // Get current Thailand time
+      const now = new Date();
+      const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
+      const updatedAt = thailandTime.toISOString();
+      
       const updateData = {
         id: currentJob.id, // เพิ่ม id เพื่อให้ External API รู้ว่าต้องอัปเดตงานไหน
         status,
@@ -695,7 +743,7 @@ export default function HomePage() {
         images: currentJob.images,
         parts: currentJob.parts, // เพิ่มข้อมูลอะไหล่
         created_at: currentJob.created_at,
-        updated_at: new Date().toISOString() // อัปเดต timestamp
+        updated_at: updatedAt // อัปเดต timestamp ด้วยเวลาไทย
       };
 
       console.log('📤 Sending API request to update job status...', {
@@ -806,18 +854,22 @@ export default function HomePage() {
             });
           }
           
-          // โหลดข้อมูล Serial History ใหม่
-          const serialHistoryResult = await serialHistoryApi.getAll();
-          if (serialHistoryResult.success) {
-            setSerialHistory(serialHistoryResult.data as SerialHistoryEntry[]);
-            console.log('✅ Serial history data refreshed successfully');
-          }
-          
-          // โหลดข้อมูล Parts Usage Logs ใหม่
-          const partsUsageLogsResult = await partsUsageLogsApi.getAll();
-          if (partsUsageLogsResult.success) {
-            setPartsUsageLog(partsUsageLogsResult.data as PartsUsageLog[]);
-            console.log('✅ Parts usage logs data refreshed successfully');
+          // โหลดข้อมูล Serial History และ Parts Usage Logs เฉพาะเมื่อ approve เท่านั้น
+          if (status === 'approved') {
+            const [serialHistoryResult, partsUsageLogsResult] = await Promise.allSettled([
+              serialHistoryApi.getAll(),
+              partsUsageLogsApi.getAll()
+            ]);
+            
+            if (serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value.success) {
+              setSerialHistory(serialHistoryResult.value.data as SerialHistoryEntry[]);
+              console.log('✅ Serial history data refreshed successfully');
+            }
+            
+            if (partsUsageLogsResult.status === 'fulfilled' && partsUsageLogsResult.value.success) {
+              setPartsUsageLog(partsUsageLogsResult.value.data as PartsUsageLog[]);
+              console.log('✅ Parts usage logs data refreshed successfully');
+            }
           }
         } catch (refreshError) {
           console.error('❌ Error refreshing data:', refreshError);
@@ -1075,12 +1127,11 @@ export default function HomePage() {
         )}
         {view === 'history' && (
           <HistoryScreen 
-            setView={handleSetView}
             vehicles={vehicles}
-            parts={parts}
             jobs={jobs}
             users={users}
             golfCourses={golfCourses}
+            serialHistory={serialHistory}
           />
         )}
         {view === 'multi_assign' && (
