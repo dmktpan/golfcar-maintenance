@@ -16,6 +16,7 @@
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "@types/multer": "^2.0.0",
+    "@types/xlsx": "^0.0.35",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",

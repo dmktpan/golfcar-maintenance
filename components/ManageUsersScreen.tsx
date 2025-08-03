@@ -12,21 +12,6 @@ interface ManageUsersScreenProps {
 }
 
 const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: ManageUsersScreenProps) => {
-    // ตรวจสอบสิทธิ์ admin หรือ supervisor
-    if (user.role !== 'admin' && user.role !== 'supervisor') {
-        return (
-            <div className="card">
-                <div className="page-header">
-                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
-                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
-                </div>
-                <div className="no-access-message">
-                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นที่สามารถจัดการผู้ใช้ได้</p>
-                </div>
-            </div>
-        );
-    }
-
     const isAdmin = user.role === 'admin';
     const isSupervisor = user.role === 'supervisor';
 
@@ -49,6 +34,21 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
     });
     const [editMode, setEditMode] = useState(false);
     const [editUserId, setEditUserId] = useState<number | null>(null);
+
+    // ตรวจสอบสิทธิ์ admin หรือ supervisor
+    if (user.role !== 'admin' && user.role !== 'supervisor') {
+        return (
+            <div className="card">
+                <div className="page-header">
+                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                </div>
+                <div className="no-access-message">
+                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นที่สามารถจัดการผู้ใช้ได้</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

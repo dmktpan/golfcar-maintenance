@@ -38,23 +38,10 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
     const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
     const [editMode, setEditMode] = useState(false);
 
-    // ตรวจสอบสิทธิ์ admin
-    if (user.role !== 'admin') {
-        return (
-            <div className="card">
-                <div className="page-header">
-                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
-                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
-                </div>
-                <div className="no-access-message">
-                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถจัดการผู้ใช้และสิทธิ์ได้</p>
-                </div>
-            </div>
-        );
-    }
-
     // กรองผู้ใช้ที่มีสิทธิ์ระดับ supervisor หรือ admin เท่านั้น
     useEffect(() => {
+        if (user.role !== 'admin') return; // ถ้าไม่ใช่ admin ไม่ต้องทำอะไร
+        
         const admins = users.filter(user => 
             user.role === 'admin' || user.role === 'supervisor'
         );
@@ -75,7 +62,22 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         }
         
         setFilteredUsers(filtered);
-    }, [users, searchTerm, selectedRole]);
+    }, [users, searchTerm, selectedRole, user.role]);
+
+    // ตรวจสอบสิทธิ์ admin
+    if (user.role !== 'admin') {
+        return (
+            <div className="card">
+                <div className="page-header">
+                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                </div>
+                <div className="no-access-message">
+                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถจัดการผู้ใช้และสิทธิ์ได้</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleSelectUser = (user: User) => {
         setSelectedUser(user);
