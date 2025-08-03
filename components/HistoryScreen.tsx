@@ -14,6 +14,24 @@ interface HistoryScreenProps {
     serialHistory: SerialHistoryEntry[];
 }
 
+interface PartsUsageLog {
+    id: string;
+    jobId: string;
+    partId: string;
+    partName: string;
+    quantityUsed: number;
+    vehicleNumber: string;
+    usedBy: string;
+    usedDate: string;
+}
+
+interface PartsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    parts: PartsUsageLog[];
+    jobId: string;
+}
+
 const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVehicle, setFilterVehicle] = useState('');
@@ -25,6 +43,10 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     const [sortField, setSortField] = useState<'created_at' | 'vehicle_number' | 'type' | 'status'>('created_at');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+    const [partsData, setPartsData] = useState<Map<string, PartsUsageLog[]>>(new Map());
+    const [partsModalOpen, setPartsModalOpen] = useState(false);
+    const [selectedJobParts, setSelectedJobParts] = useState<PartsUsageLog[]>([]);
+    const [selectedJobId, setSelectedJobId] = useState<string>('');
     
     // ใช้ข้อมูลงานจากระบบแทนข้อมูล mock
     // กรองเฉพาะงานที่เสร็จสิ้นแล้วหรืออนุมัติแล้วเพื่อแสดงในประวัติ
@@ -33,6 +55,54 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
         job.status === 'approved' || 
         job.status === 'rejected'
     );
+
+    // ฟังก์ชันดึงข้อมูล parts usage logs
+    const fetchPartsData = async () => {
+        try {
+            console.log('🔍 Fetching parts usage logs...');
+            const response = await fetch('/api/proxy/parts-usage-logs');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            console.log('📦 Parts usage logs response:', result);
+
+            if (result.success && result.data) {
+                // สร้าง Map ของ parts โดยใช้ jobId เป็น key
+                const partsMap = new Map<string, PartsUsageLog[]>();
+                
+                result.data.forEach((log: any) => {
+                    if (log.jobId) {
+                        const partsLog: PartsUsageLog = {
+                            id: log.id,
+                            jobId: log.jobId,
+                            partId: log.partId,
+                            partName: log.partName,
+                            quantityUsed: log.quantityUsed,
+                            vehicleNumber: log.vehicleNumber,
+                            usedBy: log.usedBy,
+                            usedDate: log.usedDate
+                        };
+
+                        if (!partsMap.has(log.jobId)) {
+                            partsMap.set(log.jobId, []);
+                        }
+                        partsMap.get(log.jobId)!.push(partsLog);
+                    }
+                });
+
+                console.log('🔧 Parts map created:', partsMap);
+                setPartsData(partsMap);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching parts data:', error);
+        }
+    };
+
+    // โหลดข้อมูล parts เมื่อ component mount
+    useEffect(() => {
+        fetchPartsData();
+    }, []);
 
     // กรองพนักงานตามสนามที่เลือก
     const filteredUsers = useMemo(() => {
@@ -124,19 +194,28 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
 
     // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
     const getPartName = (part: { part_id: string; part_name?: string }) => {
+        console.log('🔍 getPartName called with:', part);
+        
         // ใช้ part_name ที่บันทึกไว้เป็นหลัก
         if (part.part_name) {
+            console.log('✅ Found part_name:', part.part_name);
             return part.part_name;
         }
         
+        console.log('⚠️ No part_name, searching in PARTS_BY_SYSTEM_DISPLAY for part_id:', part.part_id);
+        console.log('📊 PARTS_BY_SYSTEM_DISPLAY:', PARTS_BY_SYSTEM_DISPLAY);
+        
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
-        for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
+        for (const [systemName, system] of Object.entries(PARTS_BY_SYSTEM_DISPLAY)) {
+            console.log(`🔍 Searching in system ${systemName}:`, system);
             const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
             if (partInfo) {
+                console.log('✅ Found in PARTS_BY_SYSTEM_DISPLAY:', partInfo.name);
                 return partInfo.name;
             }
         }
         
+        console.log('❌ Part not found, returning default');
         return 'ไม่ระบุ';
     };
 
@@ -250,55 +329,172 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
         setExpandedRows(newExpanded);
     };
 
-    const exportToExcel = () => {
-        const exportData = filteredAndSortedJobs.map(job => ({
-            'วันที่': formatDateForExcel((job as any).createdAt || job.created_at),
-            'เบอร์รถ': job.vehicle_number,
-            'Serial รถ': getVehicleSerial(job.vehicle_id),
-            'Serial แบต': job.battery_serial || getVehicleSerial(job.vehicle_id),
-            'สนาม': getGolfCourseName(job.golf_course_id),
-            'ประเภทงาน': job.type,
-            'ระบบ': job.system ? getSystemDisplayName(job.system) : '-',
-            'อะไหล่ที่ใช้': job.parts && job.parts.length > 0 ? 
-                job.parts.map(p => `${getPartName(p)} (จำนวน ${p.quantity_used})`).join(', ') : '-',
-            'บันทึกอะไหล่': job.partsNotes || '-',
-            'ผู้ดำเนินการ': job.userName,
-            'สถานะ': getStatusText(job.status),
-            'หมายเหตุ': job.remarks || '-',
-            'มอบหมายโดย': job.assigned_by_name || '-',
-            'วันที่อัปเดต': ((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) ? formatDateForExcel((job as any).updatedAt || job.updated_at) : '-'
-        }));
+    const exportToExcel = async () => {
+        console.log('🔍 Debug Excel Export - Sample jobs data:', filteredAndSortedJobs.slice(0, 3).map(job => ({
+            id: job.id,
+            vehicle_number: job.vehicle_number,
+            parts: job.parts,
+            partsLength: job.parts?.length || 0
+        })));
 
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'ประวัติการซ่อมบำรุง');
-        
-        // Set column widths
-        const colWidths = [
-            { wch: 15 }, // วันที่
-            { wch: 10 }, // เบอร์รถ
-            { wch: 15 }, // Serial รถ
-            { wch: 15 }, // Serial แบต
-            { wch: 20 }, // สนาม
-            { wch: 12 }, // ประเภทงาน
-            { wch: 20 }, // ระบบ
-            { wch: 35 }, // อะไหล่ที่ใช้
-            { wch: 25 }, // บันทึกอะไหล่
-            { wch: 20 }, // ผู้ดำเนินการ
-            { wch: 12 }, // สถานะ
-            { wch: 25 }, // หมายเหตุ
-            { wch: 20 }, // มอบหมายโดย
-            { wch: 15 }  // วันที่อัปเดต
-        ];
-        ws['!cols'] = colWidths;
+        try {
+            // ดึงข้อมูล parts usage logs
+            console.log('🔧 Fetching parts usage logs...');
+            const partsResponse = await fetch('/api/proxy/parts-usage-logs');
+            const partsData = await partsResponse.json();
+            console.log('🔧 Parts usage logs response:', partsData);
 
-        const fileName = `ประวัติการซ่อมบำรุง_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+            // สร้าง map ของ parts ตาม jobId
+            const partsMap = new Map();
+            if (partsData.success && partsData.data && Array.isArray(partsData.data)) {
+                partsData.data.forEach((partLog: any) => {
+                    if (partLog.jobId) {
+                        if (!partsMap.has(partLog.jobId)) {
+                            partsMap.set(partLog.jobId, []);
+                        }
+                        partsMap.get(partLog.jobId).push(partLog);
+                    }
+                });
+            }
+            console.log('🔧 Parts map created:', partsMap.size, 'jobs have parts');
+
+            const exportData = filteredAndSortedJobs.map(job => {
+                // ดึงข้อมูล parts จาก parts usage logs
+                const jobParts = partsMap.get(job.id) || [];
+                console.log(`🔧 Job ${job.vehicle_number} (${job.id}) parts from logs:`, jobParts);
+
+                // สร้างข้อความอะไหล่ที่ใช้
+                let partsText = '-';
+                if (jobParts.length > 0) {
+                    partsText = jobParts.map((partLog: any) => {
+                        const partName = partLog.partName || getPartName({ part_id: partLog.partId });
+                        return `${partName} (จำนวน ${partLog.quantityUsed || 1})`;
+                    }).join(', ');
+                } else if (job.parts && job.parts.length > 0) {
+                    // fallback ใช้ข้อมูลจาก job.parts ถ้ามี
+                    partsText = job.parts.map(p => {
+                        const partName = getPartName(p);
+                        return `${partName} (จำนวน ${p.quantity_used})`;
+                    }).join(', ');
+                } else if ((job as any).parts_used && Array.isArray((job as any).parts_used) && (job as any).parts_used.length > 0) {
+                     // fallback ใช้ข้อมูลจาก job.parts_used ถ้ามี
+                     partsText = (job as any).parts_used.join(', ');
+                }
+
+                return {
+                    'วันที่': formatDateForExcel((job as any).createdAt || job.created_at),
+                    'เบอร์รถ': job.vehicle_number,
+                    'Serial รถ': getVehicleSerial(job.vehicle_id),
+                    'Serial แบต': job.battery_serial || getVehicleSerial(job.vehicle_id),
+                    'สนาม': getGolfCourseName(job.golf_course_id),
+                    'ประเภทงาน': job.type,
+                    'ระบบ': job.system ? getSystemDisplayName(job.system) : '-',
+                    'อะไหล่ที่ใช้': partsText,
+                    'บันทึกอะไหล่': job.partsNotes || '-',
+                    'ผู้ดำเนินการ': job.userName,
+                    'สถานะ': getStatusText(job.status),
+                    'หมายเหตุ': job.remarks || '-',
+                    'มอบหมายโดย': job.assigned_by_name || '-',
+                    'วันที่อัปเดต': ((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) ? formatDateForExcel((job as any).updatedAt || job.updated_at) : '-'
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'ประวัติการซ่อมบำรุง');
+            
+            // Set column widths
+            const colWidths = [
+                { wch: 15 }, // วันที่
+                { wch: 10 }, // เบอร์รถ
+                { wch: 15 }, // Serial รถ
+                { wch: 15 }, // Serial แบต
+                { wch: 20 }, // สนาม
+                { wch: 12 }, // ประเภทงาน
+                { wch: 20 }, // ระบบ
+                { wch: 35 }, // อะไหล่ที่ใช้
+                { wch: 25 }, // บันทึกอะไหล่
+                { wch: 20 }, // ผู้ดำเนินการ
+                { wch: 12 }, // สถานะ
+                { wch: 25 }, // หมายเหตุ
+                { wch: 20 }, // มอบหมายโดย
+                { wch: 15 }  // วันที่อัปเดต
+            ];
+            ws['!cols'] = colWidths;
+
+            const fileName = `ประวัติการซ่อมบำรุง_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        } catch (error) {
+            console.error('❌ Error exporting to Excel:', error);
+            alert('เกิดข้อผิดพลาดในการ export ข้อมูล');
+        }
     };
 
     const getSortIcon = (field: typeof sortField) => {
         if (sortField !== field) return '↕️';
         return sortDirection === 'asc' ? '↑' : '↓';
+    };
+
+    // ฟังก์ชันเปิด parts modal
+    const openPartsModal = (jobId: string) => {
+        const jobParts = partsData.get(jobId) || [];
+        setSelectedJobParts(jobParts);
+        setSelectedJobId(jobId);
+        setPartsModalOpen(true);
+    };
+
+    // ฟังก์ชันปิด parts modal
+    const closePartsModal = () => {
+        setPartsModalOpen(false);
+        setSelectedJobParts([]);
+        setSelectedJobId('');
+    };
+
+    // Parts Modal Component
+    const PartsModal = ({ isOpen, onClose, parts, jobId }: PartsModalProps) => {
+        if (!isOpen) return null;
+
+        return (
+            <div className="modal-overlay" onClick={onClose}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-header">
+                        <h3>🔧 อะไหล่ที่ใช้ในงาน</h3>
+                        <button className="modal-close" onClick={onClose}>×</button>
+                    </div>
+                    <div className="modal-body">
+                        {parts.length > 0 ? (
+                            <div className="parts-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่ออะไหล่</th>
+                                            <th>จำนวน</th>
+                                            <th>ใช้โดย</th>
+                                            <th>วันที่ใช้</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {parts.map((part) => (
+                                            <tr key={part.id}>
+                                                <td className="part-name">{part.partName}</td>
+                                                <td className="quantity">{part.quantityUsed}</td>
+                                                <td>{part.usedBy}</td>
+                                                <td>{formatDate(part.usedDate)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="no-parts-message">
+                                <div className="no-parts-icon">📦</div>
+                                <p>ไม่มีข้อมูลอะไหล่สำหรับงานนี้</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -468,20 +664,21 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                         </td>
                                         <td>{job.system ? getSystemDisplayName(job.system) : '-'}</td>
                                         <td className="parts-summary">
-                                            {job.parts && job.parts.length > 0 ? (
-                                                <div className="parts-preview">
-                                                    {job.parts.slice(0, 2).map((part, index) => (
-                                                        <span key={`${job.id}-${part.part_id}-${index}`} className="part-item">
-                                                            {getPartName(part)} ({part.quantity_used})
-                                                        </span>
-                                                    ))}
-                                                    {job.parts.length > 2 && (
-                                                        <span className="more-parts">และอีก {job.parts.length - 2} รายการ</span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="no-parts">-</span>
-                                            )}
+                                            {(() => {
+                                                const jobParts = partsData.get(job.id) || [];
+                                                if (jobParts.length > 0) {
+                                                    return (
+                                                        <button 
+                                                            className="parts-button"
+                                                            onClick={() => openPartsModal(job.id)}
+                                                        >
+                                                            🔧 {jobParts.length} รายการ
+                                                        </button>
+                                                    );
+                                                } else {
+                                                    return <span className="no-parts">-</span>;
+                                                }
+                                            })()}
                                         </td>
                                         <td>{job.userName}</td>
                                         <td>
@@ -528,23 +725,29 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                             )}
                                                         </div>
 
-                                                        {job.parts && job.parts.length > 0 && (
-                                                            <div className="detail-section">
-                                                                <h4>อะไหล่ที่ใช้</h4>
-                                                                <ul className="parts-list">
-                                                                    {job.parts.map((part, index) => (
-                                                                        <li key={`${job.id}-${part.part_id}-${index}`}>
-                                                                            {getPartName(part)} (จำนวน {part.quantity_used})
-                                                                        </li>
-                                                                    ))}
-                                                                </ul>
-                                                                {job.partsNotes && (
-                                                                    <div className="detail-item">
-                                                                        <strong>บันทึกอะไหล่:</strong> {job.partsNotes}
+                                                        {(() => {
+                                                            const jobParts = partsData.get(job.id) || [];
+                                                            if (jobParts.length > 0) {
+                                                                return (
+                                                                    <div className="detail-section">
+                                                                        <h4>อะไหล่ที่ใช้</h4>
+                                                                        <ul className="parts-list">
+                                                                            {jobParts.map((part) => (
+                                                                                <li key={part.id}>
+                                                                                    {part.partName} (จำนวน {part.quantityUsed})
+                                                                                </li>
+                                                                            ))}
+                                                                        </ul>
+                                                                        {job.partsNotes && (
+                                                                            <div className="detail-item">
+                                                                                <strong>บันทึกอะไหล่:</strong> {job.partsNotes}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
 
                                                         {job.images && job.images.length > 0 && (
                                                             <div className="detail-section">
@@ -576,6 +779,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                     </table>
                 )}
             </div>
+
+            {/* Parts Modal */}
+            <PartsModal 
+                isOpen={partsModalOpen}
+                onClose={closePartsModal}
+                parts={selectedJobParts}
+                jobId={selectedJobId}
+            />
 
             <style jsx>{`
                 .header-actions {
@@ -738,6 +949,150 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                 .no-parts {
                     color: #6c757d;
                     font-style: italic;
+                }
+
+                .parts-button {
+                    background: #e3f2fd;
+                    color: #1565c0;
+                    border: 1px solid #bbdefb;
+                    padding: 6px 12px;
+                    border-radius: 16px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+
+                .parts-button:hover {
+                    background: #bbdefb;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    padding: 20px;
+                }
+
+                .modal-content {
+                    background: white;
+                    border-radius: 12px;
+                    max-width: 600px;
+                    width: 100%;
+                    max-height: 80vh;
+                    overflow: hidden;
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                    animation: modalSlideIn 0.3s ease-out;
+                }
+
+                @keyframes modalSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-20px) scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+
+                .modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px 24px;
+                    border-bottom: 1px solid #dee2e6;
+                    background: #f8f9fa;
+                }
+
+                .modal-header h3 {
+                    margin: 0;
+                    color: #495057;
+                    font-size: 18px;
+                    font-weight: 600;
+                }
+
+                .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #6c757d;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+
+                .modal-close:hover {
+                    background: #e9ecef;
+                    color: #495057;
+                }
+
+                .modal-body {
+                    padding: 24px;
+                    max-height: 60vh;
+                    overflow-y: auto;
+                }
+
+                .parts-table table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 0;
+                }
+
+                .parts-table th {
+                    background: #f8f9fa;
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: 600;
+                    border-bottom: 2px solid #dee2e6;
+                    color: #495057;
+                    font-size: 14px;
+                }
+
+                .parts-table td {
+                    padding: 12px;
+                    border-bottom: 1px solid #dee2e6;
+                    font-size: 14px;
+                }
+
+                .parts-table .part-name {
+                    font-weight: 500;
+                    color: #495057;
+                }
+
+                .parts-table .quantity {
+                    text-align: center;
+                    font-weight: 600;
+                    color: #1565c0;
+                }
+
+                .no-parts-message {
+                    text-align: center;
+                    padding: 40px 20px;
+                    color: #6c757d;
+                }
+
+                .no-parts-icon {
+                    font-size: 48px;
+                    margin-bottom: 16px;
+                }
+
+                .no-parts-message p {
+                    margin: 0;
+                    font-size: 16px;
                 }
 
                 .image-gallery {

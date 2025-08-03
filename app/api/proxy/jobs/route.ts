@@ -14,9 +14,15 @@ export async function GET(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    // เพิ่ม query parameter เพื่อขอข้อมูล parts ด้วย
+    // ลองใช้ parameter ที่แตกต่างกันสำหรับการขอข้อมูล parts
     const url = new URL(`${EXTERNAL_API_BASE}/jobs`);
+    // ลองหลาย parameter ที่อาจใช้ได้
     url.searchParams.append('include', 'parts');
+    url.searchParams.append('with_parts', 'true');
+    url.searchParams.append('expand', 'parts');
+    url.searchParams.append('parts', 'true');
+    
+    console.log('🔗 Final URL being called:', url.toString());
     
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -32,6 +38,17 @@ export async function GET(request: NextRequest) {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ External API success');
+      console.log('📦 Raw response data structure:', {
+        hasData: !!data.data,
+        dataType: Array.isArray(data.data) ? 'array' : typeof data.data,
+        dataLength: Array.isArray(data.data) ? data.data.length : 'N/A',
+        sampleJob: data.data && data.data[0] ? {
+          id: data.data[0].id,
+          hasPartsField: 'parts' in data.data[0],
+          partsValue: data.data[0].parts,
+          allFields: Object.keys(data.data[0])
+        } : null
+      });
       
       // Debug: ตรวจสอบข้อมูล parts ที่ได้รับ
       if (data && data.data && Array.isArray(data.data)) {

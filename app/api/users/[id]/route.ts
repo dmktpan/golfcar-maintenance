@@ -70,10 +70,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }, { status: 400 });
     }
 
-    if (!['staff', 'supervisor', 'admin'].includes(role)) {
+    if (!['staff', 'supervisor', 'central', 'admin'].includes(role)) {
       return NextResponse.json({
         success: false,
-        message: 'Role must be staff, supervisor, or admin'
+        message: 'Role must be staff, supervisor, central, or admin'
       }, { status: 400 });
     }
 

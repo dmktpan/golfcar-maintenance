@@ -8,9 +8,28 @@ interface ManageUsersScreenProps {
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     golfCourses: GolfCourse[];
+    user: User;
 }
 
-const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUsersScreenProps) => {
+const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: ManageUsersScreenProps) => {
+    // ตรวจสอบสิทธิ์ admin หรือ supervisor
+    if (user.role !== 'admin' && user.role !== 'supervisor') {
+        return (
+            <div className="card">
+                <div className="page-header">
+                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                </div>
+                <div className="no-access-message">
+                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นที่สามารถจัดการผู้ใช้ได้</p>
+                </div>
+            </div>
+        );
+    }
+
+    const isAdmin = user.role === 'admin';
+    const isSupervisor = user.role === 'supervisor';
+
     const [newUser, setNewUser] = useState<{
         code: string;
         username: string;
@@ -91,7 +110,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
         try {
             if (editMode && editUserId !== null) {
                 // Update existing user
-                const response = await fetch(`/api/proxy/users/${editUserId}`, {
+                const response = await fetch(`/api/users/${editUserId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -113,7 +132,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                 setEditUserId(null);
             } else {
                 // Add new user
-                const response = await fetch('/api/proxy/users', {
+                const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -164,7 +183,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
     const handleDeleteUser = async (userId: number) => {
         if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
             try {
-                const response = await fetch(`/api/proxy/users/${userId}`, {
+                const response = await fetch(`/api/users/${userId}`, {
                     method: 'DELETE'
                 });
 
@@ -254,7 +273,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                     >
                         <option value="staff">พนักงานทั่วไป</option>
                         <option value="supervisor">หัวหน้างาน</option>
-                        <option value="admin">ผู้ดูแลระบบ</option>
+                        {isAdmin && <option value="central">ส่วนกลาง</option>}
+                        {isAdmin && <option value="admin">ผู้ดูแลระบบ</option>}
                     </select>
                 </div>
                 <div className="form-group">
@@ -273,8 +293,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                     </select>
                 </div>
 
-                {/* แสดงช่อง password สำหรับ Admin และหัวหน้า */}
-                {(newUser.role === 'admin' || newUser.role === 'supervisor') && (
+                {/* แสดงช่อง password สำหรับ Admin, หัวหน้า และส่วนกลาง */}
+                {(newUser.role === 'admin' || newUser.role === 'supervisor' || newUser.role === 'central') && (
                     <div className="form-group">
                         <label htmlFor="password">
                             รหัสผ่าน {editMode ? '(เว้นว่างหากไม่ต้องการเปลี่ยน)' : ''}
@@ -327,6 +347,14 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                             หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br/>
                             <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
                         </small>
+                    </div>
+                )}
+
+                {newUser.role === 'central' && (
+                    <div className="form-group full-width">
+                        <div className="info-box">
+                            <strong>หมายเหตุ:</strong> ส่วนกลางจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟและสร้างงานสำหรับทุกสนามได้
+                        </div>
                     </div>
                 )}
 
@@ -387,23 +415,32 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses }: ManageUser
                                 <td>
                                     {user.role === 'staff' && 'พนักงานทั่วไป'}
                                     {user.role === 'supervisor' && 'หัวหน้างาน'}
+                                    {user.role === 'central' && 'ส่วนกลาง'}
                                     {user.role === 'admin' && 'ผู้ดูแลระบบ'}
                                 </td>
                                 <td>{getGolfCourseName(user.golf_course_id)}</td>
                                 <td>{getManagedCoursesText(user)}</td>
                                 <td>
-                                    <button 
-                                        className="btn-secondary btn-sm" 
-                                        onClick={() => handleEditUser(user)}
-                                    >
-                                        แก้ไข
-                                    </button>
-                                    <button 
-                                        className="btn-danger btn-sm" 
-                                        onClick={() => handleDeleteUser(user.id)}
-                                    >
-                                        ลบ
-                                    </button>
+                                    {/* Supervisor ไม่สามารถแก้ไขหรือลบ Admin ได้ */}
+                                    {(isAdmin || user.role !== 'admin') && (
+                                        <>
+                                            <button 
+                                                className="btn-secondary btn-sm" 
+                                                onClick={() => handleEditUser(user)}
+                                            >
+                                                แก้ไข
+                                            </button>
+                                            <button 
+                                                className="btn-danger btn-sm" 
+                                                onClick={() => handleDeleteUser(user.id)}
+                                            >
+                                                ลบ
+                                            </button>
+                                        </>
+                                    )}
+                                    {isSupervisor && user.role === 'admin' && (
+                                        <span className="text-muted">ไม่มีสิทธิ์</span>
+                                    )}
                                 </td>
                             </tr>
                         ))}

@@ -73,18 +73,18 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    if (!['staff', 'supervisor', 'admin'].includes(role)) {
+    if (!['staff', 'supervisor', 'central', 'admin'].includes(role)) {
       return NextResponse.json({
         success: false,
-        message: 'Role must be staff, supervisor, or admin'
+        message: 'Role must be staff, supervisor, central, or admin'
       }, { status: 400 });
     }
 
-    // ตรวจสอบ password สำหรับ admin และ supervisor
-    if ((role === 'admin' || role === 'supervisor') && !password) {
+    // ตรวจสอบ password สำหรับ admin, supervisor และ central
+    if ((role === 'admin' || role === 'supervisor' || role === 'central') && !password) {
       return NextResponse.json({
         success: false,
-        message: 'Password is required for admin and supervisor roles'
+        message: 'Password is required for admin, supervisor, and central roles'
       }, { status: 400 });
     }
 

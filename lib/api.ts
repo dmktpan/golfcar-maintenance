@@ -157,7 +157,7 @@ export const golfCoursesApi = {
   }),
 };
 
-// Users API
+// Users API (External API via proxy)
 export const usersApi = {
   getAll: () => apiCall('/users'),
   getById: (id: string) => apiCall(`/users/${id}`),
@@ -172,6 +172,40 @@ export const usersApi = {
   delete: (id: string) => apiCall(`/users/${id}`, {
     method: 'DELETE',
   }),
+};
+
+// Local Users API (Internal API - supports central role)
+export const localUsersApi = {
+  getAll: async () => {
+    const response = await fetch('/api/users');
+    return await response.json();
+  },
+  getById: async (id: string) => {
+    const response = await fetch(`/api/users/${id}`);
+    return await response.json();
+  },
+  create: async (data: any) => {
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+  update: async (id: string, data: any) => {
+    const response = await fetch(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  },
+  delete: async (id: string) => {
+    const response = await fetch(`/api/users/${id}`, {
+      method: 'DELETE',
+    });
+    return await response.json();
+  },
 };
 
 // Vehicles API

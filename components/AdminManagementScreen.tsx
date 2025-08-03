@@ -10,6 +10,7 @@ interface AdminManagementScreenProps {
     updateUserPermissions: (userId: number, permissions: string[]) => void;
     getUserPermissions: (userId: number) => string[];
     golfCourses: GolfCourse[];
+    user: User;
 }
 
 interface Permission {
@@ -29,13 +30,28 @@ const MOCK_PERMISSIONS: Permission[] = [
     { id: 'manage_vehicles', name: 'จัดการรถกอล์ฟ', description: 'สามารถเพิ่ม แก้ไข และลบข้อมูลรถกอล์ฟ', roles: ['admin', 'supervisor'] },
 ];
 
-const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions, getUserPermissions, golfCourses }: AdminManagementScreenProps) => {
+const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions, getUserPermissions, golfCourses, user }: AdminManagementScreenProps) => {
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
     const [editMode, setEditMode] = useState(false);
+
+    // ตรวจสอบสิทธิ์ admin
+    if (user.role !== 'admin') {
+        return (
+            <div className="card">
+                <div className="page-header">
+                    <h2>ไม่มีสิทธิ์เข้าถึง</h2>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                </div>
+                <div className="no-access-message">
+                    <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้ เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถจัดการผู้ใช้และสิทธิ์ได้</p>
+                </div>
+            </div>
+        );
+    }
 
     // กรองผู้ใช้ที่มีสิทธิ์ระดับ supervisor หรือ admin เท่านั้น
     useEffect(() => {

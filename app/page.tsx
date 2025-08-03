@@ -3,11 +3,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { User, Job, Part, GolfCourse, Vehicle, PartsUsageLog, SerialHistoryEntry, View, JobStatus } from '@/lib/data';
-import { golfCoursesApi, usersApi, vehiclesApi, partsApi, jobsApi, partsUsageLogsApi, serialHistoryApi } from '@/lib/api';
+import { golfCoursesApi, vehiclesApi, partsApi, jobsApi, usersApi, localUsersApi, partsUsageLogsApi, serialHistoryApi } from '@/lib/api';
 import LoginScreen from '@/components/LoginScreen';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import CreateJobScreen from '@/components/CreateJobScreen';
+import CentralCreateJobScreen from '@/components/CentralCreateJobScreen';
 import PartsManagementScreen from '@/components/PartsManagementScreen';
 import AdminDashboard from '@/components/AdminDashboard';
 import WelcomeBanner from '@/components/WelcomeBanner';
@@ -64,7 +65,7 @@ export default function HomePage() {
         try {
           console.log('🔍 ทดสอบการเชื่อมต่อเซิร์ฟเวอร์...');
           // ใช้ API function แทนการเรียก fetch โดยตรง
-          const healthCheck = await usersApi.getAll();
+          const healthCheck = await localUsersApi.getAll();
           if (healthCheck.success) {
             setConnectionStatus('connected');
             console.log('✅ การเชื่อมต่อเซิร์ฟเวอร์สำเร็จ');
@@ -328,7 +329,7 @@ export default function HomePage() {
         serialHistoryApi.getAll(),
         partsUsageLogsApi.getAll(),
         vehiclesApi.getAll(),
-        usersApi.getAll()
+        localUsersApi.getAll()
       ]);
 
       // อัพเดต Jobs
@@ -1106,6 +1107,16 @@ export default function HomePage() {
             jobs={jobs}
           />
         )}
+        {view === 'central_create_job' && user.role === 'central' && (
+          <CentralCreateJobScreen 
+            user={user} 
+            onJobCreate={handleCreateJob} 
+            setView={handleSetView}
+            vehicles={vehicles}
+            golfCourses={golfCourses}
+            jobs={jobs}
+          />
+        )}
         {view === 'parts_management' && (
           <PartsManagementScreen 
             partsUsageLog={partsUsageLog}
@@ -1115,14 +1126,15 @@ export default function HomePage() {
           />
         )}
         {view === 'admin_dashboard' && (
-          <AdminDashboard setView={handleSetView} />
+          <AdminDashboard setView={handleSetView} user={user} />
         )}
-        {view === 'manage_users' && (
+        {view === 'manage_users' && (user.role === 'admin' || user.role === 'supervisor') && (
           <ManageUsersScreen 
             users={users} 
             setUsers={setUsers} 
             setView={handleSetView}
             golfCourses={golfCourses}
+            user={user}
           />
         )}
         {view === 'history' && (
@@ -1157,7 +1169,7 @@ export default function HomePage() {
             partsUsageLog={partsUsageLog}
           />
         )}
-        {view === 'admin_management' && (
+        {view === 'admin_management' && user.role === 'admin' && (
           <AdminManagementScreen 
             setView={handleSetView}
             users={users}
@@ -1165,6 +1177,7 @@ export default function HomePage() {
             updateUserPermissions={updateUserPermissions}
             getUserPermissions={getUserPermissions}
             golfCourses={golfCourses}
+            user={user}
           />
         )}
         {view === 'golf_course_management' && (

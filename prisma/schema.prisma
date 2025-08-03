@@ -190,6 +190,7 @@ enum UserRole {
   staff
   technician
   viewer
+  central
 }
 
 enum JobType {

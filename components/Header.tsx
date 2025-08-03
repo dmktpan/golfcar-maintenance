@@ -13,6 +13,7 @@ interface HeaderProps {
 
 const Header = ({ user, onLogout, setView }: HeaderProps) => {
     const isAdminOrSuper = user.role === 'admin' || user.role === 'supervisor';
+    const isCentral = user.role === 'central';
 
     const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, view: View) => {
         e.preventDefault();
@@ -28,14 +29,29 @@ const Header = ({ user, onLogout, setView }: HeaderProps) => {
         <header className={styles.header}>
             <div 
                 className={styles.headerTitle} 
-                onClick={() => setView(isAdminOrSuper ? 'admin_dashboard' : 'dashboard')} 
+                onClick={() => setView(isAdminOrSuper ? 'admin_dashboard' : isCentral ? 'central_create_job' : 'dashboard')} 
                 style={{ cursor: 'pointer' }}
             >
                 <GolfCartIcon />
                 <span>GolfCart Maintenance</span>
             </div>
             <div className={styles.userInfo}>
-                {isAdminOrSuper ? (
+                {isCentral ? (
+                    <nav className={styles.headerNav}>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์">
+                            <ProfileIcon /> <span>โปรไฟล์</span>
+                        </a>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'central_create_job')} title="สร้างงานส่วนกลาง">
+                            <AdminDashboardIcon /> <span>สร้างงานส่วนกลาง</span>
+                        </a>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัติการซ่อมบำรุง">
+                            <HistoryIcon /> <span>ประวัติซ่อมบำรุง</span>
+                        </a>
+                        <a href="#" onClick={handleLogoutClick} title="ออกจากระบบ">
+                            <LogoutIcon /> <span>ออกจากระบบ ({user.name})</span>
+                        </a>
+                    </nav>
+                ) : isAdminOrSuper ? (
                     <nav className={styles.headerNav}>
                         <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์">
                             <ProfileIcon /> <span>โปรไฟล์</span>

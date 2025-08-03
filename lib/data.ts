@@ -1,10 +1,11 @@
 
 // Types
-export type UserRole = 'admin' | 'supervisor' | 'technician' | 'viewer' | 'staff';
+export type UserRole = 'admin' | 'supervisor' | 'technician' | 'viewer' | 'staff' | 'central';
 
 export type View = 
   | 'dashboard'
   | 'create_job'
+  | 'central_create_job'
   | 'parts_management'
   | 'admin_dashboard'
   | 'manage_users'

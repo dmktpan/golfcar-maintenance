@@ -38,7 +38,7 @@ export async function POST(request: Request) {
             { code: { equals: identifier, mode: 'insensitive' } },
             { username: { equals: identifier, mode: 'insensitive' } }
           ],
-          role: { in: ['admin', 'supervisor'] }
+          role: { in: ['admin', 'supervisor', 'central'] }
         }
       });
 
