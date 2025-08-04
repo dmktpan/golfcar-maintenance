@@ -208,7 +208,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
         for (const [systemName, system] of Object.entries(PARTS_BY_SYSTEM_DISPLAY)) {
             console.log(`🔍 Searching in system ${systemName}:`, system);
-            const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
+            const partInfo = system.find((p: any) => p.id.toString() === part.part_id.toString());
             if (partInfo) {
                 console.log('✅ Found in PARTS_BY_SYSTEM_DISPLAY:', partInfo.name);
                 return partInfo.name;

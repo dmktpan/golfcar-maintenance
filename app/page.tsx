@@ -587,7 +587,7 @@ export default function HomePage() {
           const logData = {
             jobId: jobId, // เก็บเป็น string แทน parseInt
             partName: part.part_name || `อะไหล่ ID: ${part.part_id}`,
-            partId: `PART-${part.part_id}`,
+            partId: part.part_id, // ไม่ใช้ parseInt กับ ObjectID
             quantityUsed: part.quantity_used,
             vehicleNumber: job.vehicle_number,
             vehicleSerial: vehicle?.serial_number || 'ไม่ระบุ',
@@ -639,17 +639,17 @@ export default function HomePage() {
 
       const serialHistoryData = {
         serial_number: vehicle.serial_number,
-        vehicle_id: parseInt(job.vehicle_id),
+        vehicle_id: job.vehicle_id, // ไม่ใช้ parseInt กับ ObjectID
         vehicle_number: job.vehicle_number,
         action_type: 'maintenance',
         action_date: actionDate,
         details: `${job.type} - ${job.system || 'ไม่ระบุระบบ'}: ${job.remarks || 'ไม่มีหมายเหตุ'}`,
         performed_by: user.name,
-        performed_by_id: parseInt(job.user_id),
-        golf_course_id: parseInt(job.golf_course_id),
+        performed_by_id: job.user_id, // ไม่ใช้ parseInt กับ ObjectID
+        golf_course_id: job.golf_course_id, // ไม่ใช้ parseInt กับ ObjectID
         golf_course_name: golfCourse.name,
         is_active: true,
-        related_job_id: parseInt(jobId),
+        related_job_id: jobId, // ไม่ใช้ parseInt กับ ObjectID
         job_type: job.type,
         status: 'completed',
         change_type: 'status_change',

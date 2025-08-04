@@ -440,8 +440,15 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     if (bulkUploadData.length === 0) return;
 
     const newVehicles = bulkUploadData.map((data, index) => {
-      // สร้าง ID ใหม่โดยใช้ timestamp และ index เพื่อให้ unique
-      const newId = `${Date.now()}_${index}`;
+      // สร้าง ObjectID ที่ถูกต้องสำหรับ MongoDB (24 ตัวอักษร)
+      const generateObjectId = () => {
+        const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+        const randomPart = Array.from({length: 16}, () => 
+          Math.floor(Math.random() * 16).toString(16)
+        ).join('');
+        return timestamp + randomPart;
+      };
+      const newId = generateObjectId();
       const golfCourse = golfCourses.find(c => c.id === String(data.golf_course_id));
       
       return {
@@ -460,6 +467,15 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
     setVehicles([...vehicles, ...newVehicles]);
     
+    // สร้าง ObjectID ที่ถูกต้องสำหรับ performed_by_id
+    const generatePerformedByObjectId = () => {
+      const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+      const randomPart = Array.from({length: 16}, () => 
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      return timestamp + randomPart;
+    };
+
     // บันทึกประวัตการอัปโหลดหลายคัน
     newVehicles.forEach(vehicle => {
       addSerialHistoryEntry({
@@ -470,7 +486,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         action_date: new Date().toISOString(),
         details: `อัปโหลดรถจากไฟล์ - หมายเลขรถ: ${vehicle.vehicle_number}, สนาม: ${vehicle.golf_course_name}`,
         performed_by: 'administrator',
-        performed_by_id: "1",
+        performed_by_id: generatePerformedByObjectId(),
         golf_course_id: vehicle.golf_course_id,
         golf_course_name: vehicle.golf_course_name,
         is_active: true

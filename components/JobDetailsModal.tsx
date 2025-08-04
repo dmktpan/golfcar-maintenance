@@ -32,7 +32,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
     // ถ้ามี part_id ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
     if (part.part_id) {
       for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
-        const partInfo = system.find((p: any) => p.id === parseInt(part.part_id));
+        const partInfo = system.find((p: any) => p.id.toString() === part.part_id.toString());
         if (partInfo) {
           return partInfo.name;
         }

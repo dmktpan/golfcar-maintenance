@@ -6,7 +6,7 @@ import ImageUpload from './ImageUpload';
 
 // Interface สำหรับ local state ของอะไหล่ที่เลือก
 interface LocalSelectedPart {
-    id: number;
+    id: string | number;
     name: string;
     quantity: number;
     unit: string;
@@ -92,9 +92,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         return job.parts?.map(part => {
             // หาข้อมูลอะไหล่จาก PARTS_BY_SYSTEM
             const allParts = Object.values(PARTS_BY_SYSTEM).flat();
-            const partInfo = allParts.find(p => p.id === parseInt(part.part_id));
+            const partInfo = allParts.find(p => p.id.toString() === part.part_id.toString());
             return {
-                id: parseInt(part.part_id),
+                id: part.part_id, // ไม่ใช้ parseInt กับ ObjectID
                 name: part.part_name || partInfo?.name || 'ไม่ทราบชื่อ',
                 quantity: part.quantity_used,
                 unit: partInfo?.unit || 'ชิ้น'
@@ -150,7 +150,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
     };
 
-    const handleRemovePart = (partId: number) => {
+    const handleRemovePart = (partId: string | number) => {
         setSelectedParts(prev => prev.filter(p => p.id !== partId));
     };
 
