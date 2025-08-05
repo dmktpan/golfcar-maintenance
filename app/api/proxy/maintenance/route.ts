@@ -1,7 +1,7 @@
 // app/api/proxy/maintenance/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const EXTERNAL_API_BASE = 'http://golfcar.go2kt.com:8080/api';
+const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
 export async function GET(request: NextRequest) {
   try {
