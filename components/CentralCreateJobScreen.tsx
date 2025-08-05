@@ -209,6 +209,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
         }
         
         try {
+            // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
             const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
                 user_id: user.id.toString(),
                 userName: user.name,
@@ -217,42 +218,25 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 golf_course_id: selectedVehicle.golf_course_id,
                 type: jobType,
                 status: 'pending',
-                battery_serial: batterySerial,
                 parts: selectedParts.map(part => ({
                     part_id: part.id.toString(),
                     quantity_used: part.quantity,
                     part_name: part.name
                 })),
-                system: jobType === 'PM' ? system : undefined,
-                subTasks: subTasks.length > 0 ? subTasks : undefined,
-                partsNotes: partsNotes || undefined,
-                remarks: remarks || undefined,
-                bmCause: jobType === 'BM' ? bmCause as BMCause : undefined,
-                images: images.length > 0 ? images : undefined
+                system: system || '',
+                subTasks,
+                partsNotes: partsNotes,
+                remarks: remarks,
+                battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
+                images: images, // เพิ่มรูปภาพ
+                ...(jobType === 'BM' && bmCause && { bmCause })
             };
-
-            fetch('/api/jobs', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newJob)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    onJobCreate(data.job);
-                    alert('สร้างงานสำเร็จ!');
-                    setView('dashboard');
-                } else {
-                    throw new Error(data.error || 'เกิดข้อผิดพลาด');
-                }
-            })
-            .catch(error => {
-                console.error('Error creating job:', error);
-                alert('เกิดข้อผิดพลาดในการสร้างงาน: ' + error.message);
-            });
+            
+            onJobCreate(newJob as Job);
+            
         } catch (error) {
+            alert('เกิดข้อผิดพลาดในการสร้างงาน กรุณาลองใหม่อีกครั้ง');
             console.error('Error creating job:', error);
-            alert('เกิดข้อผิดพลาดในการสร้างงาน');
         }
     };
 
