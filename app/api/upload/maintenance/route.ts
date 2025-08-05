@@ -96,7 +96,7 @@ async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> 
 async function uploadToExternalAPI(buffer: Buffer, filename: string): Promise<string> {
   try {
     const formData = new FormData();
-    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    const blob = new Blob([new Uint8Array(buffer)], { type: 'image/jpeg' });
     formData.append('files', blob, filename);
 
     console.log(`🌐 Uploading ${filename} to external API...`);
