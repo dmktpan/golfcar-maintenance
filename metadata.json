@@ -1,8 +1,0 @@
-{
-  "name": "GolfCart Maintenance",
-  "description": "A system for logging, approving, and tracking golf cart repairs and managing spare parts inventory.",
-  "requestFramePermissions": [
-    "camera"
-  ],
-  "prompt": ""
-}
