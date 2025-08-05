@@ -1188,7 +1188,7 @@ export default function HomePage() {
             vehicles={vehicles}
             setVehicles={setVehicles}
             serialHistory={serialHistory}
-            addSerialHistoryEntry={addSerialHistoryEntry}
+            forceRefreshAllData={forceRefreshAllData}
           />
         )}
         {view === 'assigned_job_form' && selectedJobForForm && (

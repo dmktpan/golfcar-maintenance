@@ -103,7 +103,7 @@ const MOCK_VEHICLES = [
     model: 'Drive2', 
     year: 2024,
     battery_serial: 'BAT-2024-003', 
-    status: 'parked'
+    status: 'ready'
   },
   { 
     serial_number: 'WL-2024-004', 
@@ -114,7 +114,7 @@ const MOCK_VEHICLES = [
     model: 'DS', 
     year: 2023,
     battery_serial: 'BAT-2024-004', 
-    status: 'spare'
+    status: 'retired'
   },
   
   // Vehicles สำหรับกรีนวัลเลย์ (4 คัน)
@@ -149,7 +149,7 @@ const MOCK_VEHICLES = [
     model: 'G29', 
     year: 2023,
     battery_serial: 'BAT-2024-007', 
-    status: 'inactive', 
+    status: 'maintenance', 
     transfer_date: '2024-02-10T00:00:00.000Z'
   },
   { 
@@ -161,7 +161,7 @@ const MOCK_VEHICLES = [
     model: 'Freedom', 
     year: 2024,
     battery_serial: 'BAT-2024-008', 
-    status: 'spare'
+    status: 'retired'
   }
 ];
 

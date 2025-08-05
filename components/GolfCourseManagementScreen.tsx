@@ -14,7 +14,7 @@ interface GolfCourseManagementScreenProps {
   vehicles: Vehicle[];
   setVehicles: (vehicles: Vehicle[]) => void;
   serialHistory: SerialHistoryEntry[];
-  addSerialHistoryEntry: (entry: Omit<SerialHistoryEntry, 'id'>) => void;
+  forceRefreshAllData?: () => Promise<void>;
 }
 
 interface BulkUploadData {
@@ -29,7 +29,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   setGolfCourses, 
   vehicles, 
   setVehicles,
-  addSerialHistoryEntry
+  forceRefreshAllData
 }) => {
   // Remove conflicting useState declarations and use props instead
   const [activeTab, setActiveTab] = useState<'courses' | 'vehicles'>('courses');
@@ -64,9 +64,9 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   const getStatusLabel = (status: string) => {
     const statusLabels: Record<string, string> = {
       'active': 'ใช้งาน',
-      'inactive': 'ไม่ใช้งาน',
-      'parked': 'ฝากจอด',
-      'spare': 'สแปร์'
+      'ready': 'พร้อมใช้',
+      'maintenance': 'รอซ่อม',
+      'retired': 'เสื่อมแล้ว'
     };
     return statusLabels[status] || 'ใช้งาน';
   };
@@ -241,19 +241,34 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           setVehicles([...vehicles, result.data]);
           
           // บันทึกประวัตการเพิ่มรถใหม่
-          addSerialHistoryEntry({
-            serial_number: result.data.serial_number,
-            vehicle_id: result.data.id,
-            vehicle_number: result.data.vehicle_number,
-            action_type: 'registration',
-            action_date: new Date().toISOString(),
-            details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name || 'ไม่ระบุ'}`,
-            performed_by: 'administrator',
-            performed_by_id: "1",
-            golf_course_id: result.data.golf_course_id,
-            golf_course_name: golfCourse?.name || 'ไม่ระบุ',
-            is_active: true
-          });
+          try {
+            await fetch('/api/proxy/serial-history', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                serial_number: result.data.serial_number,
+                vehicle_id: result.data.id,
+                vehicle_number: result.data.vehicle_number,
+                action_type: 'registration',
+                action_date: new Date().toISOString(),
+                details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name || 'ไม่ระบุ'}`,
+                performed_by: 'administrator',
+                performed_by_id: "000000000000000000000001",
+                golf_course_id: result.data.golf_course_id,
+                golf_course_name: golfCourse?.name || 'ไม่ระบุ',
+                is_active: true
+              })
+            });
+            
+            // รีเฟรชข้อมูลทั้งหมดหลังจากบันทึก Serial History
+            if (forceRefreshAllData) {
+              await forceRefreshAllData();
+            }
+          } catch (error) {
+            console.error('Error logging serial history:', error);
+          }
           
           setNewVehicle({ serial_number: '', vehicle_number: '', golf_course_id: '' });
           setShowAddVehicleForm(false);
@@ -269,92 +284,127 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     }
   };
 
-  const handleUpdateVehicle = () => {
-    if (editingVehicle) {
-      // ตรวจสอบข้อมูลซ้ำ (ยกเว้นรถที่กำลังแก้ไข)
-      const validation = validateVehicleData(
-        editingVehicle.serial_number, 
-        editingVehicle.vehicle_number, 
-        editingVehicle.id
-      );
-      
-      if (!validation.isValid) {
-        let errorMessage = 'ไม่สามารถบันทึกได้:\n';
-        if (validation.errors.serial) {
-          errorMessage += `• ${validation.errors.serial}\n`;
-        }
-        if (validation.errors.vehicleNumber) {
-          errorMessage += `• ${validation.errors.vehicleNumber}\n`;
-        }
-        alert(errorMessage);
-        return; // หยุดการทำงานถ้าพบข้อมูลซ้ำ
+  const handleUpdateVehicle = async () => {
+    if (!editingVehicle) return;
+
+    // ตรวจสอบข้อมูลซ้ำ (ยกเว้นรถที่กำลังแก้ไข)
+    const validation = validateVehicleData(
+      editingVehicle.serial_number, 
+      editingVehicle.vehicle_number, 
+      editingVehicle.id
+    );
+    
+    if (!validation.isValid) {
+      let errorMessage = 'ไม่สามารถบันทึกได้:\n';
+      if (validation.errors.serial) {
+        errorMessage += `• ${validation.errors.serial}\n`;
       }
+      if (validation.errors.vehicleNumber) {
+        errorMessage += `• ${validation.errors.vehicleNumber}\n`;
+      }
+      alert(errorMessage);
+      return;
+    }
+
+    try {
+      // เตรียมข้อมูลสำหรับส่งไป API
+      const updateData = {
+        id: editingVehicle.id,
+        serial_number: editingVehicle.serial_number.trim(),
+        vehicle_number: editingVehicle.vehicle_number.trim(),
+        golf_course_id: editingVehicle.golf_course_id,
+        golf_course_name: golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ',
+        status: editingVehicle.status || 'active',
+        brand: editingVehicle.brand || 'ไม่ระบุ',
+        model: editingVehicle.model || 'ไม่ระบุ',
+        year: editingVehicle.year || new Date().getFullYear(),
+        battery_serial: editingVehicle.battery_serial?.trim() || ''
+      };
+
+      console.log('🔄 Updating vehicle with data:', updateData);
+
+      // อัปเดตข้อมูลผ่าน proxy API
+      const response = await fetch(`/api/proxy/vehicles/${editingVehicle.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Update failed:', error);
+        alert(`เกิดข้อผิดพลาดในการอัปเดต: ${error.message || 'ไม่ทราบสาเหตุ'}`);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('✅ Update successful:', result);
+
+      // อัปเดต state ด้วยข้อมูลที่ส่งไป (ไม่ต้องพึ่งพา API response)
+      const updatedVehicle = result.data || result;
       
-      const oldVehicle = vehicles.find(v => v.id === editingVehicle.id);
+      // หารถที่กำลังแก้ไข
+      const currentVehicle = vehicles.find(v => v.id === editingVehicle.id);
       
+      // เตรียมข้อมูลที่อัปเดตแล้วสำหรับ state โดยใช้ข้อมูลที่เราส่งไป
+      const vehicleForState: Vehicle = {
+        ...currentVehicle!,
+        ...updateData // ใช้ข้อมูลที่เราส่งไปโดยตรง (รวมถึงสถานะที่ถูกต้อง)
+      };
+      
+      console.log('🔄 Updating vehicle state with:', vehicleForState);
+      
+      // อัปเดต vehicles state
       setVehicles(vehicles.map(vehicle => 
-        vehicle.id === editingVehicle.id ? editingVehicle : vehicle
+        vehicle.id === editingVehicle.id ? vehicleForState : vehicle
       ));
-      
-      // บันทึกประวัตการเปลี่ยนแปลง
-      if (oldVehicle) {
-        const changes: string[] = [];
-        
-        if (oldVehicle.serial_number !== editingVehicle.serial_number) {
-          changes.push(`หมายเลขซีเรียล: ${oldVehicle.serial_number} → ${editingVehicle.serial_number}`);
-        }
-        if (oldVehicle.vehicle_number !== editingVehicle.vehicle_number) {
-          changes.push(`หมายเลขรถ: ${oldVehicle.vehicle_number} → ${editingVehicle.vehicle_number}`);
-        }
-        if (oldVehicle.golf_course_id !== editingVehicle.golf_course_id) {
-          const oldCourse = golfCourses.find(c => c.id === oldVehicle.golf_course_id)?.name || 'ไม่ระบุ';
-          const newCourse = golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ';
-          changes.push(`สนาม: ${oldCourse} → ${newCourse}`);
-        }
-        if (oldVehicle.status !== editingVehicle.status) {
-          changes.push(`สถานะ: ${getStatusLabel(oldVehicle.status || 'active')} → ${getStatusLabel(editingVehicle.status || 'active')}`);
-        }
-        
-        if (changes.length > 0) {
-          addSerialHistoryEntry({
-            serial_number: editingVehicle.serial_number,
-            vehicle_id: editingVehicle.id,
-            vehicle_number: editingVehicle.vehicle_number,
-            action_type: 'data_edit',
-            action_date: new Date().toISOString(),
-            details: `แก้ไขข้อมูลรถ - ${changes.join(', ')}`,
-            performed_by: 'administrator',
-            performed_by_id: "1",
-            golf_course_id: editingVehicle.golf_course_id,
-            golf_course_name: golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ',
-            is_active: true
-          });
-        }
-      }
-      
+
+      // ปิด editing mode
       setEditingVehicle(null);
+      
+      // ไม่ต้อง refresh ข้อมูลทั้งหมด เพื่อไม่ให้เขียนทับสถานะรถที่เพิ่งอัปเดต
+      // Serial History จะถูกสร้างโดย API อัตโนมัติแล้ว
+      console.log('✅ Vehicle updated successfully, Serial History created automatically');
+      
+      alert('อัปเดตข้อมูลรถสำเร็จ');
+
+    } catch (error) {
+      console.error('❌ Error updating vehicle:', error);
+      alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล กรุณาลองใหม่อีกครั้ง');
     }
   };
 
-  const handleDeleteVehicle = (id: string) => {
+  const handleDeleteVehicle = async (id: string) => {
     if (confirm('คุณแน่ใจหรือไม่ที่จะลบรถคันนี้?')) {
       const vehicleToDelete = vehicles.find(v => v.id === id);
       
       if (vehicleToDelete) {
-        // บันทึกประวัตการลบ
-        addSerialHistoryEntry({
-          serial_number: vehicleToDelete.serial_number,
-          vehicle_id: vehicleToDelete.id,
-          vehicle_number: vehicleToDelete.vehicle_number,
-          action_type: 'data_delete',
-          action_date: new Date().toISOString(),
-          details: `ลบรถออกจากระบบ - หมายเลขรถ: ${vehicleToDelete.vehicle_number}, สนาม: ${vehicleToDelete.golf_course_name}`,
-          performed_by: 'administrator',
-          performed_by_id: "1",
-          golf_course_id: vehicleToDelete.golf_course_id,
-          golf_course_name: vehicleToDelete.golf_course_name,
-          is_active: false
-        });
+        // Serial history จะถูกสร้างโดย Backend API อัตโนมัติเมื่อลบรถ
+        // ไม่ต้องสร้างซ้ำที่ Frontend
+        
+        // เรียก API เพื่อลบรถ (ใช้ External API เท่านั้น)
+        try {
+          const response = await fetch(`/api/proxy/vehicles/${vehicleToDelete.id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            // รีเฟรชข้อมูลทั้งหมดหลังจากลบสำเร็จ
+            if (forceRefreshAllData) {
+              await forceRefreshAllData();
+            }
+          } else {
+            const error = await response.json();
+            alert(`เกิดข้อผิดพลาดในการลบรถ: ${error.message}`);
+            return;
+          }
+        } catch (error) {
+          console.error('Error deleting vehicle:', error);
+          alert('เกิดข้อผิดพลาดในการลบรถ');
+          return;
+        }
       }
       
       setVehicles(vehicles.filter(vehicle => vehicle.id !== id));
@@ -436,62 +486,72 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     reader.readAsText(file);
   };
 
-  const handleBulkUpload = () => {
+  const handleBulkUpload = async () => {
     if (bulkUploadData.length === 0) return;
 
-    const newVehicles = bulkUploadData.map((data, index) => {
-      // สร้าง ObjectID ที่ถูกต้องสำหรับ MongoDB (24 ตัวอักษร)
-      const generateObjectId = () => {
-        const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
-        const randomPart = Array.from({length: 16}, () => 
-          Math.floor(Math.random() * 16).toString(16)
-        ).join('');
-        return timestamp + randomPart;
-      };
-      const newId = generateObjectId();
-      const golfCourse = golfCourses.find(c => c.id === String(data.golf_course_id));
+    const successfulVehicles = [];
+    const failedVehicles = [];
+
+    // บันทึกรถแต่ละคันลงฐานข้อมูลผ่าน API
+    for (const data of bulkUploadData) {
+      try {
+        const golfCourse = golfCourses.find(c => c.id === String(data.golf_course_id));
+        
+        const vehicleData = {
+          serial_number: data.serial_number,
+          vehicle_number: data.vehicle_number,
+          golf_course_id: String(data.golf_course_id),
+          golf_course_name: golfCourse?.name || 'ไม่ระบุ',
+          brand: 'ไม่ระบุ',
+          model: 'ไม่ระบุ',
+          year: new Date().getFullYear(),
+          status: 'active' as const
+        };
+
+        // เรียก API เพื่อบันทึกรถลงฐานข้อมูล
+        const vehicleResponse = await fetch('/api/proxy/vehicles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(vehicleData)
+        });
+
+        if (vehicleResponse.ok) {
+          const vehicleResult = await vehicleResponse.json();
+          const savedVehicle = vehicleResult.data;
+          successfulVehicles.push(savedVehicle);
+          
+          console.log(`✅ บันทึกรถสำเร็จ: ${savedVehicle.vehicle_number}`);
+        } else {
+          const error = await vehicleResponse.json();
+          console.error(`❌ ไม่สามารถบันทึกรถ ${data.vehicle_number}: ${error.message}`);
+          failedVehicles.push({ ...data, error: error instanceof Error ? error.message : String(error) });
+        }
+      } catch (error) {
+         console.error(`❌ Error saving vehicle ${data.vehicle_number}:`, error);
+         failedVehicles.push({ ...data, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
+    // อัปเดต state ด้วยรถที่บันทึกสำเร็จ
+    if (successfulVehicles.length > 0) {
+      setVehicles([...vehicles, ...successfulVehicles]);
       
-      return {
-        id: newId,
-        serial_number: data.serial_number,
-        vehicle_number: data.vehicle_number,
-        golf_course_id: String(data.golf_course_id),
-        golf_course_name: golfCourse?.name || 'ไม่ระบุ',
-        brand: 'ไม่ระบุ',
-        model: 'ไม่ระบุ',
-        year: new Date().getFullYear(),
-        status: 'active' as const,
-        created_at: new Date().toISOString()
-      };
-    });
+      // รีเฟรชข้อมูลทั้งหมดหลังจากอัปโหลดสำเร็จ
+      if (forceRefreshAllData) {
+        await forceRefreshAllData();
+      }
+    }
 
-    setVehicles([...vehicles, ...newVehicles]);
-    
-    // สร้าง ObjectID ที่ถูกต้องสำหรับ performed_by_id
-    const generatePerformedByObjectId = () => {
-      const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
-      const randomPart = Array.from({length: 16}, () => 
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
-      return timestamp + randomPart;
-    };
-
-    // บันทึกประวัตการอัปโหลดหลายคัน
-    newVehicles.forEach(vehicle => {
-      addSerialHistoryEntry({
-        serial_number: vehicle.serial_number,
-        vehicle_id: vehicle.id,
-        vehicle_number: vehicle.vehicle_number,
-        action_type: 'bulk_upload',
-        action_date: new Date().toISOString(),
-        details: `อัปโหลดรถจากไฟล์ - หมายเลขรถ: ${vehicle.vehicle_number}, สนาม: ${vehicle.golf_course_name}`,
-        performed_by: 'administrator',
-        performed_by_id: generatePerformedByObjectId(),
-        golf_course_id: vehicle.golf_course_id,
-        golf_course_name: vehicle.golf_course_name,
-        is_active: true
-      });
-    });
+    // แสดงผลลัพธ์
+    if (successfulVehicles.length > 0 && failedVehicles.length === 0) {
+      alert(`อัปโหลดรถสำเร็จทั้งหมด ${successfulVehicles.length} คัน`);
+    } else if (successfulVehicles.length > 0 && failedVehicles.length > 0) {
+      alert(`อัปโหลดสำเร็จ ${successfulVehicles.length} คัน, ล้มเหลว ${failedVehicles.length} คัน`);
+    } else {
+      alert(`อัปโหลดล้มเหลวทั้งหมด ${failedVehicles.length} คัน`);
+    }
 
     setBulkUploadData([]);
     setBulkUploadErrors([]);
@@ -538,6 +598,11 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
               }
             : vehicle
         ));
+
+        // รีเฟรชข้อมูลทั้งหมดหลังจากย้ายรถสำเร็จ
+        if (forceRefreshAllData) {
+          await forceRefreshAllData();
+        }
 
         alert(`ย้ายรถสำเร็จ ${result.data.length} คัน`);
         
@@ -894,17 +959,17 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                       <td>
                         {editingVehicle?.id === vehicle.id ? (
                           <select
-                            value={editingVehicle.status || 'active'}
+                            value={editingVehicle.status || vehicle.status || 'active'}
                             onChange={(e) => setEditingVehicle({
                               ...editingVehicle, 
-                              status: e.target.value as 'active' | 'maintenance' | 'retired' | 'parked'
+                              status: e.target.value as 'active' | 'ready' | 'maintenance' | 'retired'
                             })}
                             className="status-select"
                           >
                             <option value="active">ใช้งาน</option>
-                            <option value="maintenance">ซ่อมบำรุง</option>
-                            <option value="retired">เกษียณ</option>
-                            <option value="parked">ฝากจอด</option>
+                            <option value="ready">พร้อมใช้</option>
+                            <option value="maintenance">รอซ่อม</option>
+                            <option value="retired">เสื่อมแล้ว</option>
                           </select>
                         ) : (
                           <span className={`status-badge ${vehicle.status || 'active'}`}>
@@ -920,7 +985,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                           </>
                         ) : (
                           <>
-                            <button onClick={() => setEditingVehicle(vehicle)} className="edit-button">แก้ไข</button>
+                            <button onClick={() => {
+                              // ตรวจสอบให้แน่ใจว่า status มีค่าเสมอ
+                              const vehicleWithStatus = {
+                                ...vehicle,
+                                status: vehicle.status || 'active'
+                              };
+                              setEditingVehicle(vehicleWithStatus);
+                            }} className="edit-button">แก้ไข</button>
                             <button onClick={() => handleDeleteVehicle(vehicle.id)} className="delete-button">ลบ</button>
                           </>
                         )}

@@ -52,7 +52,7 @@ export interface Vehicle {
   battery_serial?: string; // เพิ่มฟิลด์สำหรับซีเรียลแบตเตอรี่
   golf_course_id: string;
   golf_course_name: string;
-  status: 'active' | 'maintenance' | 'retired' | 'parked';
+  status: 'active' | 'ready' | 'maintenance' | 'retired';
   created_at: string;
 }
 
