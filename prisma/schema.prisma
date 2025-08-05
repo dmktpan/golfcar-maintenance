@@ -209,12 +209,13 @@ enum JobStatus {
 }
 
 enum VehicleStatus {
-  active
-  maintenance
-  retired
-  parked
-  spare
-  inactive
+  active      // ใช้งาน
+  ready       // พร้อมใช้
+  maintenance // รอซ่อม
+  retired     // เสื่อมแล้ว
+  parked      // จอดไว้ (เก่า - เก็บไว้เพื่อ backward compatibility)
+  spare       // อะไหล่ (เก่า - เก็บไว้เพื่อ backward compatibility)
+  inactive    // ไม่ใช้งาน (เก่า - เก็บไว้เพื่อ backward compatibility)
 }
 
 enum BMCause {

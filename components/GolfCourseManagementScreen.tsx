@@ -66,7 +66,10 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       'active': 'ใช้งาน',
       'ready': 'พร้อมใช้',
       'maintenance': 'รอซ่อม',
-      'retired': 'เสื่อมแล้ว'
+      'retired': 'เสื่อมแล้ว',
+      'parked': 'จอดไว้',
+      'spare': 'อะไหล่',
+      'inactive': 'ไม่ใช้งาน'
     };
     return statusLabels[status] || 'ใช้งาน';
   };
@@ -962,7 +965,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                             value={editingVehicle.status || vehicle.status || 'active'}
                             onChange={(e) => setEditingVehicle({
                               ...editingVehicle, 
-                              status: e.target.value as 'active' | 'ready' | 'maintenance' | 'retired'
+                              status: e.target.value as Vehicle['status']
                             })}
                             className="status-select"
                           >
@@ -970,6 +973,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                             <option value="ready">พร้อมใช้</option>
                             <option value="maintenance">รอซ่อม</option>
                             <option value="retired">เสื่อมแล้ว</option>
+                            
                           </select>
                         ) : (
                           <span className={`status-badge ${vehicle.status || 'active'}`}>

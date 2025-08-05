@@ -499,7 +499,7 @@ interface Vehicle {
   model?: string;
   year?: number;
   battery_serial?: string;
-  status: 'active' | 'maintenance' | 'retired' | 'parked' | 'spare' | 'inactive';
+  status: 'active' | 'ready' | 'maintenance' | 'retired' | 'parked' | 'spare' | 'inactive';
   golf_course_id?: string;
   golf_course_name?: string;
   transfer_date?: Date;

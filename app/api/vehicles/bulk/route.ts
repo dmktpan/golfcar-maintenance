@@ -186,7 +186,7 @@ async function bulkCreateVehicles(vehicles: any[], golf_course_id: string, golf_
 }
 
 // ฟังก์ชันสำหรับอัพเดทสถานะรถหลายคันพร้อมกัน
-async function bulkUpdateStatus(vehicle_ids: string[], status: 'active' | 'maintenance' | 'retired' | 'parked' | 'spare' | 'inactive', user_id: string, reason?: string) {
+async function bulkUpdateStatus(vehicle_ids: string[], status: 'active' | 'ready' | 'maintenance' | 'retired' | 'parked' | 'spare' | 'inactive', user_id: string, reason?: string) {
   const results = {
     success: true,
     message: '',

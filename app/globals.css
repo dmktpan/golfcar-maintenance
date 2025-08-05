@@ -4144,6 +4144,21 @@ textarea:focus,
   color: #166534;
 }
 
+.status-badge.ready {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.maintenance {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge.retired {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;

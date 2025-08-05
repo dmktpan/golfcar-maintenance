@@ -2,29 +2,99 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
-const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
+const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE || 'https://api.example.com';
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = params.id;
+    console.log('🔄 GET /api/proxy/vehicles/[id] - Using External API');
+    console.log('📝 Vehicle ID:', id);
+    
+    // เรียกใช้ External API
+    console.log('🌐 Fetching vehicle from external API...');
+    
+    const response = await fetch(`${EXTERNAL_API_BASE}/vehicles/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.log(`❌ External API error: ${response.status} ${response.statusText}`);
+      
+      if (response.status === 404) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: 'Vehicle not found',
+            details: `Vehicle with ID ${id} does not exist`
+          },
+          { status: 404 }
+        );
+      }
+      
+      throw new Error(`External API error: ${response.status} ${response.statusText}`);
+    }
+
+    const vehicleData = await response.json();
+    console.log('✅ Vehicle fetched successfully from external API');
+    console.log('📝 Vehicle data:', JSON.stringify(vehicleData, null, 2));
+    
+    // แมปสถานะจาก External API กลับมายัง frontend
+    if (vehicleData.data && vehicleData.data.status) {
+      vehicleData.data.status = mapStatusFromExternalAPI(vehicleData.data.status);
+    } else if (vehicleData.status) {
+      vehicleData.status = mapStatusFromExternalAPI(vehicleData.status);
+    }
+    
+    return NextResponse.json(vehicleData);
+    
+  } catch (error) {
+    console.error('❌ Error fetching vehicle from external API:', error);
+    
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Request timeout',
+          details: 'External API request timed out after 30 seconds'
+        },
+        { status: 504 }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Failed to fetch vehicle from external API',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
 
 // แมปสถานะจาก frontend ไปยัง External API
+// ตอนนี้ External API ใช้สถานะเดียวกันกับ frontend แล้ว ไม่ต้องแมป
 function mapStatusToExternalAPI(status: string): string {
-  const statusMap: { [key: string]: string } = {
-    'active': 'active',
-    'ready': 'active',      // แมป ready เป็น active
-    'maintenance': 'inactive', // แมป maintenance เป็น inactive
-    'retired': 'spare'      // แมป retired เป็น spare
-  };
-  
-  return statusMap[status] || 'active';
+  // ส่งสถานะตรงไปยัง External API เลย
+  return status;
 }
 
 // แมปสถานะจาก External API กลับมายัง frontend
+// ตอนนี้ External API ใช้สถานะเดียวกันกับ frontend แล้ว
 function mapStatusFromExternalAPI(externalStatus: string): string {
-  const statusMap: { [key: string]: string } = {
-    'active': 'active',     // active ยังคงเป็น active
-    'inactive': 'maintenance', // inactive กลับเป็น maintenance
-    'spare': 'retired'      // spare กลับเป็น retired
+  // สำหรับ backward compatibility กับข้อมูลเก่า
+  const legacyStatusMap: { [key: string]: string } = {
+    'inactive': 'maintenance', // inactive เก่า -> รอซ่อม
+    'spare': 'retired',        // spare เก่า -> เสื่อมแล้ว
+    'parked': 'ready'          // parked เก่า -> พร้อมใช้
   };
   
-  return statusMap[externalStatus] || 'active';
+  // ถ้าเป็นสถานะเก่า ให้แมป ถ้าไม่ใช่ ให้ใช้สถานะเดิม
+  return legacyStatusMap[externalStatus] || externalStatus;
 }
 
 // แปลงสถานะเป็นข้อความภาษาไทยที่เข้าใจง่าย
@@ -34,6 +104,9 @@ function getStatusLabel(status: string): string {
     case 'ready': return 'พร้อมใช้';
     case 'maintenance': return 'รอซ่อม';
     case 'retired': return 'เสื่อมแล้ว';
+    case 'parked': return 'จอดไว้';
+    case 'spare': return 'อะไหล่';
+    case 'inactive': return 'ไม่ใช้งาน';
     default: return 'ใช้งาน';
   }
 }
@@ -41,13 +114,11 @@ function getStatusLabel(status: string): string {
 // สร้าง Serial History หลังจากอัปเดตสำเร็จ
 async function createSerialHistory(vehicleId: string, originalBody: any, updatedData: any) {
   try {
-    // ดึงข้อมูลรถปัจจุบันจากฐานข้อมูล (ข้อมูลก่อนการอัปเดต)
-    const currentVehicle = await prisma.vehicle.findUnique({
-      where: { id: vehicleId }
-    });
+    // ใช้ข้อมูลที่ได้จาก External API แทนการดึงจากฐานข้อมูลโดยตรง
+    const currentVehicle = updatedData;
 
     if (!currentVehicle) {
-      console.log('⚠️ Vehicle not found in local database, skipping serial history');
+      console.log('⚠️ Vehicle data not available, skipping serial history');
       return;
     }
 
@@ -66,12 +137,14 @@ async function createSerialHistory(vehicleId: string, originalBody: any, updated
     
     // สำหรับสถานะ ให้เปรียบเทียบสถานะต้นฉบับจาก frontend
     if (originalBody.status) {
-      const currentStatus = currentVehicle.status || 'active';
-      const newStatus = originalBody.status; // ใช้สถานะต้นฉบับจาก frontend โดยตรง
+      // แมปสถานะจาก External API กลับมาเป็น frontend status
+      const currentExternalStatus = currentVehicle.status || 'active';
+      const currentFrontendStatus = mapStatusFromExternalAPI(currentExternalStatus);
+      const newFrontendStatus = originalBody.status; // สถานะใหม่จาก frontend
       
-      if (currentStatus !== newStatus) {
-        const currentStatusLabel = getStatusLabel(currentStatus);
-        const newStatusLabel = getStatusLabel(newStatus);
+      if (currentFrontendStatus !== newFrontendStatus) {
+        const currentStatusLabel = getStatusLabel(currentFrontendStatus);
+        const newStatusLabel = getStatusLabel(newFrontendStatus);
         changes.push(`สถานะ: ${currentStatusLabel} → ${newStatusLabel}`);
       }
     }
@@ -88,23 +161,7 @@ async function createSerialHistory(vehicleId: string, originalBody: any, updated
     }
     
     if (changes.length > 0) {
-      // ตรวจสอบว่ามี history ที่เหมือนกันในช่วง 5 วินาทีที่ผ่านมาหรือไม่
-      const recentHistory = await prisma.serialHistoryEntry.findFirst({
-        where: {
-          vehicle_id: vehicleId,
-          action_type: 'data_edit',
-          action_date: {
-            gte: new Date(Date.now() - 5000) // 5 วินาทีที่ผ่านมา
-          },
-          details: `แก้ไขข้อมูลรถ - ${changes.join(', ')}`
-        }
-      });
-
-      if (recentHistory) {
-        console.log('ℹ️ Duplicate history detected, skipping creation');
-        return;
-      }
-
+      // สร้าง Serial History ผ่าน Prisma (เฉพาะ Serial History ยังคงใช้ฐานข้อมูลท้องถิ่น)
       await prisma.serialHistoryEntry.create({
         data: {
           serial_number: originalBody.serial_number?.trim() || currentVehicle.serial_number,
@@ -136,114 +193,71 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     const id = params.id;
     const originalBody = await request.json();
-    console.log('🔄 PUT /api/proxy/vehicles/[id] - External API Only');
+    console.log('🔄 PUT /api/proxy/vehicles/[id] - Using External API');
     console.log('📝 Vehicle ID:', id);
     console.log('📝 Original request body:', JSON.stringify(originalBody, null, 2));
     
-    // เก็บสถานะต้นฉบับไว้สำหรับ Serial History
-    const originalStatusForHistory = originalBody.status;
-    
-    // สร้าง body สำหรับส่งไป External API
-    const body = { ...originalBody };
-    
-    // แมปสถานะให้ตรงกับ External API
-    if (body.status) {
-      const frontendStatus = body.status;
-      body.status = mapStatusToExternalAPI(body.status);
-      console.log(`📝 Status mapping: ${frontendStatus} → ${body.status}`);
+    // แมปสถานะจาก frontend ไปยัง External API
+    const requestBody = { ...originalBody };
+    if (requestBody.status) {
+      requestBody.status = mapStatusToExternalAPI(requestBody.status);
+      console.log('📝 Mapped status for external API:', requestBody.status);
     }
     
-    console.log('📝 Mapped request body:', JSON.stringify(body, null, 2));
+    // เรียกใช้ External API
+    console.log('🌐 Updating vehicle via external API...');
     
-    // ใช้ External API เท่านั้น
-    console.log('🌐 Calling external API...');
-    
-    // เพิ่ม timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    // ลองใช้ endpoint ที่แตกต่างกัน
-    const endpoints = [
-      `${EXTERNAL_API_BASE}/vehicles/${id}`,
-      `${EXTERNAL_API_BASE}/vehicles`,
-      `${EXTERNAL_API_BASE}/vehicle/${id}`,
-      `${EXTERNAL_API_BASE}/vehicle`
-    ];
-    
-    let lastError = null;
-    
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔄 Trying endpoint: ${endpoint}`);
-        
-        const response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...body, id }),
-          signal: controller.signal,
-        });
-
-        console.log(`🌐 External API response status for ${endpoint}:`, response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ External API success (PUT method - creating serial history)');
-          
-          // สร้าง Serial History หลังจากอัปเดตสำเร็จ (ใช้ originalBody ที่มีสถานะต้นฉบับ)
-          try {
-            await createSerialHistory(id, originalBody, data);
-            console.log('✅ Serial History created successfully');
-          } catch (historyError) {
-            console.error('❌ Error creating Serial History:', historyError);
-          }
-          
-          clearTimeout(timeoutId);
-          return NextResponse.json(data);
-        } else if (response.status !== 405 && response.status !== 404) {
-          // ถ้าไม่ใช่ Method Not Allowed หรือ Not Found ให้ return error
-          const errorText = await response.text();
-          console.log('❌ Error response:', errorText);
-          clearTimeout(timeoutId);
-          return NextResponse.json(
-            { 
-              success: false, 
-              message: `External API failed with status ${response.status}`,
-              details: errorText
-            },
-            { status: response.status }
-          );
-        } else {
-          console.log(`⚠️ Endpoint ${endpoint} not supported (${response.status}), trying next...`);
-          lastError = await response.text();
-        }
-      } catch (endpointError) {
-        console.log(`❌ Error with endpoint ${endpoint}:`, endpointError);
-        lastError = endpointError;
-        continue;
-      }
-    }
-    
-    clearTimeout(timeoutId);
-    
-    // ถ้าทุก endpoint ล้มเหลว
-    console.error('❌ All endpoints failed');
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'All external API endpoints failed',
-        details: lastError instanceof Error ? lastError.message : lastError
+    const response = await fetch(`${EXTERNAL_API_BASE}/vehicles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      { status: 500 }
-    );
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.log(`❌ External API error: ${response.status} ${response.statusText}`);
+      throw new Error(`External API error: ${response.status} ${response.statusText}`);
+    }
+
+    const updatedData = await response.json();
+    console.log('✅ Vehicle updated successfully via external API');
+    console.log('📝 Updated vehicle data:', JSON.stringify(updatedData, null, 2));
+    
+    // แมปสถานะกลับจาก External API
+    if (updatedData.data && updatedData.data.status) {
+      updatedData.data.status = mapStatusFromExternalAPI(updatedData.data.status);
+    }
+    
+    // สร้าง Serial History หลังจากอัปเดตสำเร็จ
+    try {
+      await createSerialHistory(id, originalBody, updatedData.data || updatedData);
+      console.log('✅ Serial History created successfully');
+    } catch (historyError) {
+      console.error('❌ Error creating Serial History:', historyError);
+    }
+    
+    return NextResponse.json(updatedData);
     
   } catch (error) {
-    console.error('❌ Error updating vehicle:', error);
+    console.error('❌ Error updating vehicle via external API:', error);
+    
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Request timeout',
+          details: 'External API request timed out after 30 seconds'
+        },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to update vehicle with external API',
+        message: 'Failed to update vehicle via external API',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -254,107 +268,78 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
-    console.log('🔄 DELETE /api/proxy/vehicles/[id] - External API Only');
+    console.log('🔄 DELETE /api/proxy/vehicles/[id] - Using External API');
     console.log('📝 Vehicle ID:', id);
     
     // ดึงข้อมูลรถก่อนลบเพื่อสร้าง Serial History
     let vehicleData = null;
     try {
-      const vehicle = await prisma.vehicle.findUnique({
-        where: { id }
+      const getResponse = await fetch(`${EXTERNAL_API_BASE}/vehicles/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(30000),
       });
-      vehicleData = vehicle;
+      
+      if (getResponse.ok) {
+        const vehicleResponse = await getResponse.json();
+        vehicleData = vehicleResponse.data || vehicleResponse;
+      }
     } catch (error) {
       console.log('⚠️ Could not fetch vehicle data for serial history:', error);
     }
     
-    // ใช้ External API เท่านั้น
-    console.log('🌐 Calling external API...');
+    // เรียกใช้ External API
+    console.log('🌐 Deleting vehicle via external API...');
     
-    // เพิ่ม timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const response = await fetch(`${EXTERNAL_API_BASE}/vehicles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.log(`❌ External API error: ${response.status} ${response.statusText}`);
+      throw new Error(`External API error: ${response.status} ${response.statusText}`);
+    }
+
+    const deletedData = await response.json();
+    console.log('✅ Vehicle deleted successfully via external API');
+    console.log('📝 Deleted vehicle data:', JSON.stringify(deletedData, null, 2));
     
-    // ลองใช้ endpoint ที่แตกต่างกัน
-    const endpoints = [
-      `${EXTERNAL_API_BASE}/vehicles/${id}`,
-      `${EXTERNAL_API_BASE}/vehicle/${id}`
-    ];
-    
-    let lastError = null;
-    
-    for (const endpoint of endpoints) {
+    // สร้าง Serial History หลังจากลบสำเร็จ
+    if (vehicleData) {
       try {
-        console.log(`🔄 Trying DELETE endpoint: ${endpoint}`);
-        
-        const response = await fetch(endpoint, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-        });
-
-        console.log(`🌐 External API response status for ${endpoint}:`, response.status);
-
-        if (response.ok) {
-          console.log('✅ External API success (DELETE method - creating serial history)');
-          
-          // สร้าง Serial History หลังจากลบสำเร็จ
-          if (vehicleData) {
-            try {
-              await createSerialHistory(id, vehicleData, { deleted: true });
-              console.log('✅ Serial History created successfully for deleted vehicle');
-            } catch (historyError) {
-              console.error('❌ Error creating Serial History for deleted vehicle:', historyError);
-            }
-          }
-          
-          clearTimeout(timeoutId);
-          return NextResponse.json({ success: true, message: 'Vehicle deleted successfully' });
-        } else if (response.status !== 405 && response.status !== 404) {
-          // ถ้าไม่ใช่ Method Not Allowed หรือ Not Found ให้ return error
-          const errorText = await response.text();
-          console.log('❌ Error response:', errorText);
-          clearTimeout(timeoutId);
-          return NextResponse.json(
-            { 
-              success: false, 
-              message: `External API failed with status ${response.status}`,
-              details: errorText
-            },
-            { status: response.status }
-          );
-        } else {
-          console.log(`⚠️ Endpoint ${endpoint} not supported (${response.status}), trying next...`);
-          lastError = await response.text();
-        }
-      } catch (endpointError) {
-        console.log(`❌ Error with endpoint ${endpoint}:`, endpointError);
-        lastError = endpointError;
-        continue;
+        await createSerialHistory(id, vehicleData, { deleted: true });
+        console.log('✅ Serial History created successfully for deleted vehicle');
+      } catch (historyError) {
+        console.error('❌ Error creating Serial History for deleted vehicle:', historyError);
       }
     }
     
-    clearTimeout(timeoutId);
-    
-    // ถ้าทุก endpoint ล้มเหลว
-    console.error('❌ All endpoints failed');
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'All external API endpoints failed',
-        details: lastError instanceof Error ? lastError.message : lastError
-      },
-      { status: 500 }
-    );
+    return NextResponse.json(deletedData);
     
   } catch (error) {
-    console.error('❌ Error deleting vehicle:', error);
+    console.error('❌ Error deleting vehicle via external API:', error);
+    
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Request timeout',
+          details: 'External API request timed out after 30 seconds'
+        },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to delete vehicle with external API',
+        message: 'Failed to delete vehicle via external API',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -366,112 +351,71 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   try {
     const id = params.id;
     const originalBody = await request.json();
-    console.log('🔄 PATCH /api/proxy/vehicles/[id] - External API Only');
+    console.log('🔄 PATCH /api/proxy/vehicles/[id] - Using External API');
     console.log('📝 Vehicle ID:', id);
     console.log('📝 Original request body:', JSON.stringify(originalBody, null, 2));
     
-    // สร้าง body สำหรับส่งไป External API
-    const body = { ...originalBody };
-    
-    // แมปสถานะให้ตรงกับ External API
-    if (body.status) {
-      const frontendStatus = body.status;
-      body.status = mapStatusToExternalAPI(body.status);
-      console.log(`📝 Status mapping: ${frontendStatus} → ${body.status}`);
+    // แมปสถานะจาก frontend ไปยัง External API
+    const requestBody = { ...originalBody };
+    if (requestBody.status) {
+      requestBody.status = mapStatusToExternalAPI(requestBody.status);
+      console.log('📝 Mapped status for external API:', requestBody.status);
     }
     
-    console.log('📝 Mapped request body:', JSON.stringify(body, null, 2));
+    // เรียกใช้ External API
+    console.log('🌐 Updating vehicle via external API (PATCH)...');
     
-    // ใช้ External API เท่านั้น
-    console.log('🌐 Calling external API...');
-    
-    // เพิ่ม timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    // ลองใช้ endpoint ที่แตกต่างกัน
-    const endpoints = [
-      `${EXTERNAL_API_BASE}/vehicles/${id}`,
-      `${EXTERNAL_API_BASE}/vehicles`,
-      `${EXTERNAL_API_BASE}/vehicle/${id}`,
-      `${EXTERNAL_API_BASE}/vehicle`
-    ];
-    
-    let lastError = null;
-    
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`🔄 Trying PATCH endpoint: ${endpoint}`);
-        
-        const response = await fetch(endpoint, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...body, id }),
-          signal: controller.signal,
-        });
-
-        console.log(`🌐 External API response status for ${endpoint}:`, response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ External API success (PATCH method - creating serial history)');
-          
-          // สร้าง Serial History สำหรับ PATCH เช่นกัน เพื่อให้แน่ใจว่า Serial History จะถูกสร้าง
-          // เนื่องจาก External API อาจใช้ PATCH แทน PUT
-          try {
-            await createSerialHistory(id, originalBody, data);
-            console.log('✅ Serial History created successfully');
-          } catch (historyError) {
-            console.error('❌ Error creating Serial History:', historyError);
-          }
-          
-          clearTimeout(timeoutId);
-          return NextResponse.json(data);
-        } else if (response.status !== 405 && response.status !== 404) {
-          // ถ้าไม่ใช่ Method Not Allowed หรือ Not Found ให้ return error
-          const errorText = await response.text();
-          console.log('❌ Error response:', errorText);
-          clearTimeout(timeoutId);
-          return NextResponse.json(
-            { 
-              success: false, 
-              message: `External API failed with status ${response.status}`,
-              details: errorText
-            },
-            { status: response.status }
-          );
-        } else {
-          console.log(`⚠️ Endpoint ${endpoint} not supported (${response.status}), trying next...`);
-          lastError = await response.text();
-        }
-      } catch (endpointError) {
-        console.log(`❌ Error with endpoint ${endpoint}:`, endpointError);
-        lastError = endpointError;
-        continue;
-      }
-    }
-    
-    clearTimeout(timeoutId);
-    
-    // ถ้าทุก endpoint ล้มเหลว
-    console.error('❌ All endpoints failed');
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'All external API endpoints failed',
-        details: lastError instanceof Error ? lastError.message : lastError
+    const response = await fetch(`${EXTERNAL_API_BASE}/vehicles/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      { status: 500 }
-    );
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.log(`❌ External API error: ${response.status} ${response.statusText}`);
+      throw new Error(`External API error: ${response.status} ${response.statusText}`);
+    }
+
+    const updatedData = await response.json();
+    console.log('✅ Vehicle updated successfully via external API (PATCH)');
+    console.log('📝 Updated vehicle data:', JSON.stringify(updatedData, null, 2));
+    
+    // แมปสถานะกลับจาก External API
+    if (updatedData.data && updatedData.data.status) {
+      updatedData.data.status = mapStatusFromExternalAPI(updatedData.data.status);
+    }
+    
+    // สร้าง Serial History สำหรับ PATCH เช่นกัน เพื่อให้แน่ใจว่า Serial History จะถูกสร้าง
+    try {
+      await createSerialHistory(id, originalBody, updatedData.data || updatedData);
+      console.log('✅ Serial History created successfully');
+    } catch (historyError) {
+      console.error('❌ Error creating Serial History:', historyError);
+    }
+    
+    return NextResponse.json(updatedData);
     
   } catch (error) {
-    console.error('❌ Error updating vehicle:', error);
+    console.error('❌ Error updating vehicle via external API (PATCH):', error);
+    
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Request timeout',
+          details: 'External API request timed out after 30 seconds'
+        },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to update vehicle with external API',
+        message: 'Failed to update vehicle via external API',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
