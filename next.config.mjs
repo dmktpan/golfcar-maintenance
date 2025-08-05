@@ -58,12 +58,6 @@ const nextConfig = {
     ]
   },
 
-  // Environment variables validation
-  env: {
-    EXTERNAL_API_BASE_URL: process.env.EXTERNAL_API_BASE_URL,
-    EXTERNAL_API_TIMEOUT: process.env.EXTERNAL_API_TIMEOUT,
-    NODE_ENV: process.env.NODE_ENV,
-  },
 
   // Image optimization
   images: {
