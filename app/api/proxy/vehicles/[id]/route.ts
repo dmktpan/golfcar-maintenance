@@ -112,7 +112,7 @@ function getStatusLabel(status: string): string {
 }
 
 // สร้าง Serial History หลังจากอัปเดตสำเร็จ
-async function createSerialHistory(vehicleId: string, originalBody: any, updatedData: any) {
+async function createSerialHistory(vehicleId: string, originalBody: any, updatedData: any, userId?: string) {
   try {
     // ใช้ข้อมูลที่ได้จาก External API แทนการดึงจากฐานข้อมูลโดยตรง
     const currentVehicle = updatedData;
@@ -160,7 +160,26 @@ async function createSerialHistory(vehicleId: string, originalBody: any, updated
       }
     }
     
-    if (changes.length > 0) {
+    // ตรวจสอบว่าเป็นการลบรถหรือไม่
+    if (updatedData.deleted) {
+      // สร้าง Serial History สำหรับการลบรถ
+      await prisma.serialHistoryEntry.create({
+        data: {
+          serial_number: currentVehicle.serial_number,
+          vehicle_number: currentVehicle.vehicle_number,
+          action_type: 'data_delete',
+          action_date: new Date(),
+          details: `ลบรถออกจากระบบ - หมายเลขซีเรียล: ${currentVehicle.serial_number}, หมายเลขรถ: ${currentVehicle.vehicle_number}`,
+          is_active: true,
+          status: 'completed',
+          golf_course_name: currentVehicle.golf_course_name,
+          vehicle_id: vehicleId,
+          performed_by_id: userId || '000000000000000000000001' // Use provided user ID or default admin ID
+        }
+      });
+      
+      console.log('✅ Serial history created successfully for vehicle deletion');
+    } else if (changes.length > 0) {
       // สร้าง Serial History ผ่าน Prisma (เฉพาะ Serial History ยังคงใช้ฐานข้อมูลท้องถิ่น)
       await prisma.serialHistoryEntry.create({
         data: {
@@ -173,7 +192,7 @@ async function createSerialHistory(vehicleId: string, originalBody: any, updated
           status: 'completed',
           golf_course_name: originalBody.golf_course_name?.trim() || currentVehicle.golf_course_name,
           vehicle_id: vehicleId,
-          performed_by_id: '000000000000000000000001' // Default admin ID
+          performed_by_id: userId || '000000000000000000000001' // Use provided user ID or default admin ID
         }
       });
       
@@ -232,7 +251,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     // สร้าง Serial History หลังจากอัปเดตสำเร็จ
     try {
-      await createSerialHistory(id, originalBody, updatedData.data || updatedData);
+      await createSerialHistory(id, originalBody, updatedData.data || updatedData, originalBody.user_id);
       console.log('✅ Serial History created successfully');
     } catch (historyError) {
       console.error('❌ Error creating Serial History:', historyError);
@@ -268,8 +287,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
+    const body = await request.json().catch(() => ({})); // Get user_id if provided
     console.log('🔄 DELETE /api/proxy/vehicles/[id] - Using External API');
     console.log('📝 Vehicle ID:', id);
+    console.log('📝 Request body:', JSON.stringify(body, null, 2));
     
     // ดึงข้อมูลรถก่อนลบเพื่อสร้าง Serial History
     let vehicleData = null;
@@ -313,7 +334,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // สร้าง Serial History หลังจากลบสำเร็จ
     if (vehicleData) {
       try {
-        await createSerialHistory(id, vehicleData, { deleted: true });
+        await createSerialHistory(id, vehicleData, { deleted: true }, body.user_id);
         console.log('✅ Serial History created successfully for deleted vehicle');
       } catch (historyError) {
         console.error('❌ Error creating Serial History for deleted vehicle:', historyError);
@@ -390,7 +411,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     
     // สร้าง Serial History สำหรับ PATCH เช่นกัน เพื่อให้แน่ใจว่า Serial History จะถูกสร้าง
     try {
-      await createSerialHistory(id, originalBody, updatedData.data || updatedData);
+      await createSerialHistory(id, originalBody, updatedData.data || updatedData, originalBody.user_id);
       console.log('✅ Serial History created successfully');
     } catch (historyError) {
       console.error('❌ Error creating Serial History:', historyError);

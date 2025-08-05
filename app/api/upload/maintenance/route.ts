@@ -9,6 +9,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (เพิ่มขึ้นเ�
 const MAX_COMPRESSED_SIZE = 150 * 1024; // 150KB (ขนาดหลังบีบอัด)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const UPLOAD_DIR = path.join(process.cwd(), 'public/uploads/maintenance');
+const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
 // ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 100KB
 async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> {
@@ -91,6 +92,60 @@ async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> 
   }
 }
 
+// ฟังก์ชันส่งไฟล์ไปยัง External API
+async function uploadToExternalAPI(buffer: Buffer, filename: string): Promise<string> {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    formData.append('files', blob, filename);
+
+    console.log(`🌐 Uploading ${filename} to external API...`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    const response = await fetch(`${EXTERNAL_API_BASE}/upload/maintenance`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`✅ External API upload success for ${filename}`, result);
+      
+      let fileUrl = '';
+      
+      // ส่งกลับ URL จาก External API
+      if (result.files && result.files.length > 0) {
+        fileUrl = result.files[0];
+      } else if (result.file) {
+        fileUrl = result.file;
+      } else {
+        // ถ้า External API ไม่ส่ง URL กลับมา ให้สร้าง URL เอง
+        fileUrl = `/uploads/maintenance/${filename}`;
+      }
+      
+      // ตรวจสอบว่า URL เป็น relative path หรือไม่ ถ้าใช่ให้เพิ่ม domain
+      if (fileUrl.startsWith('/')) {
+        const baseUrl = EXTERNAL_API_BASE.replace('/api', '');
+        fileUrl = `${baseUrl}${fileUrl}`;
+      }
+      
+      console.log(`🔗 Final URL: ${fileUrl}`);
+      return fileUrl;
+    } else {
+      console.error(`❌ External API upload failed for ${filename}:`, response.status);
+      throw new Error(`External API upload failed with status ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`❌ Error uploading ${filename} to external API:`, error);
+    throw error;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // เพิ่ม timeout สำหรับ request
@@ -147,14 +202,24 @@ export async function POST(request: NextRequest) {
           // บีบอัดรูปภาพ
           const compressedBuffer = await compressImage(buffer, filename);
           
-          const filepath = path.join(UPLOAD_DIR, filename);
-          await writeFile(filepath, compressedBuffer);
+          // บันทึกไฟล์ local เป็น backup (optional)
+          try {
+            const filepath = path.join(UPLOAD_DIR, filename);
+            await writeFile(filepath, compressedBuffer);
+            console.log(`📁 Local backup saved: ${filename}`);
+          } catch (localError) {
+            console.warn(`⚠️ Failed to save local backup for ${filename}:`, localError);
+            // ไม่ให้ error ของ local backup ทำให้การอัพโหลดล้มเหลว
+          }
           
-          uploadedFiles.push(`/uploads/maintenance/${filename}`);
-          console.log(`Successfully processed: ${filename} (${(compressedBuffer.length / 1024).toFixed(2)}KB)`);
+          // ส่งไฟล์ไปยัง External API
+          const externalUrl = await uploadToExternalAPI(compressedBuffer, filename);
+          
+          uploadedFiles.push(externalUrl);
+          console.log(`✅ Successfully processed: ${filename} (${(compressedBuffer.length / 1024).toFixed(2)}KB) -> ${externalUrl}`);
           
         } catch (error) {
-          console.error(`Error processing ${file.name}:`, error);
+          console.error(`❌ Error processing ${file.name}:`, error);
           errors.push(`${file.name}: การอัปโหลดล้มเหลว - ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }

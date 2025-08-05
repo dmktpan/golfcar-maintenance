@@ -1,5 +1,8 @@
 // app/api/proxy/vehicles/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
@@ -171,6 +174,32 @@ export async function POST(request: NextRequest) {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ External API success');
+      
+      // สร้าง Serial History หลังจากสร้างรถสำเร็จ
+      try {
+        const vehicleData = data.data || data;
+        if (vehicleData && vehicleData.serial_number) {
+          await prisma.serialHistoryEntry.create({
+            data: {
+              serial_number: vehicleData.serial_number,
+              vehicle_number: vehicleData.vehicle_number || '',
+              action_type: 'bulk_upload',
+              action_date: new Date(),
+              details: `เพิ่มรถใหม่ผ่านการอัปโหลดไฟล์ - ${vehicleData.vehicle_number || vehicleData.serial_number} (${vehicleData.model || 'ไม่ระบุ'})`,
+              is_active: vehicleData.status === 'active',
+              status: 'completed',
+              golf_course_name: vehicleData.golf_course_name || body.golf_course_name || 'ไม่ระบุ',
+              vehicle_id: vehicleData.id || null,
+              performed_by_id: '000000000000000000000001' // Default admin ID
+            }
+          });
+          console.log('✅ Serial history created for bulk upload:', vehicleData.serial_number);
+        }
+      } catch (historyError) {
+        console.error('⚠️ Failed to create serial history:', historyError);
+        // ไม่ให้ error ของ serial history ทำให้การสร้างรถล้มเหลว
+      }
+      
       return NextResponse.json(data);
     } else {
       console.log('❌ External API failed with status:', response.status);

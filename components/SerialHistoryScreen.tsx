@@ -111,6 +111,43 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     return systemNames[system] || system;
   };
 
+  // เพิ่มฟังก์ชันแปลงสถานะรถเป็นภาษาไทย
+  const getStatusLabel = (status: string): string => {
+    const statusLabels: Record<string, string> = {
+      'active': 'ใช้งาน',
+      'ready': 'พร้อมใช้',
+      'maintenance': 'รอซ่อม',
+      'retired': 'เสื่อมแล้ว',
+      'parked': 'จอดไว้',
+      'spare': 'อะไหล่',
+      'inactive': 'ไม่ใช้งาน'
+    };
+    return statusLabels[status] || status;
+  };
+
+  // ฟังก์ชันแปลงรายละเอียดให้แสดงสถานะเป็นภาษาไทย
+  const translateDetailsToThai = (details: string): string => {
+    // แปลงสถานะในรายละเอียดจากภาษาอังกฤษเป็นภาษาไทย
+    let translatedDetails = details;
+    
+    // แปลงรูปแบบ "สถานะ: active → ready" เป็น "สถานะ: ใช้งาน → พร้อมใช้"
+    const statusChangePattern = /สถานะ:\s*(\w+)\s*→\s*(\w+)/g;
+    translatedDetails = translatedDetails.replace(statusChangePattern, (match, oldStatus, newStatus) => {
+      const oldStatusThai = getStatusLabel(oldStatus);
+      const newStatusThai = getStatusLabel(newStatus);
+      return `สถานะ: ${oldStatusThai} → ${newStatusThai}`;
+    });
+
+    // แปลงสถานะเดี่ยวที่อาจปรากฏในรายละเอียด
+    const statusWords = ['active', 'ready', 'maintenance', 'retired', 'parked', 'spare', 'inactive'];
+    statusWords.forEach(status => {
+      const regex = new RegExp(`\\b${status}\\b`, 'gi');
+      translatedDetails = translatedDetails.replace(regex, getStatusLabel(status));
+    });
+
+    return translatedDetails;
+  };
+
   const getActionTypeLabel = (actionType: string): string => {
     switch (actionType) {
       case 'registration': return 'ลงทะเบียน';
@@ -358,7 +395,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   };
 
   const handleViewDetails = (entry: SerialHistoryEntry) => {
-    alert(`รายละเอียด: ${entry.details}`);
+    alert(`รายละเอียด: ${translateDetailsToThai(entry.details)}`);
   };
 
   const handleCloseModal = () => {
@@ -624,7 +661,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                     </td>
                     <td className="details-col">
                       <div className="details-content">
-                        <p className="details-text">{entry.details}</p>
+                        <p className="details-text">{translateDetailsToThai(entry.details)}</p>
                         {entry.parts_used && entry.parts_used.length > 0 && (
                           <div className="parts-info">
                             <span className="info-label">🔧 อะไหล่ที่ใช้:</span>

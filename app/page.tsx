@@ -1189,6 +1189,7 @@ export default function HomePage() {
             setVehicles={setVehicles}
             serialHistory={serialHistory}
             forceRefreshAllData={forceRefreshAllData}
+            user={user}
           />
         )}
         {view === 'assigned_job_form' && selectedJobForForm && (

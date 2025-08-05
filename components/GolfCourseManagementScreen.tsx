@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   GolfCourse, 
   Vehicle, 
-  SerialHistoryEntry
+  SerialHistoryEntry,
+  User
 } from '@/lib/data';
 
 interface GolfCourseManagementScreenProps {
@@ -15,6 +16,7 @@ interface GolfCourseManagementScreenProps {
   setVehicles: (vehicles: Vehicle[]) => void;
   serialHistory: SerialHistoryEntry[];
   forceRefreshAllData?: () => Promise<void>;
+  user: User;
 }
 
 interface BulkUploadData {
@@ -29,7 +31,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   setGolfCourses, 
   vehicles, 
   setVehicles,
-  forceRefreshAllData
+  forceRefreshAllData,
+  user
 }) => {
   // Remove conflicting useState declarations and use props instead
   const [activeTab, setActiveTab] = useState<'courses' | 'vehicles'>('courses');
@@ -321,7 +324,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         brand: editingVehicle.brand || 'ไม่ระบุ',
         model: editingVehicle.model || 'ไม่ระบุ',
         year: editingVehicle.year || new Date().getFullYear(),
-        battery_serial: editingVehicle.battery_serial?.trim() || ''
+        battery_serial: editingVehicle.battery_serial?.trim() || '',
+        user_id: user.id.toString()
       };
 
       console.log('🔄 Updating vehicle with data:', updateData);
@@ -390,7 +394,13 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         // เรียก API เพื่อลบรถ (ใช้ External API เท่านั้น)
         try {
           const response = await fetch(`/api/proxy/vehicles/${vehicleToDelete.id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: user.id.toString()
+            })
           });
           
           if (response.ok) {
