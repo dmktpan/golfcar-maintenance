@@ -28,6 +28,11 @@ echo "🧹 ทำความสะอาด PM2 logs..."
 pm2 flush
 
 echo ""
+echo "🔄 ลบ process เก่าที่อาจมีชื่อไม่ถูกต้อง..."
+pm2 delete golfcar-maintenance 2>/dev/null || true
+pm2 delete golfcart-app 2>/dev/null || true
+
+echo ""
 echo "🔧 ทำความสะอาดและ rebuild แอปพลิเคชัน..."
 
 # ลบ .next และ node_modules
@@ -86,7 +91,7 @@ mkdir -p logs
 
 echo ""
 echo "🎯 เริ่ม application ด้วย PM2..."
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.js --force
 
 echo ""
 echo "💾 บันทึกการตั้งค่า PM2..."
@@ -99,6 +104,10 @@ pm2 startup
 echo ""
 echo "📊 แสดงสถานะ PM2 หลังเริ่มงาน:"
 pm2 list
+
+echo ""
+echo "✅ ตรวจสอบชื่อแอพ:"
+pm2 list | grep -E "(golfcart-app|golfcar-maintenance)" || echo "ไม่พบแอพที่คาดหวัง"
 
 echo ""
 echo "📝 แสดง logs แบบ real-time (กด Ctrl+C เพื่อออก):"
