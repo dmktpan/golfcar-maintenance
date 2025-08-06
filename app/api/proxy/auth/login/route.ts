@@ -85,20 +85,53 @@ export async function POST(request: NextRequest) {
                   message: 'Login successful',
                   data: user
                 });
+              } else {
+                // รหัสผ่านไม่ถูกต้อง
+                console.log('❌ Internal API fallback failed - wrong password');
+                return NextResponse.json(
+                  { 
+                    success: false, 
+                    message: 'รหัสผ่านไม่ถูกต้อง',
+                    data: null
+                  },
+                  { status: 401 }
+                );
               }
             }
           }
           
-          console.log('❌ Internal API fallback also failed');
+          console.log('❌ Internal API fallback also failed - user not found');
+          
+          // กำหนดข้อความ error ที่เหมาะสมตาม loginType
+          const errorMessage = loginType === 'staff' 
+            ? 'ไม่พบรหัสพนักงานในระบบ' 
+            : 'ไม่พบชื่อผู้ใช้ในระบบผู้ดูแล';
+            
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: errorMessage,
+              data: null
+            },
+            { status: 401 }
+          );
         } catch (fallbackError) {
           console.error('❌ Internal API fallback error:', fallbackError);
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: 'เกิดข้อผิดพลาดในการล็อกอิน',
+              data: null
+            },
+            { status: 500 }
+          );
         }
       }
       
       return NextResponse.json(
         { 
           success: false, 
-          message: `External API failed with status ${response.status}`,
+          message: 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์',
           data: null,
           details: errorText
         },
