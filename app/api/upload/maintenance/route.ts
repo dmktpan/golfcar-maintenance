@@ -355,8 +355,10 @@ export async function POST(request: NextRequest) {
       }
 
       // ตรวจสอบว่ามีไฟล์ที่อัปโหลดผ่าน External API หรือไม่
-      const externalUploads = uploadedFiles.filter(url => !url.includes('localhost'));
-      const localFallbacks = uploadedFiles.filter(url => url.includes('localhost'));
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const localDomain = baseUrl.includes('localhost') ? 'localhost' : new URL(baseUrl).hostname;
+      const externalUploads = uploadedFiles.filter(url => !url.includes(localDomain));
+      const localFallbacks = uploadedFiles.filter(url => url.includes(localDomain));
       
       let message = '';
       if (externalUploads.length > 0 && localFallbacks.length === 0) {

@@ -4,7 +4,7 @@ import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public/uploads/maintenance');
+const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'maintenance');
 
 export async function GET(
   request: NextRequest,
