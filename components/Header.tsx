@@ -29,7 +29,7 @@ const Header = ({ user, onLogout, setView }: HeaderProps) => {
         <header className={styles.header}>
             <div 
                 className={styles.headerTitle} 
-                onClick={() => setView(isAdminOrSuper ? 'admin_dashboard' : isCentral ? 'central_create_job' : 'dashboard')} 
+                onClick={() => setView(isAdminOrSuper || isCentral ? 'admin_dashboard' : 'dashboard')} 
                 style={{ cursor: 'pointer' }}
             >
                 <GolfCartIcon />
