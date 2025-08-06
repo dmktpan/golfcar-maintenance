@@ -102,10 +102,10 @@ pm2 list
 
 echo ""
 echo "📝 แสดง logs แบบ real-time (กด Ctrl+C เพื่อออก):"
-echo "   คำสั่งดู logs: pm2 logs golfcar-maintenance"
+echo "   คำสั่งดู logs: pm2 logs golfcart-app"
 echo "   คำสั่งดู status: pm2 status"
-echo "   คำสั่งรีสตาร์ท: pm2 restart golfcar-maintenance"
-echo "   คำสั่งหยุด: pm2 stop golfcar-maintenance"
+echo "   คำสั่งรีสตาร์ท: pm2 restart golfcart-app"
+echo "   คำสั่งหยุด: pm2 stop golfcart-app"
 
 echo ""
 echo "✅ PM2 Server Management เสร็จสิ้น!"
@@ -114,7 +114,7 @@ echo "🌐 แอปพลิเคชันควรทำงานที่: h
 # แสดง logs สำหรับ 10 วินาทีแรก
 echo ""
 echo "📋 แสดง logs เริ่มต้น (10 วินาที)..."
-timeout 10 pm2 logs golfcar-maintenance --lines 20 || true
+timeout 10 pm2 logs golfcart-app --lines 20 || true
 
 echo ""
-echo "🎉 เสร็จสิ้น! ใช้คำสั่ง 'pm2 logs golfcar-maintenance' เพื่อดู logs ต่อ"
+echo "🎉 เสร็จสิ้น! ใช้คำสั่ง 'pm2 logs golfcart-app' เพื่อดู logs ต่อ"
