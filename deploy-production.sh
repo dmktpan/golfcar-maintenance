@@ -74,7 +74,7 @@ if command -v pm2 &> /dev/null; then
     pm2 stop all || true
     
     print_status "Starting application with PM2..."
-    NODE_ENV=production pm2 start npm --name "golfcar-maintenance" -- start
+    NODE_ENV=production pm2 start npm --name "golfcart-app" -- start
     
     print_status "Saving PM2 configuration..."
     pm2 save
