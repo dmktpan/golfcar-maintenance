@@ -180,6 +180,40 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     }
   };
 
+  // Helper function สำหรับแปลงค่า performed_by ให้ปลอดภัย
+  const safeGetPerformedBy = (userName: any): string => {
+    if (userName === null || userName === undefined) {
+      return 'ไม่ระบุ';
+    }
+    
+    if (typeof userName === 'string') {
+      return userName.trim() || 'ไม่ระบุ';
+    }
+    
+    if (typeof userName === 'object') {
+      // ลองดึงค่าจาก object properties ต่างๆ
+      const possibleNames = [
+        userName.name,
+        userName.username,
+        userName.displayName,
+        userName.fullName,
+        userName.user_name
+      ];
+      
+      for (const name of possibleNames) {
+        if (typeof name === 'string' && name.trim()) {
+          return name.trim();
+        }
+      }
+      
+      // ถ้าไม่มี property ที่เป็น string ให้แปลงทั้ง object เป็น string
+      return JSON.stringify(userName);
+    }
+    
+    // สำหรับ type อื่นๆ ให้แปลงเป็น string
+    return String(userName);
+  };
+
   // สร้าง Serial History Entries จากงานที่มีในระบบ
   const generateSerialHistoryFromJobs = useMemo(() => {
     const generatedEntries: SerialHistoryEntry[] = [];
@@ -188,7 +222,8 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
       const vehicle = vehicles.find(v => v.id === job.vehicle_id);
       if (!vehicle) return;
 
-      const golfCourse = MOCK_GOLF_COURSES.find(gc => gc.id === vehicle.golf_course_id);
+      // ใช้ golfCourses จาก API แทน MOCK_GOLF_COURSES
+      const golfCourse = golfCourses.find(gc => gc.id === vehicle.golf_course_id);
       if (!golfCourse) return;
 
       const entry: SerialHistoryEntry = {
@@ -199,7 +234,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         action_type: 'maintenance',
         action_date: job.updated_at || job.created_at,
         details: `งาน${job.type === 'PM' ? 'ซ่อมบำรุงตามแผน' : job.type === 'BM' ? 'ซ่อมแซม' : 'ปรับปรุงสภาพ'} (${job.type})${job.system ? ` - ระบบ${getSystemDisplayName(job.system)}` : ''}${job.subTasks && job.subTasks.length > 0 ? `: ${job.subTasks.join(', ')}` : ''}`,
-        performed_by: job.userName,
+        performed_by: safeGetPerformedBy(job.userName),
         performed_by_id: job.user_id,
         golf_course_id: vehicle.golf_course_id,
         golf_course_name: golfCourse.name,
@@ -215,11 +250,35 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     });
 
     return generatedEntries;
-  }, [jobs, vehicles]);
+  }, [jobs, vehicles, golfCourses]);
 
-  // รวม Serial History จาก mock data และข้อมูลที่สร้างจากงาน
+  // รวม Serial History จาก mock data และข้อมูลที่สร้างจากงาน (ป้องกันการซ้ำกัน)
   const allSerialHistory = useMemo(() => {
-    return [...serialHistory, ...generateSerialHistoryFromJobs];
+    // สร้าง Set ของ job IDs ที่มีอยู่ใน serialHistory แล้ว
+    const existingJobIds = new Set(
+      serialHistory
+        .filter(entry => entry.related_job_id)
+        .map(entry => entry.related_job_id)
+    );
+
+    // กรองข้อมูลจาก generateSerialHistoryFromJobs ที่ไม่ซ้ำกับที่มีอยู่แล้ว
+    const uniqueGeneratedEntries = generateSerialHistoryFromJobs.filter(
+      entry => !existingJobIds.has(entry.related_job_id)
+    );
+
+    const combinedHistory = [...serialHistory, ...uniqueGeneratedEntries];
+    
+    // ตรวจสอบการซ้ำกันเพิ่มเติมด้วย unique key (serial + date + action)
+    const uniqueEntries = combinedHistory.filter((entry, index, array) => {
+      const uniqueKey = `${entry.serial_number}-${entry.action_date}-${entry.action_type}-${entry.details}`;
+      return array.findIndex(e => 
+        `${e.serial_number}-${e.action_date}-${e.action_type}-${e.details}` === uniqueKey
+      ) === index;
+    });
+
+
+
+    return uniqueEntries;
   }, [serialHistory, generateSerialHistoryFromJobs]);
 
   // Get unique action types for filter
@@ -243,54 +302,59 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     return vehicleNumbers;
   }, [allSerialHistory]);
 
-  // Get golf courses that actually have history data
+  // Get golf courses that actually have history data (เหมือนกับ actionTypes)
   const availableGolfCoursesWithData = useMemo(() => {
-    // Get unique golf courses from actual history data
-    const coursesFromHistory = Array.from(
-      new Map(
-        allSerialHistory.map(entry => [
-          entry.golf_course_id,
-          { id: entry.golf_course_id, name: entry.golf_course_name }
-        ])
-      ).values()
-    );
-    
-    // Merge with MOCK_GOLF_COURSES, prioritizing MOCK_GOLF_COURSES data
-    const allCourses = new Map();
-    
-    // First add courses from history
-    coursesFromHistory.forEach(course => {
-      allCourses.set(course.id, course);
-    });
-    
-    // Then override with MOCK_GOLF_COURSES data if exists
-    MOCK_GOLF_COURSES.forEach(course => {
-      if (allCourses.has(course.id)) {
-        allCourses.set(course.id, course);
-      }
-    });
-    
-    const coursesToShow = Array.from(allCourses.values());
-    
-    // Apply user role restrictions
-    if (user.role === 'admin') {
-      return coursesToShow;
-    } else if (user.role === 'supervisor' && user.managed_golf_courses) {
-      // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะเห็นสนามทั้งหมดในตัวกรอง
-      const totalGolfCourses = golfCourses.length;
-      const managedCoursesCount = user.managed_golf_courses.length;
+    // กรองข้อมูลตาม user access ก่อน
+    const accessibleHistory = allSerialHistory.filter(entry => {
+      let hasAccess = false;
       
-      if (managedCoursesCount === totalGolfCourses) {
-        return coursesToShow; // แสดงสนามทั้งหมดเหมือน admin
+      if (user.role === 'admin') {
+        hasAccess = true;
+      } else if (user.role === 'supervisor' && user.managed_golf_courses) {
+        // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
+        const totalGolfCourses = golfCourses.length;
+        const managedCoursesCount = user.managed_golf_courses.length;
+        
+        if (managedCoursesCount === totalGolfCourses) {
+          hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
+        } else {
+          hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
+        }
       } else {
-        return coursesToShow.filter(course => 
-          user.managed_golf_courses!.includes(course.id)
-        );
+        hasAccess = entry.golf_course_id === user.golf_course_id;
       }
-    } else {
-      return coursesToShow.filter(course => course.id === user.golf_course_id);
-    }
-  }, [allSerialHistory, user]);
+
+      return hasAccess;
+    });
+
+    // Get unique golf course IDs from accessible history data
+    const uniqueCourseIds = Array.from(new Set(accessibleHistory.map(entry => entry.golf_course_id)))
+      .filter(id => id !== null && id !== undefined);
+
+    // Map to golf course objects with names
+    const coursesWithData = uniqueCourseIds.map(courseId => {
+      // Try to find in golfCourses first (from API) - แปลง ID เป็น string เพื่อเปรียบเทียบ
+      const apiCourse = golfCourses.find(course => String(course.id) === String(courseId));
+      if (apiCourse) {
+        return {
+          id: String(apiCourse.id), // แปลงเป็น string เพื่อความสม่ำเสมอ
+          name: apiCourse.name
+        };
+      }
+      
+      // Fallback to name from history data
+      const historyEntry = accessibleHistory.find(entry => String(entry.golf_course_id) === String(courseId));
+      return {
+        id: String(courseId), // แปลงเป็น string เพื่อความสม่ำเสมอ
+        name: historyEntry?.golf_course_name || `สนาม ${courseId}`
+      };
+    });
+    
+    // Sort by name
+    const sortedCourses = coursesWithData.sort((a, b) => a.name.localeCompare(b.name));
+    
+    return sortedCourses;
+  }, [allSerialHistory, golfCourses, user]);
 
   // Filter and sort entries
   const filteredEntries = useMemo(() => {
@@ -327,9 +391,15 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         return false;
       }
 
-      if (filterGolfCourse && filterGolfCourse !== '' && entry.golf_course_id.toString() !== filterGolfCourse) {
-        return false;
-      }
+      if (filterGolfCourse && filterGolfCourse !== '') {
+          // แปลงทั้งสองค่าเป็น string เพื่อเปรียบเทียบ
+          const entryGolfCourseId = String(entry.golf_course_id);
+          const selectedGolfCourseId = String(filterGolfCourse);
+          
+          if (entryGolfCourseId !== selectedGolfCourseId) {
+            return false;
+          }
+        }
 
       if (filterDateFrom) {
         const entryDate = new Date(entry.action_date);
@@ -371,7 +441,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     });
 
     return filtered;
-  }, [allSerialHistory, user, searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder]);
+  }, [allSerialHistory, user, searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder, golfCourses]);
 
   // Pagination logic
   const totalItems = filteredEntries.length;
@@ -553,9 +623,9 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
               className="filter-select"
             >
               <option value="">ทั้งหมด ({availableGolfCoursesWithData.length} สนาม)</option>
-              {availableGolfCoursesWithData.map(course => (
-                <option key={course.id} value={course.id ? course.id.toString() : ''}>
-                  {course.name}
+              {availableGolfCoursesWithData.map((course, index) => (
+                <option key={`course-${course.id}-${index}`} value={String(course.id)}>
+                  {String(course.name)}
                 </option>
               ))}
             </select>
@@ -644,14 +714,14 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                       </div>
                     </td>
                     <td className="serial-col">
-                      <span className="serial-badge">{entry.serial_number}</span>
+                      <span className="serial-badge">{String(entry.serial_number || '-')}</span>
                     </td>
                     <td className="vehicle-col">
-                      <span className="vehicle-badge">{entry.vehicle_number}</span>
+                      <span className="vehicle-badge">{String(entry.vehicle_number || '-')}</span>
                     </td>
                     <td className="battery-col">
                       <span className="battery-badge">
-                        {entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-'}
+                        {String(entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-')}
                       </span>
                     </td>
                     <td className="action-col">
@@ -661,13 +731,13 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                     </td>
                     <td className="details-col">
                       <div className="details-content">
-                        <p className="details-text">{translateDetailsToThai(entry.details)}</p>
+                        <p className="details-text">{translateDetailsToThai(String(entry.details || ''))}</p>
                         {entry.parts_used && entry.parts_used.length > 0 && (
                           <div className="parts-info">
                             <span className="info-label">🔧 อะไหล่ที่ใช้:</span>
                             <div className="parts-list">
                               {entry.parts_used.map((part, index) => (
-                                <span key={`part-${entry.id}-${index}-${part.replace(/[^a-zA-Z0-9]/g, '')}`} className="part-item">{part}</span>
+                                <span key={`part-${entry.id}-${index}-${String(part).replace(/[^a-zA-Z0-9]/g, '')}`} className="part-item">{String(part)}</span>
                               ))}
                             </div>
                           </div>
@@ -675,18 +745,18 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                         {entry.system && (
                           <div className="system-info">
                             <span className="info-label">⚙️ ระบบ:</span> 
-                            <span className="system-name">{getSystemDisplayName(entry.system)}</span>
+                            <span className="system-name">{getSystemDisplayName(String(entry.system))}</span>
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="performer-col">
                       <div className="performer-info">
-                        <span className="performer-name">{entry.performed_by}</span>
+                        <span className="performer-name">{safeGetPerformedBy(entry.performed_by)}</span>
                       </div>
                     </td>
                     <td className="course-col">
-                      <span className="course-name">{entry.golf_course_name}</span>
+                      <span className="course-name">{String(entry.golf_course_name || 'ไม่ระบุ')}</span>
                     </td>
                     <td className="status-col">
                       <div className="status-container">

@@ -1,5 +1,48 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { Prisma } from '@prisma/client';
+
+const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
+
+// ฟังก์ชันสำหรับส่งข้อมูล Serial History ไปยัง External API
+async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
+  try {
+    console.log('🔄 Sending Serial History to External API...');
+    console.log('📝 Serial History data:', JSON.stringify(serialHistoryData, null, 2));
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(`${EXTERNAL_API_BASE}/serial-history`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...serialHistoryData,
+        system: serialHistoryData.system || 'job_activity'
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Serial History sent to External API successfully');
+      return result;
+    } else {
+      console.log('❌ External API failed with status:', response.status);
+      const errorText = await response.text();
+      console.log('❌ Error response:', errorText);
+      // ไม่ throw error เพื่อไม่ให้กระทบต่อการสร้าง job หลัก
+    }
+  } catch (error) {
+    console.error('❌ Error sending Serial History to External API:', error);
+    // ไม่ throw error เพื่อไม่ให้กระทบต่อการสร้าง job หลัก
+  }
+}
+import { isValidObjectId } from '@/lib/utils/validation';
 
 // GET - ดึงข้อมูลงานทั้งหมด
 export async function GET() {
@@ -116,7 +159,7 @@ export async function POST(request: Request) {
     }
 
     // ใช้ transaction เพื่อสร้างงานและบันทึก Serial History
-    const job = await prisma.$transaction(async (tx) => {
+    const job = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // สร้างงานใหม่
       const newJob = await tx.job.create({
         data: jobData,
@@ -136,24 +179,44 @@ export async function POST(request: Request) {
           ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
           : [];
 
-        // บันทึก Serial History สำหรับการสร้างงานใหม่
-        await tx.serialHistoryEntry.create({
+        // บันทึก Serial History เฉพาะการเปิดจ๊อบใหม่เท่านั้น
+        const serialHistoryEntry = await tx.serialHistoryEntry.create({
           data: {
             serial_number: vehicle.serial_number,
             vehicle_number: vehicle_number || vehicle.vehicle_number || '',
             action_type: 'maintenance',
             action_date: new Date(),
-            details: `สร้างงาน ${type} ใหม่ - สถานะ: ${status}${system ? `, ระบบ: ${system}` : ''}${assigned_to ? `, ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
+            details: `เปิดงาน ${type} ใหม่${system ? ` - ระบบ: ${system}` : ''}`,
             is_active: true,
             status: status,
             job_type: type,
             golf_course_name: vehicle.golf_course_name,
-            parts_used: partsUsed,  // เพิ่มข้อมูลอะไหล่
-            system: system,         // เพิ่มข้อมูลระบบ
+            parts_used: partsUsed,
+            system: system,
             vehicle_id: vehicle.id,
             performed_by_id: user_id,
             related_job_id: newJob.id
           }
+        });
+
+        // ส่งข้อมูล Serial History ไปยัง External API (ไม่รอผลลัพธ์)
+        setImmediate(() => {
+          sendSerialHistoryToExternalAPI({
+            serial_number: vehicle.serial_number,
+            vehicle_number: vehicle_number || vehicle.vehicle_number || '',
+            action_type: 'maintenance',
+            action_date: new Date().toISOString(),
+            details: `เปิดงาน ${type} ใหม่${system ? ` - ระบบ: ${system}` : ''}`,
+            is_active: true,
+            status: status,
+            job_type: type,
+            golf_course_name: vehicle.golf_course_name,
+            parts_used: partsUsed,
+            system: system,
+            vehicle_id: vehicle.id,
+            performed_by_id: user_id,
+            related_job_id: newJob.id
+          });
         });
       }
 
@@ -241,7 +304,7 @@ export async function PUT(request: Request) {
     updateData.updatedAt = new Date();
 
     // ใช้ transaction เพื่ออัพเดทงานและบันทึก Serial History
-    const job = await prisma.$transaction(async (tx) => {
+    const job = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // ดึงข้อมูลงานเดิมก่อนอัพเดท
       const existingJob = await tx.job.findUnique({
         where: { id: id },
@@ -259,37 +322,59 @@ export async function PUT(request: Request) {
         include: { parts: true }
       });
 
-      // บันทึก Serial History หากมีการเปลี่ยนแปลงสถานะ
-      if (status && status !== existingJob.status) {
+      // บันทึก Serial History เฉพาะสถานะสำคัญ: assigned (ส่งงาน) และ approved (อนุมัติ) เท่านั้น
+      if (status && status !== existingJob.status && (status === 'assigned' || status === 'approved')) {
         const vehicle = await tx.vehicle.findUnique({
           where: { id: updatedJob.vehicle_id }
         });
 
         if (vehicle) {
-          // เตรียมข้อมูลอะไหล่สำหรับ Serial History (ใช้ข้อมูลจาก parts ที่ส่งมาหรือจากงานที่มีอยู่)
-          const partsUsed = parts && Array.isArray(parts) && parts.length > 0 
+          // เตรียมข้อมูลอะไหล่สำหรับ Serial History (เฉพาะเมื่อ approved)
+          const partsUsed = status === 'approved' && parts && Array.isArray(parts) && parts.length > 0 
             ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
-            : updatedJob.parts && updatedJob.parts.length > 0
+            : status === 'approved' && updatedJob.parts && updatedJob.parts.length > 0
             ? updatedJob.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used})`)
             : [];
 
-          await tx.serialHistoryEntry.create({
+          const actionDescription = status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
+          
+          const serialHistoryEntry = await tx.serialHistoryEntry.create({
             data: {
               serial_number: vehicle.serial_number,
               vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number || '',
               action_type: 'status_change',
               action_date: new Date(),
-              details: `เปลี่ยนสถานะงาน ${updatedJob.type} จาก ${existingJob.status} เป็น ${status}${assigned_to ? `, ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
+              details: `${actionDescription} ${updatedJob.type}${assigned_to ? ` - ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
               is_active: true,
               status: status,
               job_type: updatedJob.type,
               golf_course_name: vehicle.golf_course_name,
-              parts_used: partsUsed,  // เพิ่มข้อมูลอะไหล่
-              system: system || updatedJob.system,  // เพิ่มข้อมูลระบบ
+              parts_used: partsUsed,
+              system: system || updatedJob.system,
               vehicle_id: vehicle.id,
               performed_by_id: user_id || updatedJob.user_id,
               related_job_id: updatedJob.id
             }
+          });
+
+          // ส่งข้อมูล Serial History ไปยัง External API (ไม่รอผลลัพธ์)
+          setImmediate(() => {
+            sendSerialHistoryToExternalAPI({
+              serial_number: vehicle.serial_number,
+              vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number || '',
+              action_type: 'status_change',
+              action_date: new Date().toISOString(),
+              details: `${actionDescription} ${updatedJob.type}${assigned_to ? ` - ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
+              is_active: true,
+              status: status,
+              job_type: updatedJob.type,
+              golf_course_name: vehicle.golf_course_name,
+              parts_used: partsUsed,
+              system: system || updatedJob.system,
+              vehicle_id: vehicle.id,
+              performed_by_id: user_id || updatedJob.user_id,
+              related_job_id: updatedJob.id
+            });
           });
         }
       }

@@ -10,15 +10,31 @@ export async function GET() {
           not: ""
         }
       },
+      include: {
+        vehicle: {
+          include: {
+            golfCourse: true
+          }
+        },
+        performed_by: true,
+        related_job: true
+      },
       orderBy: {
         action_date: 'desc'
       }
     });
 
+    // Transform data to include golf_course_id
+    const transformedHistory = serialHistory.map((entry: any) => ({
+      ...entry,
+      golf_course_id: entry.vehicle.golf_course_id,
+      golf_course_name: entry.golf_course_name || entry.vehicle.golfCourse.name
+    }));
+
     return NextResponse.json({
       success: true,
       message: 'Serial history retrieved successfully',
-      data: serialHistory
+      data: transformedHistory
     }, { status: 200 });
 
   } catch (error: unknown) {

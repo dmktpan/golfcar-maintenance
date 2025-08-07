@@ -45,33 +45,32 @@ async function retryFetch(url: string, options: RequestInit, maxRetries = 3) {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔄 GET /api/proxy/serial-history - External API with retry');
+    console.log('🔄 GET /api/proxy/serial-history - Using internal API');
     
-    // ใช้ External API เท่านั้น พร้อม retry mechanism
-    console.log('🌐 Calling external API with retry...');
-    
-    const response = await retryFetch(`${EXTERNAL_API_BASE}/serial-history`, {
+    // ใช้ internal API แทน external API
+    const baseUrl = request.nextUrl.origin;
+    const response = await fetch(`${baseUrl}/api/serial-history`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    console.log('🌐 External API response status:', response.status);
+    console.log('🏠 Internal API response status:', response.status);
 
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ External API success');
+      console.log('✅ Internal API success');
       return NextResponse.json(data);
     } else {
-      console.log('❌ External API failed with status:', response.status);
+      console.log('❌ Internal API failed with status:', response.status);
       const errorText = await response.text();
       console.log('❌ Error response:', errorText);
       
       return NextResponse.json(
         { 
           success: false, 
-          message: `External API failed with status ${response.status}`,
+          message: `Internal API failed with status ${response.status}`,
           data: [],
           details: errorText
         },
@@ -83,7 +82,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to fetch serial history from external API', 
+        message: 'Failed to fetch serial history from internal API', 
         data: [],
         details: error instanceof Error ? error.message : 'Unknown error'
       },

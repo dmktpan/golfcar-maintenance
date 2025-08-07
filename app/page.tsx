@@ -833,14 +833,7 @@ export default function HomePage() {
             // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ log ไม่สำเร็จ
           }
 
-          try {
-            // เพิ่ม Serial History Entry
-            await createSerialHistoryForJob(jobId, { ...currentJob, status });
-            console.log('✅ Serial history entry added successfully');
-          } catch (historyError) {
-            console.error('❌ Error adding serial history entry:', historyError);
-            // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ history ไม่สำเร็จ
-          }
+          // Serial History จะถูกสร้างโดยอัตโนมัติใน API แล้ว ไม่ต้องสร้างซ้ำที่นี่
         }
         
         // โหลดข้อมูลงานใหม่จากฐานข้อมูลเพื่อให้แน่ใจว่าข้อมูลอัปเดต

@@ -583,6 +583,16 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         return;
       }
 
+      // หาสนามต้นทางจากรถคันแรก
+      const firstVehicle = vehicles.find(v => v.id === selectedVehicles[0]);
+      const fromGolfCourseId = firstVehicle?.golf_course_id;
+      const fromGolfCourseName = firstVehicle?.golf_course_name;
+
+      if (!fromGolfCourseId) {
+        alert('ไม่พบข้อมูลสนามต้นทาง');
+        return;
+      }
+
       // เรียก API เพื่อย้ายรถ
       const response = await fetch('/api/proxy/vehicles/transfer', {
         method: 'POST',
@@ -591,10 +601,12 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         },
         body: JSON.stringify({
           vehicle_ids: selectedVehicles,
-          target_golf_course_id: targetCourseId,
-          target_golf_course_name: targetCourse.name,
+          from_golf_course_id: fromGolfCourseId,
+          to_golf_course_id: targetCourseId,
+          to_golf_course_name: targetCourse.name,
           transfer_date: transferDate,
-          performed_by: 'administrator'
+          user_id: user?.id?.toString() || 'unknown',
+          performed_by: user?.name || 'Unknown'
         }),
       });
 
@@ -624,7 +636,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         setTransferDate('');
         setShowBulkTransferModal(false);
       } else {
-        alert(`เกิดข้อผิดพลาด: ${result.message}`);
+        // จัดการ error case พิเศษ
+        if (response.status === 409 && result.data?.vehicles_with_pending_jobs) {
+          const vehiclesWithJobs = result.data.vehicles_with_pending_jobs;
+          const vehicleNumbers = vehiclesWithJobs.map((v: any) => v.vehicle_number).join(', ');
+          alert(`ไม่สามารถย้ายรถได้เนื่องจากมี job ที่ยังไม่เสร็จ:\n\nรถหมายเลข: ${vehicleNumbers}\n\nกรุณาทำ job ให้เสร็จก่อนหรือยกเลิก job แล้วค่อยย้ายรถ`);
+        } else {
+          alert(`เกิดข้อผิดพลาด: ${result.message}`);
+        }
       }
     } catch (error) {
       console.error('Error transferring vehicles:', error);
@@ -1113,11 +1132,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>ย้ายรถไปสนามอื่น</h3>
+              <h3>ย้ายรถไปสนามอื่น ({selectedVehicles.length} คัน)</h3>
               <button onClick={() => setShowBulkTransferModal(false)} className="close-button">×</button>
             </div>
             <div className="modal-body">
-              <p>เลือกสนามและวันที่ที่ต้องการย้าย {selectedVehicles.length} คัน:</p>
+              <div className="transfer-info">
+                <p><strong>จำนวนรถที่เลือก: {selectedVehicles.length} คัน</strong></p>
+                <p>เลือกสนามปลายทางและวันที่ที่ต้องการย้าย:</p>
+              </div>
               
               <div className="transfer-form">
                 <div className="form-group">
