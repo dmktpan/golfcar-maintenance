@@ -114,6 +114,24 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         setIsDropdownOpen(!isDropdownOpen);
     };
     
+    // ฟังก์ชันสำหรับแสดงชื่อแท็บ
+    const getTabDisplayName = (tab: string) => {
+        const tabNames: Record<string, string> = {
+            'brake': 'ระบบเบรก',
+            'steering': 'ระบบพวงมาลัย',
+            'motor': 'ระบบมอเตอร์',
+            'electric': 'ระบบไฟฟ้า',
+            'others': 'อื่นๆ'
+        };
+        return tabNames[tab] || tab;
+    };
+    
+    // ฟังก์ชันสำหรับเลือกหมวดหมู่
+    const handleCategorySelect = (tab: string) => {
+        setActivePartsTab(tab);
+        setIsDropdownOpen(false);
+    };
+    
     // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
     const getFilteredParts = () => {
         const currentParts = PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM];
