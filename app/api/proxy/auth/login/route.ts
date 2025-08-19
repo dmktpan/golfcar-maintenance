@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
             });
 
             if (user) {
-              // ตรวจสอบรหัสผ่านจากฐานข้อมูล
-              if (password === user.password || password === user.code || password === 'admin000') {
+              // ตรวจสอบรหัสผ่านจากฐานข้อมูล (เฉพาะ password ใหม่เท่านั้น)
+              if (password === user.password) {
                 console.log('✅ Internal API fallback success for admin/supervisor/central');
                 return NextResponse.json({
                   success: true,
