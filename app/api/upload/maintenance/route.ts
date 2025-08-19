@@ -11,8 +11,8 @@ const MAX_COMPRESSED_SIZE = 150 * 1024; // 150KB (ขนาดหลังบี
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const UPLOAD_DIR = path.join(process.cwd(), 'public/uploads/maintenance');
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
-const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '15000'); // ลดเป็น 15 วินาที
-const MAX_RETRY_ATTEMPTS = 1; // ลดเป็น 1 ครั้ง
+const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '30000'); // เพิ่มเป็น 30 วินาที
+const MAX_RETRY_ATTEMPTS = 3; // เพิ่มจำนวน retry
 
 // ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 100KB
 async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> {
@@ -100,7 +100,7 @@ async function checkExternalAPIHealth(): Promise<boolean> {
   try {
     console.log('🔍 Checking External API health...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // ลดเป็น 5 วินาที timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // เพิ่มเป็น 10 วินาที timeout
     
     const response = await fetch(`${EXTERNAL_API_BASE}/health`, {
       method: 'GET',
@@ -247,9 +247,9 @@ async function uploadToExternalAPI(buffer: Buffer, filename: string, fileHash?: 
         break;
       }
       
-      // รอสักครู่ก่อน retry (ลดเวลารอ)
+      // รอสักครู่ก่อน retry (exponential backoff)
       if (attempt < MAX_RETRY_ATTEMPTS) {
-        const delay = Math.min(500 * Math.pow(2, attempt - 1), 2000); // เริ่มต้น 500ms
+        const delay = Math.pow(2, attempt - 1) * 2000; // 2s, 4s, 8s... (เพิ่มเวลารอ)
         console.log(`⏳ Waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -354,28 +354,6 @@ export async function POST(request: NextRequest) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
 
-          // ตรวจสอบว่ามีไฟล์ที่มี hash เดียวกันอยู่แล้วหรือไม่
-          const existingFiles = await new Promise<string[]>((resolve) => {
-            const fs = require('fs');
-            fs.readdir(UPLOAD_DIR, (err: any, files: string[]) => {
-              if (err) {
-                resolve([]);
-              } else {
-                const matchingFiles = files.filter(f => f.includes(fileHash));
-                resolve(matchingFiles);
-              }
-            });
-          });
-          
-          // ถ้ามีไฟล์ที่มี hash เดียวกันอยู่แล้ว ให้ใช้ไฟล์นั้น
-          if (existingFiles.length > 0) {
-            const existingFilename = existingFiles[0];
-            const existingFileUrl = createLocalFileUrl(existingFilename);
-            console.log(`📁 Using existing file: ${existingFilename}`);
-            uploadedFiles.push(existingFileUrl);
-            continue;
-          }
-          
           // Generate unique filename with UUID to prevent duplicates
           const timestamp = Date.now();
           const uuid = randomUUID().replace(/-/g, ''); // Remove hyphens for shorter filename
@@ -385,15 +363,15 @@ export async function POST(request: NextRequest) {
           // Check if file already exists and generate new name if needed
           let filepath = path.join(UPLOAD_DIR, filename);
           let attempts = 0;
-          while (existsSync(filepath) && attempts < 3) {
+          while (existsSync(filepath) && attempts < 5) {
             attempts++;
             console.warn(`⚠️ File ${filename} already exists, generating new name (attempt ${attempts})...`);
             const newUuid = randomUUID().replace(/-/g, '');
-            filename = `${Date.now()}-${newUuid.slice(0, 12)}-${fileHash}.jpg`;
+            filename = `${Date.now()}-${newUuid.slice(0, 12)}-${fileHash}-${attempts}.jpg`;
             filepath = path.join(UPLOAD_DIR, filename);
           }
           
-          if (attempts >= 3) {
+          if (attempts >= 5) {
             errors.push(`${file.name}: ไม่สามารถสร้างชื่อไฟล์ที่ไม่ซ้ำได้`);
             continue;
           }

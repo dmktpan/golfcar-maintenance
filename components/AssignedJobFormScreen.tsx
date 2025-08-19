@@ -165,27 +165,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
     };
 
-    // Functions for dropdown management
-    const toggleDropdown = () => {
-        setIsDropdownOpen(!isDropdownOpen);
-    };
-
-    const handleCategorySelect = (category: string) => {
-        setActivePartsTab(category);
-        setIsDropdownOpen(false);
-    };
-
-    const getTabDisplayName = (tab: string) => {
-        const tabNames: { [key: string]: string } = {
-            'brake': 'ระบบเบรก',
-            'steering': 'ระบบพวงมาลัย', 
-            'motor': 'ระบบมอเตอร์',
-            'electric': 'ระบบไฟฟ้า',
-            'others': 'อื่นๆ'
-        };
-        return tabNames[tab] || tab;
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -459,45 +438,41 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                     <div className="remove-col">ยกเลิก</div>
                                 </div>
                                 {selectedParts.map((part, index) => (
-                                    <div key={`part-${part.id}-${index}`} className="selected-part-item three-column">
-                                        <div className="part-name-col">
+                                    <div key={`part-${part.id}-${index}`} className="selected-part-item">
+                                        <div className="part-info">
                                             <span className="part-name">{part.name}</span>
                                             <span className="part-unit">({part.unit})</span>
                                         </div>
-                                        <div className="quantity-col">
-                                            <div className="quantity-controls">
-                                                <button 
-                                                    type="button" 
-                                                    className="quantity-btn"
-                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
-                                                >
-                                                    -
-                                                </button>
-                                                <input 
-                                                    type="number" 
-                                                    value={part.quantity}
-                                                    onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
-                                                    className="quantity-input"
-                                                    min="1"
-                                                />
-                                                <button 
-                                                    type="button" 
-                                                    className="quantity-btn"
-                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="remove-col">
+                                        <div className="quantity-controls">
                                             <button 
                                                 type="button" 
-                                                className="remove-part-btn mobile-small-text"
-                                                onClick={() => handleRemovePart(part.id)}
+                                                className="quantity-btn"
+                                                onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
                                             >
-                                                x
+                                                -
+                                            </button>
+                                            <input 
+                                                type="number" 
+                                                value={part.quantity}
+                                                onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
+                                                className="quantity-input"
+                                                min="1"
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="quantity-btn"
+                                                onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
+                                            >
+                                                +
                                             </button>
                                         </div>
+                                        <button 
+                                            type="button" 
+                                            className="remove-part-btn"
+                                            onClick={() => handleRemovePart(part.id)}
+                                        >
+                                            ×
+                                        </button>
                                     </div>
                                 ))}
                             </div>
