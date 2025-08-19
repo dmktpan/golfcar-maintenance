@@ -458,18 +458,29 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                 รูปภาพ
               </h3>
               <div className={styles['image-gallery']}>
-                {job.images.map((image, index) => (
-                  <div key={`image-${index}-${image.slice(-10)}`} className={styles['image-item']}>
-                    <Image 
-                      src={image} 
-                      alt={`รูปภาพงาน ${index + 1}`} 
-                      className={styles['job-image']}
-                      width={200}
-                      height={150}
-                      onClick={() => window.open(image, '_blank')}
-                    />
-                  </div>
-                ))}
+                {job.images.map((image, index) => {
+                  // ตรวจสอบว่าเป็น URL ภายนอกหรือไฟล์ local
+                  const isExternalUrl = image.startsWith('http');
+                  const displaySrc = isExternalUrl ? image : `/api/uploads/maintenance/${image.split('/').pop()}`;
+                  
+                  return (
+                    <div key={`image-${index}-${image.slice(-10)}`} className={styles['image-item']}>
+                      <Image 
+                        src={displaySrc} 
+                        alt={`รูปภาพงาน ${index + 1}`} 
+                        className={styles['job-image']}
+                        width={200}
+                        height={150}
+                        onClick={() => window.open(displaySrc, '_blank')}
+                        onError={(e) => {
+                          // Fallback ถ้าโหลดรูปไม่ได้
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-image.svg';
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -16,7 +16,12 @@ export async function GET() {
             golfCourse: true
           }
         },
-        performed_by: true,
+        performed_by: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         related_job: true
       },
       orderBy: {

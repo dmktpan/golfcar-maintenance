@@ -33,6 +33,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [showPartsModal, setShowPartsModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [partsSearchTerm, setPartsSearchTerm] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
@@ -267,6 +268,15 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         return tabNames[tab] || tab;
     };
 
+    const handleCategorySelect = (category: string) => {
+        setActivePartsTab(category);
+        setIsDropdownOpen(false);
+    };
+
+    const toggleDropdown = () => {
+        setIsDropdownOpen(!isDropdownOpen);
+    };
+
     return (
         <div className="card">
             <div className="page-header">
@@ -478,42 +488,51 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         
                         {selectedParts.length > 0 && (
                             <div className="selected-parts-list">
+                                <div className="parts-table-header">
+                                    <div className="part-name-col">ชื่ออะไหล่</div>
+                                    <div className="quantity-col">ปรับจำนวน</div>
+                                    <div className="remove-col">ยกเลิก</div>
+                                </div>
                                 {selectedParts.map((part) => (
-                                    <div key={part.id} className="selected-part-item">
-                                        <div className="part-info">
+                                    <div key={part.id} className="selected-part-item three-column">
+                                        <div className="part-name-col">
                                             <span className="part-name">{part.name}</span>
                                             <span className="part-unit">({part.unit})</span>
                                         </div>
-                                        <div className="quantity-controls">
+                                        <div className="quantity-col">
+                                            <div className="quantity-controls">
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                >
+                                                    -
+                                                </button>
+                                                <input 
+                                                    type="number" 
+                                                    value={part.quantity}
+                                                    onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
+                                                    className="quantity-input"
+                                                    min="1"
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="remove-col">
                                             <button 
                                                 type="button" 
-                                                className="quantity-btn"
-                                                onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                className="remove-part-btn mobile-small-text"
+                                                onClick={() => handleRemovePart(part.id)}
                                             >
-                                                -
-                                            </button>
-                                            <input 
-                                                type="number" 
-                                                value={part.quantity}
-                                                onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
-                                                className="quantity-input"
-                                                min="1"
-                                            />
-                                            <button 
-                                                type="button" 
-                                                className="quantity-btn"
-                                                onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
-                                            >
-                                                +
+                                                x
                                             </button>
                                         </div>
-                                        <button 
-                                            type="button" 
-                                            className="remove-part-btn"
-                                            onClick={() => handleRemovePart(part.id)}
-                                        >
-                                            ×
-                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -612,15 +631,33 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     <div className="modal-content">
                         <div className="modal-header">
                             <h3>เลือกอะไหล่</h3>
-                            <button 
-                                type="button" 
-                                className="modal-close"
-                                onClick={() => setShowPartsModal(false)}
-                            >
-                                ×
-                            </button>
+                            {/* Mobile Category Dropdown in Header */}
+                            <div className="mobile-header-dropdown">
+                                <button
+                                    type="button"
+                                    className={`header-category-dropdown-button ${isDropdownOpen ? 'open' : ''}`}
+                                    onClick={toggleDropdown}
+                                >
+                                    <span>{getTabDisplayName(activePartsTab)}</span>
+                                    <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
+                                </button>
+                                {isDropdownOpen && (
+                                    <div className="header-category-dropdown-menu">
+                                        {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
+                                            <div
+                                                key={tab}
+                                                className={`header-category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
+                                                onClick={() => handleCategorySelect(tab)}
+                                            >
+                                                {getTabDisplayName(tab)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         
+                        {/* Desktop Tabs */}
                         <div className="modal-tabs">
                             {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
                                 <button
@@ -632,6 +669,31 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                     {getTabDisplayName(tab)}
                                 </button>
                             ))}
+                        </div>
+
+                        {/* Mobile Dropdown */}
+                        <div className="mobile-category-dropdown">
+                            <button
+                                type="button"
+                                className={`category-dropdown-button ${isDropdownOpen ? 'open' : ''}`}
+                                onClick={toggleDropdown}
+                            >
+                                <span>{getTabDisplayName(activePartsTab)}</span>
+                                <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
+                            </button>
+                            {isDropdownOpen && (
+                                <div className="category-dropdown-menu">
+                                    {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
+                                        <div
+                                            key={tab}
+                                            className={`category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
+                                            onClick={() => handleCategorySelect(tab)}
+                                        >
+                                            {getTabDisplayName(tab)}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         
                         {/* Search Input */}

@@ -1030,6 +1030,15 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                           </>
                         )}
                       </td>
+                      <td>
+                        {vehicle.transfer_date ? (
+                          <span className="transfer-date">
+                            {new Date(vehicle.transfer_date).toLocaleDateString('th-TH')}
+                          </span>
+                        ) : (
+                          <span className="no-transfer-date">-</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

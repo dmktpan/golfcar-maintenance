@@ -174,8 +174,8 @@ model SerialHistoryEntry {
   vehicle              Vehicle    @relation(fields: [vehicle_id], references: [id])
   vehicle_id           String     @db.ObjectId
   
-  performed_by         User       @relation("PerformedByUser", fields: [performed_by_id], references: [id])
-  performed_by_id      String     @db.ObjectId
+  performed_by         User?      @relation("PerformedByUser", fields: [performed_by_id], references: [id])
+  performed_by_id      String?    @db.ObjectId
 
   related_job          Job?       @relation(fields: [related_job_id], references: [id])
   related_job_id       String?    @db.ObjectId

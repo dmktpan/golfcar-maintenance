@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { View, User } from '@/lib/data';
-import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon } from './icons';
+import { View, User, Job } from '@/lib/data';
+import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon, HistoryIcon } from './icons';
 import styles from './AdminDashboard.module.css';
 
 interface AdminDashboardCardProps {
@@ -31,15 +31,70 @@ const AdminDashboardCard = ({ icon, title, description, buttonText, onClick }: A
 interface AdminDashboardProps {
     setView: (view: View) => void;
     user: User;
+    jobs: Job[];
 }
 
-const AdminDashboard = ({ setView, user }: AdminDashboardProps) => {
+const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
+    // คำนวณจำนวนงานที่รอตรวจสอบ
+    const pendingJobsCount = jobs.filter(job => job.status === 'pending').length;
     const isAdmin = user.role === 'admin';
     const isSupervisor = user.role === 'supervisor';
     return (
         <div className={styles.adminDashboard}>
             <h2 className={styles.adminDashboardTitle}>ระบบจัดการสำหรับผู้ดูแล</h2>
             <div className={styles.adminDashboardGrid}>
+                {/* 1. งานที่รอตรวจสอบ - ใช้งานบ่อยที่สุด */}
+                <AdminDashboardCard 
+                    icon={
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <ChecklistIcon />
+                            {pendingJobsCount > 0 && (
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '-8px',
+                                    right: '-8px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '24px',
+                                    height: '24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }}>
+                                    {pendingJobsCount > 99 ? '99+' : pendingJobsCount}
+                                </span>
+                            )}
+                        </div>
+                    } 
+                    title={`งานที่รอตรวจสอบ${pendingJobsCount > 0 ? ` (${pendingJobsCount})` : ''}`}
+                    description="ตรวจสอบและอนุมัติงานซ่อมบำรุง"
+                    buttonText="ดูงานที่รอ"
+                    onClick={() => setView('supervisor_pending_jobs')}
+                />
+                
+                {/* 2. มอบหมายงานหลายคน */}
+                <AdminDashboardCard 
+                    icon={<ClipboardIcon />} 
+                    title="มอบหมายงานหลายคน"
+                    description="มอบหมายงานให้พนักงานหลายคนพร้อมกัน"
+                    buttonText="มอบหมายงาน"
+                    onClick={() => setView('multi_assign')}
+                />
+                
+                {/* 3. ประวัติซ่อมบำรุง - ย้ายมาจาก Header */}
+                <AdminDashboardCard 
+                    icon={<HistoryIcon />} 
+                    title="ประวัติซ่อมบำรุง"
+                    description="ดูประวัติการซ่อมบำรุงทั้งหมดของระบบ"
+                    buttonText="ดูประวัติ"
+                    onClick={() => setView('history')}
+                />
+                
+                {/* 4. จัดการสนามและซีเรียล */}
                 <AdminDashboardCard 
                     icon={<GearsIcon />} 
                     title="จัดการสนามและซีเรียล"
@@ -47,6 +102,8 @@ const AdminDashboard = ({ setView, user }: AdminDashboardProps) => {
                     buttonText="จัดการข้อมูล"
                     onClick={() => setView('golf_course_management')}
                 />
+                
+                {/* 5. จัดการผู้ใช้งาน */}
                 {(isAdmin || isSupervisor) && (
                     <AdminDashboardCard 
                         icon={<UserPlusIcon />} 
@@ -56,20 +113,8 @@ const AdminDashboard = ({ setView, user }: AdminDashboardProps) => {
                         onClick={() => setView('manage_users')}
                     />
                 )}
-                <AdminDashboardCard 
-                    icon={<ChecklistIcon />} 
-                    title="งานที่รอตรวจสอบ"
-                    description="ตรวจสอบและอนุมัติงานซ่อมบำรุง"
-                    buttonText="ดูงานที่รอ"
-                    onClick={() => setView('supervisor_pending_jobs')}
-                />
-                <AdminDashboardCard 
-                    icon={<ClipboardIcon />} 
-                    title="มอบหมายงานหลายคน"
-                    description="มอบหมายงานให้พนักงานหลายคนพร้อมกัน"
-                    buttonText="มอบหมายงาน"
-                    onClick={() => setView('multi_assign')}
-                />
+                
+                {/* 6. จัดการระบบ */}
                 {isAdmin && (
                     <AdminDashboardCard 
                         icon={<UserShieldIcon />} 
@@ -79,6 +124,8 @@ const AdminDashboard = ({ setView, user }: AdminDashboardProps) => {
                         onClick={() => setView('admin_management')}
                     />
                 )}
+                
+                {/* 7. ประวัติซีเรียล */}
                 <AdminDashboardCard 
                     icon={<SerialHistoryIcon />} 
                     title="ประวัติซีเรียล"

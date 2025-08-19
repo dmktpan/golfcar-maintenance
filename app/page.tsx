@@ -1119,7 +1119,7 @@ export default function HomePage() {
           />
         )}
         {view === 'admin_dashboard' && (
-          <AdminDashboard setView={handleSetView} user={user} />
+          <AdminDashboard setView={handleSetView} user={user} jobs={jobs} />
         )}
         {view === 'manage_users' && (user.role === 'admin' || user.role === 'supervisor') && (
           <ManageUsersScreen 

@@ -54,6 +54,7 @@ export interface Vehicle {
   golf_course_name: string;
   status: 'active' | 'ready' | 'maintenance' | 'retired';
   created_at: string;
+  transfer_date?: string; // เพิ่มฟิลด์สำหรับวันที่ย้าย
 }
 
 export interface Part {

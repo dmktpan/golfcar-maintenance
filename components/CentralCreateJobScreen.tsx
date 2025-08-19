@@ -37,6 +37,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     const [bmCause, setBmCause] = useState<BMCause | ''>('');
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     
     // กรองรถตามสนามที่เลือกและคำค้นหา
     const availableVehicles = vehicles.filter(v => {
@@ -265,6 +266,15 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
         return tabNames[tab] || tab;
     };
 
+    const toggleDropdown = () => {
+        setIsDropdownOpen(!isDropdownOpen);
+    };
+
+    const handleCategorySelect = (category: string) => {
+        setActivePartsTab(category);
+        setIsDropdownOpen(false);
+    };
+
     return (
         <div className="card">
             <div className="page-header">
@@ -442,28 +452,55 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                     {selectedParts.length > 0 && (
                         <div className="selected-parts">
                             <h4>อะไหล่ที่เลือก:</h4>
-                            {selectedParts.map(part => (
-                                <div key={part.id} className="selected-part-item">
-                                    <span>{part.name}</span>
-                                    <div className="quantity-controls">
-                                        <input 
-                                            type="number" 
-                                            min="1" 
-                                            value={part.quantity}
-                                            onChange={e => handlePartQuantityChange(part.id, parseInt(e.target.value) || 1)}
-                                            className="quantity-input"
-                                        />
-                                        <span>{part.unit}</span>
-                                        <button 
-                                            type="button" 
-                                            className="btn-remove"
-                                            onClick={() => handleRemovePart(part.id)}
-                                        >
-                                            ❌
-                                        </button>
-                                    </div>
+                            <div className="selected-parts-list">
+                                <div className="parts-table-header">
+                                    <div className="part-name-col">ชื่ออะไหล่</div>
+                                    <div className="quantity-col">ปรับจำนวน</div>
+                                    <div className="remove-col">ยกเลิก</div>
                                 </div>
-                            ))}
+                                {selectedParts.map(part => (
+                                    <div key={part.id} className="selected-part-item three-column">
+                                        <div className="part-name-col">
+                                            <span className="part-name">{part.name}</span>
+                                            <span className="part-unit">({part.unit})</span>
+                                        </div>
+                                        <div className="quantity-col">
+                                            <div className="quantity-controls">
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                >
+                                                    -
+                                                </button>
+                                                <input 
+                                                    type="number" 
+                                                    min="1" 
+                                                    value={part.quantity}
+                                                    onChange={e => handlePartQuantityChange(part.id, parseInt(e.target.value) || 1)}
+                                                    className="quantity-input"
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="remove-col">
+                                            <button 
+                                                type="button" 
+                                                className="remove-part-btn mobile-small-text"
+                                                onClick={() => handleRemovePart(part.id)}
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -514,8 +551,31 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>เลือกอะไหล่</h3>
+                            <div className="mobile-header-dropdown">
+                                <button 
+                                    type="button" 
+                                    className="header-category-dropdown-button"
+                                    onClick={toggleDropdown}
+                                >
+                                    <span>{getTabDisplayName(activePartsTab)}</span>
+                                    <span className="dropdown-arrow">▼</span>
+                                </button>
+                                {isDropdownOpen && (
+                                    <div className="header-category-dropdown-menu">
+                                        {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
+                                            <div
+                                                key={tab}
+                                                className="header-category-dropdown-item"
+                                                onClick={() => handleCategorySelect(tab)}
+                                            >
+                                                {getTabDisplayName(tab)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <button 
-                                className="modal-close"
+                                className="modal-close desktop-only"
                                 onClick={() => setShowPartsModal(false)}
                             >
                                 ✕

@@ -2969,8 +2969,21 @@ textarea:focus,
 .selected-parts-list {
     margin-top: 1rem;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.5rem;
+}
+
+/* Table header for 3-column layout */
+.parts-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.875rem;
+    color: #333;
 }
 
 .selected-part-item {
@@ -2981,6 +2994,45 @@ textarea:focus,
     border-radius: 20px;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
+}
+
+/* Three-column layout for parts */
+.selected-part-item.three-column {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.part-name-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.part-name {
+    font-weight: 500;
+    color: #333;
+}
+
+.part-unit {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.quantity-col {
+    display: flex;
+    justify-content: center;
+}
+
+.remove-col {
+    display: flex;
+    justify-content: center;
 }
 
 .remove-part-btn {
@@ -2997,6 +3049,60 @@ textarea:focus,
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Mobile small text for cancel button */
+.mobile-small-text {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    width: auto;
+    height: auto;
+    margin: 0;
+}
+
+.mobile-small-text:hover {
+    background-color: #d32f2f;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    .parts-table-header {
+        font-size: 0.75rem;
+        padding: 0.375rem;
+    }
+    
+    .selected-part-item.three-column {
+        padding: 0.5rem;
+        grid-template-columns: 2fr 1.2fr 0.8fr;
+    }
+    
+    .part-name {
+        font-size: 0.875rem;
+    }
+    
+    .part-unit {
+        font-size: 0.7rem;
+    }
+    
+    .mobile-small-text {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .quantity-input {
+        width: 50px;
+        font-size: 0.8rem;
+    }
+    
+    .quantity-btn {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.4rem;
+    }
 }
 
 .remove-part-btn:hover {
@@ -3016,6 +3122,8 @@ textarea:focus,
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    /* เพิ่มการจัดการสำหรับ iOS Safari */
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
@@ -3114,20 +3222,318 @@ textarea:focus,
 @media (max-width: 768px) {
     .modal-content {
         width: 95%;
-        max-height: 90vh;
+        max-height: 70vh; /* ลดจาก 90vh เป็น 70vh เพื่อให้แป้นพิมพ์ไม่บดบัง */
+        margin-bottom: 20vh; /* เพิ่ม margin ด้านล่างเพื่อหลีกเลี่ยงแป้นพิมพ์ */
     }
     
+    /* ซ่อนแท็บปกติและแสดง dropdown menu บนมือถือ */
     .modal-tabs {
-        flex-wrap: wrap;
+        display: none;
     }
     
-    .tab-button {
+    /* แสดง dropdown menu สำหรับมือถือ */
+    .mobile-category-dropdown {
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    .category-dropdown-button {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    
+    .category-dropdown-button:hover {
+        background-color: #0056b3;
+    }
+    
+    .category-dropdown-button.open {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .dropdown-arrow {
+        transition: transform 0.2s ease;
+    }
+    
+    .dropdown-arrow.open {
+        transform: rotate(180deg);
+    }
+    
+    .category-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999; /* เพิ่ม z-index ให้สูงขึ้น */
+        max-height: 250px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* สำหรับ iOS */
+    }
+    
+    .category-dropdown-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f4;
+        font-size: 0.85rem;
+        transition: background-color 0.2s ease;
+    }
+    
+    .category-dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .category-dropdown-item.active {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        font-weight: 500;
+    }
+    
+    .category-dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .mobile-category-dropdown {
+        position: relative;
+        width: 100%;
+        margin-bottom: 1rem;
+        z-index: 100;
+    }
+    
+    /* ซ่อน dropdown เมื่อคลิกข้างนอก */
+    .mobile-category-dropdown.open {
+        z-index: 1000;
+    }
+    
+    /* Mobile Header Dropdown - แทนที่ปุ่ม X */
+    .mobile-header-dropdown {
+        display: block; /* แสดงบนมือถือ */
+        position: relative;
+    }
+    
+    .header-category-dropdown-button {
+        padding: 0.5rem 0.8rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 120px;
+        justify-content: space-between;
+    }
+    
+    .header-category-dropdown-button:hover {
+        background-color: #218838;
+    }
+    
+    .header-category-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+        min-width: 150px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .header-category-dropdown-item {
+        padding: 0.6rem 0.8rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f4;
+        font-size: 0.8rem;
+        transition: background-color 0.2s ease;
+    }
+    
+    .header-category-dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .header-category-dropdown-item.active {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        font-weight: 500;
+    }
+    
+    .header-category-dropdown-item:last-child {
+         border-bottom: none;
+     }
+}
+
+/* ซ่อน mobile header dropdown บนเดสก์ท็อป */
+@media (min-width: 769px) {
+    .mobile-header-dropdown {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+     .tab-button {
         flex: none;
         min-width: 50%;
+        padding: 0.4rem 0.8rem; /* ลดขนาด padding */
+        font-size: 0.8rem; /* ลดขนาดฟอนต์ */
     }
     
     .parts-grid {
         grid-template-columns: 1fr;
+        gap: 0.2rem; /* ลดขนาด gap เพิ่มเติม */
+        padding: 0.5rem 0; /* เพิ่ม padding บนล่าง */
+    }
+    
+    /* ปรับขนาด parts list สำหรับมือถือ - ขยายพื้นที่แสดงผล */
+    .parts-list {
+        max-height: 500px; /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%; /* ขยายความกว้างเต็มที่ */
+        margin: 0;
+        padding: 0.5rem;
+    }
+    
+    /* ขยายกรอบการแสดงผล parts grid */
+    .parts-grid {
+        max-height: 500px; /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%; /* ขยายความกว้างเต็มที่ */
+        margin: 0;
+        padding: 0.5rem;
+    }
+    
+    .part-item {
+        padding: 0.3rem 0.5rem; /* ลดขนาด padding เพิ่มเติม */
+        margin-bottom: 0.15rem; /* ลดระยะห่างระหว่างรายการ */
+        border-radius: 4px;
+        display: block; /* เปลี่ยนเป็น block เพื่อให้ปุ่มเต็มความกว้าง */
+        width: 100%;
+        min-height: 45px; /* ลดความสูงขั้นต่ำ */
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .part-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .part-item.selected {
+        background-color: #e3f2fd;
+        border: 1px solid #2196f3;
+    }
+    
+    .part-name {
+        font-size: 0.8rem;
+        line-height: 1.2;
+        margin-bottom: 0.1rem;
+        font-weight: 500;
+        color: #333;
+        word-wrap: break-word;
+        white-space: normal; /* อนุญาตให้ข้อความขึ้นบรรทัดใหม่ */
+    }
+    
+    .part-unit {
+        font-size: 0.7rem;
+        color: #666;
+        margin-top: 0.1rem;
+        display: block;
+    }
+    
+    .part-details {
+        font-size: 0.7rem;
+        margin-top: 0.1rem;
+    }
+    
+    /* ปรับขนาดปุ่มเลือกอะไหล่ - อัตราส่วน 1:3 */
+    .btn-select-part {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.75rem;
+        min-width: 90px; /* อัตราส่วน 1:3 (30px:90px) */
+        height: 30px;
+        border-radius: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+        text-align: center;
+        line-height: 1.2;
+        max-width: 120px; /* จำกัดความกว้างสูงสุด */
+    }
+    
+    /* ปรับขนาด selected quantity indicator */
+    .selected-quantity {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        background-color: #4caf50;
+        color: white;
+        border-radius: 12px;
+        display: inline-block;
+        margin-top: 0.2rem;
+        font-weight: 500;
+        min-width: auto;
+        text-align: center;
+    }
+    
+    /* ปรับ selected indicator */
+    .selected-indicator {
+        color: #4caf50;
+        font-weight: bold;
+        font-size: 0.9rem;
+        margin-left: 0.3rem;
+        float: right;
+    }
+    
+    /* ปรับขนาด search input */
+    .search-input {
+        padding: 0.6rem; /* ลดขนาด padding */
+        font-size: 0.9rem; /* ลดขนาดฟอนต์ */
+    }
+    
+    /* ปรับขนาด modal header และ footer */
+    .modal-header {
+        padding: 0.8rem 1rem; /* ลดขนาด padding */
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem; /* ลดขนาดฟอนต์ */
+    }
+    
+    .modal-footer {
+        padding: 0.8rem 1rem; /* ลดขนาด padding */
+    }
+    
+    .modal-body {
+        padding: 0.8rem; /* ลดขนาด padding เพิ่มเติม */
+    }
+    
+    /* ปรับขนาด selected quantity indicator */
+    .selected-quantity {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.3rem;
+        top: -6px;
+        right: -6px;
     }
 }
 
@@ -3293,6 +3699,11 @@ textarea:focus,
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+/* ซ่อน mobile dropdown บนเดสก์ท็อป */
+.mobile-category-dropdown {
+  display: none;
 }
 
 .parts-list {
@@ -4570,7 +4981,8 @@ textarea:focus,
   .selected-part-item {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.75rem;
+    gap: 0.6rem; /* ลดขนาด gap */
+    padding: 0.6rem; /* ลดขนาด padding */
   }
   
   .quantity-controls {
@@ -4579,6 +4991,79 @@ textarea:focus,
   
   .part-info {
     text-align: center;
+    font-size: 0.9rem; /* ลดขนาดฟอนต์ */
+  }
+  
+  /* ปรับขนาด parts tabs สำหรับมือถือ */
+  .parts-tabs {
+    gap: 0.3rem; /* ลดขนาด gap */
+  }
+  
+  /* ปรับขนาด selected quantity indicator */
+  .selected-quantity {
+    font-size: 0.7rem; /* ลดขนาดฟอนต์ */
+    padding: 0.2rem 0.4rem; /* ลดขนาด padding */
+  }
+  
+  /* ปรับขนาด part details */
+  .part-details {
+    font-size: 0.8rem; /* ลดขนาดฟอนต์ */
+    margin-top: 0.3rem; /* ลดขนาด margin */
+  }
+  
+  /* ปรับขนาด modal สำหรับ viewport ที่เล็กมาก */
+  @media (max-height: 600px) {
+    .modal-content {
+      max-height: 60vh; /* ลดขนาดเพิ่มเติมสำหรับหน้าจอเตี้ย */
+      margin-bottom: 25vh;
+    }
+    
+    .parts-list {
+      max-height: 200px; /* ลดขนาดเพิ่มเติม */
+    }
+  }
+  
+  /* จัดการเมื่อแป้นพิมพ์เสมือนปรากฏ (viewport height ลดลงมาก) */
+  @media (max-height: 500px) {
+    .modal-content {
+      max-height: 50vh;
+      margin-bottom: 30vh;
+      transform: translateY(-10vh); /* เลื่อน modal ขึ้นเล็กน้อย */
+    }
+    
+    .parts-list {
+      max-height: 150px;
+    }
+    
+    .modal-body {
+      padding: 0.5rem;
+    }
+    
+    .search-input {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+  }
+  
+  /* สำหรับหน้าจอที่เตี้ยมาก (แป้นพิมพ์เต็มหน้าจอ) */
+  @media (max-height: 400px) {
+    .modal-content {
+      max-height: 40vh;
+      margin-bottom: 35vh;
+      transform: translateY(-15vh);
+    }
+    
+    .parts-list {
+      max-height: 120px;
+    }
+    
+    .modal-header {
+      padding: 0.5rem 0.8rem;
+    }
+    
+    .modal-footer {
+      padding: 0.5rem 0.8rem;
+    }
   }
 }
 

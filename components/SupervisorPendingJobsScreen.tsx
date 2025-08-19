@@ -619,15 +619,26 @@ function SupervisorPendingJobsScreen({
                                 <div className={styles.detailsSection}>
                                     <h4>รูปภาพ</h4>
                                     <div className={styles.imagesGrid}>
-                                        {selectedJobForDetails.images.map((image, index) => (
-                                            <img 
-                                                key={`image-${index}-${image.slice(-10)}`} 
-                                                src={image} 
-                                                alt={`รูปภาพงาน ${index + 1}`}
-                                                className={styles.jobImage}
-                                                onClick={() => window.open(image, '_blank')}
-                                            />
-                                        ))}
+                                        {selectedJobForDetails.images.map((image, index) => {
+                                            // ตรวจสอบว่าเป็น URL ภายนอกหรือไฟล์ local
+                                            const isExternalUrl = image.startsWith('http');
+                                            const displaySrc = isExternalUrl ? image : `/api/uploads/maintenance/${image.split('/').pop()}`;
+                                            
+                                            return (
+                                                <img 
+                                                    key={`image-${index}-${image.slice(-10)}`} 
+                                                    src={displaySrc} 
+                                                    alt={`รูปภาพงาน ${index + 1}`}
+                                                    className={styles.jobImage}
+                                                    onClick={() => window.open(displaySrc, '_blank')}
+                                                    onError={(e) => {
+                                                        // Fallback ถ้าโหลดรูปไม่ได้
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.src = '/placeholder-image.svg';
+                                                    }}
+                                                />
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

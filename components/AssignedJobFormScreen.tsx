@@ -107,6 +107,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [partsSearchTerm, setPartsSearchTerm] = useState(''); // เพิ่ม state สำหรับค้นหาอะไหล่
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     
     // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
     const getFilteredParts = () => {
@@ -152,6 +153,37 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
     const handleRemovePart = (partId: string | number) => {
         setSelectedParts(prev => prev.filter(p => p.id !== partId));
+    };
+
+    const handlePartQuantityChange = (partId: string | number, quantity: number) => {
+        if (quantity <= 0) {
+            setSelectedParts(prev => prev.filter(p => p.id !== partId));
+        } else {
+            setSelectedParts(prev => prev.map(p => 
+                p.id === partId ? { ...p, quantity } : p
+            ));
+        }
+    };
+
+    // Functions for dropdown management
+    const toggleDropdown = () => {
+        setIsDropdownOpen(!isDropdownOpen);
+    };
+
+    const handleCategorySelect = (category: string) => {
+        setActivePartsTab(category);
+        setIsDropdownOpen(false);
+    };
+
+    const getTabDisplayName = (tab: string) => {
+        const tabNames: { [key: string]: string } = {
+            'brake': 'ระบบเบรก',
+            'steering': 'ระบบพวงมาลัย', 
+            'motor': 'ระบบมอเตอร์',
+            'electric': 'ระบบไฟฟ้า',
+            'others': 'อื่นๆ'
+        };
+        return tabNames[tab] || tab;
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -231,17 +263,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             'ตรวจเช็ค': 'ตรวจเช็ค'
         };
         return categoryNames[category] || category;
-    };
-    
-    const getTabDisplayName = (tab: string) => {
-        const tabNames: Record<string, string> = {
-            'brake': 'ระบบเบรก',
-            'steering': 'ระบบบังคับเลี้ยว',
-            'motor': 'ระบบมอเตอร์/เพื่อขับ',
-            'electric': 'ระบบไฟฟ้า',
-            'others': 'อื่นๆ'
-        };
-        return tabNames[tab] || tab;
     };
 
     // Reset additionalSubTasks และ partsNotes เมื่ยกคำค้นหา PM เป็น BM/RC
@@ -432,16 +453,51 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         
                         {selectedParts.length > 0 && (
                             <div className="selected-parts-list">
+                                <div className="parts-table-header">
+                                    <div className="part-name-col">ชื่ออะไหล่</div>
+                                    <div className="quantity-col">ปรับจำนวน</div>
+                                    <div className="remove-col">ยกเลิก</div>
+                                </div>
                                 {selectedParts.map((part, index) => (
-                                    <div key={`part-${part.id}-${index}`} className="selected-part-item">
-                                        <span>{part.name} (จำนวน: {part.quantity} {part.unit})</span>
-                                        <button 
-                                            type="button" 
-                                            className="remove-part-btn"
-                                            onClick={() => handleRemovePart(part.id)}
-                                        >
-                                            ×
-                                        </button>
+                                    <div key={`part-${part.id}-${index}`} className="selected-part-item three-column">
+                                        <div className="part-name-col">
+                                            <span className="part-name">{part.name}</span>
+                                            <span className="part-unit">({part.unit})</span>
+                                        </div>
+                                        <div className="quantity-col">
+                                            <div className="quantity-controls">
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                >
+                                                    -
+                                                </button>
+                                                <input 
+                                                    type="number" 
+                                                    value={part.quantity}
+                                                    onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
+                                                    className="quantity-input"
+                                                    min="1"
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    className="quantity-btn"
+                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="remove-col">
+                                            <button 
+                                                type="button" 
+                                                className="remove-part-btn mobile-small-text"
+                                                onClick={() => handleRemovePart(part.id)}
+                                            >
+                                                x
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -540,9 +596,32 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <div className="modal-content">
                         <div className="modal-header">
                             <h3>เลือกอะไหล่</h3>
+                            <div className="mobile-header-dropdown">
+                                <button 
+                                    type="button" 
+                                    className="header-category-dropdown-button"
+                                    onClick={toggleDropdown}
+                                >
+                                    <span>{getTabDisplayName(activePartsTab)}</span>
+                                    <span className="dropdown-arrow">▼</span>
+                                </button>
+                                {isDropdownOpen && (
+                                    <div className="header-category-dropdown-menu">
+                                        {Object.keys(PARTS_BY_SYSTEM).map(tab => (
+                                            <div
+                                                key={tab}
+                                                className="header-category-dropdown-item"
+                                                onClick={() => handleCategorySelect(tab)}
+                                            >
+                                                {getTabDisplayName(tab)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <button 
                                 type="button" 
-                                className="modal-close"
+                                className="modal-close desktop-only"
                                 onClick={() => setShowPartsModal(false)}
                             >
                                 ×

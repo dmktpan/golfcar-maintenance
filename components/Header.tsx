@@ -62,9 +62,6 @@ const Header = ({ user, onLogout, setView }: HeaderProps) => {
                         <a href="#" onClick={(e) => handleNavClick(e, 'supervisor_pending_jobs')} title="งานที่รอตรวจสอบ">
                             <PendingJobsIcon /> <span>งานที่รอตรวจสอบ</span>
                         </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัตการซ่อมบำรุง">
-                            <HistoryIcon /> <span>ประวัติซ่อมบำรุง</span>
-                        </a>
                         <a href="#" onClick={handleLogoutClick} title="ออกจากระบบ">
                             <LogoutIcon /> <span>ออกจากระบบ ({user.name})</span>
                         </a>
