@@ -278,3 +278,4 @@ combined.log
 .temp/
 temp/
 tmp/
+.DS_Store

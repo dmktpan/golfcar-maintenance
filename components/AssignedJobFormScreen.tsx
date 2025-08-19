@@ -228,7 +228,6 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         const systemData = MOCK_SYSTEMS.find(s => s.id === system);
         if (!systemData || !systemData.tasks) return {};
         
-        // Return the categorized tasks directly
         return systemData.tasks;
     };
     
