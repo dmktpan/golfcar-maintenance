@@ -270,7 +270,7 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                                 ))}
                             </div>
                             <small className="form-hint">
-                                หัวหน้าสามารถเลือก "ทั้งหมด" เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br/>
+                                หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br/>
                                 <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
                             </small>
                         </div>
