@@ -14,6 +14,13 @@ interface ImageUploadProps {
   maxSizeKB?: number;
 }
 
+interface FileWithHash {
+  file: File;
+  preview: string;
+  size: number;
+  hash: string;
+}
+
 interface CompressedFile {
   file: File;
   preview: string;
@@ -27,13 +34,27 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   maxImages = 5,
   maxSizeKB = 500 
 }) => {
-  const [selectedFiles, setSelectedFiles] = useState<CompressedFile[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithHash[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedHashes, setUploadedHashes] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use maxImages if provided, otherwise use maxFiles
   const actualMaxFiles = maxImages || maxFiles;
+
+  // ฟังก์ชันคำนวณ hash ของไฟล์
+  const calculateFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  // ฟังก์ชันตรวจสอบว่าไฟล์ซ้ำหรือไม่
+  const isDuplicateFile = (hash: string): boolean => {
+    return uploadedHashes.has(hash) || selectedFiles.some(f => f.hash === hash);
+  };
 
   // ฟังก์ชันลดขนาดรูปภาพ
   const compressImage = useCallback((file: File, maxSizeKB: number): Promise<File> => {
@@ -112,47 +133,88 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setUploadProgress(0);
 
     try {
-      const compressedFiles: CompressedFile[] = [];
+      const compressedFiles: FileWithHash[] = [];
+      const duplicateFiles: string[] = [];
       
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
-        setUploadProgress(((i + 1) / imageFiles.length) * 50); // 50% สำหรับการบีบอัด
+        
+        // อัปเดต progress แบบค่อยเป็นค่อยไป
+        const baseProgress = (i / imageFiles.length) * 20;
+        setUploadProgress(Math.round(baseProgress));
+        
+        // คำนวณ hash ของไฟล์ต้นฉบับ
+        const fileHash = await calculateFileHash(file);
+        
+        // ตรวจสอบไฟล์ซ้ำ
+        if (isDuplicateFile(fileHash)) {
+          duplicateFiles.push(file.name);
+          continue;
+        }
+        
+        // เพิ่มการหน่วงเวลาเล็กน้อยเพื่อให้ progress bar ดูเป็นธรรมชาติ
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const compressedFile = await compressImage(file, maxSizeKB);
         const preview = URL.createObjectURL(compressedFile);
         
         compressedFiles.push({
           file: compressedFile,
-          preview
+          preview,
+          size: compressedFile.size,
+          hash: fileHash
         });
+        
+        // อัปเดต progress หลังบีบอัดเสร็จ
+        const finalProgress = ((i + 1) / imageFiles.length) * 40;
+        setUploadProgress(Math.round(finalProgress));
       }
 
-      setSelectedFiles(prev => [...prev, ...compressedFiles]);
+      // แจ้งเตือนไฟล์ซ้ำ
+      if (duplicateFiles.length > 0) {
+        alert(`ไฟล์ต่อไปนี้มีอยู่แล้วในระบบ: ${duplicateFiles.join(', ')}`);
+      }
+
+      if (compressedFiles.length > 0) {
+        setSelectedFiles(prev => [...prev, ...compressedFiles]);
+      }
       setUploadProgress(100);
     } catch (error) {
-      console.error('Error compressing images:', error);
-      alert('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ');
+      console.error('Error processing images:', error);
+      
+      let errorMessage = 'เกิดข้อผิดพลาดในการประมวลผลรูปภาพ';
+      if (error instanceof Error) {
+        if (error.message.includes('memory') || error.message.includes('size')) {
+          errorMessage = 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป\n\nคำแนะนำ:\n• ใช้ไฟล์ขนาดเล็กกว่า (< 10MB)\n• ลองอัปโหลดทีละไฟล์';
+        } else if (error.message.includes('format') || error.message.includes('type')) {
+          errorMessage = 'รูปแบบไฟล์ไม่ถูกต้อง\nกรุณาใช้ไฟล์ JPG, PNG หรือ WebP เท่านั้น';
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setUploading(false);
       setUploadProgress(0);
     }
-  }, [selectedFiles.length, actualMaxFiles, maxSizeKB, compressImage, images.length]);
+  }, [selectedFiles.length, actualMaxFiles, maxSizeKB, compressImage, images.length, calculateFileHash, isDuplicateFile]);
 
   // ฟังก์ชันเปิดกล้อง (สำหรับมือถือ)
   const openCamera = useCallback(() => {
+    if (uploading) return; // ป้องกันการใช้งานขณะอัปโหลด
     if (fileInputRef.current) {
       fileInputRef.current.setAttribute('capture', 'environment');
       fileInputRef.current.click();
     }
-  }, []);
+  }, [uploading]);
 
   // ฟังก์ชันเลือกไฟล์จากแกลเลอรี่
   const selectFromGallery = useCallback(() => {
+    if (uploading) return; // ป้องกันการใช้งานขณะอัปโหลด
     if (fileInputRef.current) {
       fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.click();
     }
-  }, []);
+  }, [uploading]);
 
   // ฟังก์ชันลบรูปภาพที่อัปโหลดแล้ว
   const removeUploadedImage = useCallback((index: number) => {
@@ -179,13 +241,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
 
     setUploading(true);
-    setUploadProgress(50); // เริ่มต้นที่ 50% หลังจากบีบอัดเสร็จ
+    setUploadProgress(40); // เริ่มต้นที่ 40% หลังจากบีบอัดเสร็จ
 
     try {
       const formData = new FormData();
-      selectedFiles.forEach(({ file }) => {
+      const fileHashes: string[] = [];
+      
+      selectedFiles.forEach(({ file, hash }) => {
         formData.append('files', file);
+        fileHashes.push(hash);
       });
+      
+      // ส่ง file hashes ไปด้วย
+      formData.append('fileHashes', JSON.stringify(fileHashes));
 
       // สร้าง XMLHttpRequest เพื่อติดตาม progress
       const xhr = new XMLHttpRequest();
@@ -193,8 +261,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       // ติดตาม progress ของการอัปโหลด
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
-          // คำนวณ progress จาก 50% ถึง 95%
-          const uploadProgress = 50 + (event.loaded / event.total) * 45;
+          // คำนวณ progress จาก 40% ถึง 90% อย่างค่อยเป็นค่อยไป
+          const uploadProgress = 40 + (event.loaded / event.total) * 50;
           setUploadProgress(Math.round(uploadProgress));
         }
       });
@@ -236,10 +304,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       // รอผลลัพธ์
       const result = await uploadPromise;
       
-      // อัปเดต progress เป็น 100%
+      // อัปเดต progress เป็น 95% ก่อน แล้วค่อยไป 100%
+      setUploadProgress(95);
+      await new Promise(resolve => setTimeout(resolve, 200));
       setUploadProgress(100);
 
       if (result.success) {
+        // อัปเดต uploadedHashes
+        const newHashes = new Set(uploadedHashes);
+        fileHashes.forEach(hash => newHashes.add(hash));
+        setUploadedHashes(newHashes);
+        
         const newImages = [...images, ...result.files];
         onImagesUploaded?.(result.files);
         onImagesChange?.(newImages);
@@ -278,7 +353,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setUploading(false);
       setUploadProgress(0);
     }
-  }, [selectedFiles, onImagesUploaded, onImagesChange, images]);
+  }, [selectedFiles, onImagesUploaded, onImagesChange, images, uploadedHashes]);
 
   return (
     <div className={styles.container}>
@@ -320,7 +395,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             />
           </div>
           <span className={styles.progressText}>
-            {uploadProgress < 50 ? 'กำลังบีบอัดรูปภาพ...' : 'กำลังอัปโหลด...'}
+            {uploadProgress < 40 ? 'กำลังบีบอัดรูปภาพ...' : 'กำลังอัปโหลด...'}
             {uploadProgress}%
           </span>
         </div>

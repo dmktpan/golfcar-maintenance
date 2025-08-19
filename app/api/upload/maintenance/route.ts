@@ -4,12 +4,15 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 import sharp from 'sharp';
+import { randomUUID } from 'crypto';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (เพิ่มขึ้นเพื่อรองรับไฟล์ก่อนบีบอัด)
 const MAX_COMPRESSED_SIZE = 150 * 1024; // 150KB (ขนาดหลังบีบอัด)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const UPLOAD_DIR = path.join(process.cwd(), 'public/uploads/maintenance');
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
+const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '30000'); // เพิ่มเป็น 30 วินาที
+const MAX_RETRY_ATTEMPTS = 3; // เพิ่มจำนวน retry
 
 // ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 100KB
 async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> {
@@ -97,7 +100,7 @@ async function checkExternalAPIHealth(): Promise<boolean> {
   try {
     console.log('🔍 Checking External API health...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 วินาที timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // เพิ่มเป็น 10 วินาที timeout
     
     const response = await fetch(`${EXTERNAL_API_BASE}/health`, {
       method: 'GET',
@@ -132,7 +135,7 @@ async function checkExternalAPIHealth(): Promise<boolean> {
 async function testExternalAPIUpload(): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // เพิ่มเป็น 10 วินาที
     
     // ใช้ OPTIONS method เพื่อทดสอบว่า endpoint มีอยู่จริงหรือไม่
     const response = await fetch(`${EXTERNAL_API_BASE}/upload/maintenance`, {
@@ -158,103 +161,134 @@ async function testExternalAPIUpload(): Promise<boolean> {
   }
 }
 
-// ฟังก์ชันส่งไฟล์ไปยัง External API พร้อม fallback
-async function uploadToExternalAPI(buffer: Buffer, filename: string): Promise<string> {
-  try {
-    const formData = new FormData();
-    const blob = new Blob([new Uint8Array(buffer)], { type: 'image/jpeg' });
-    formData.append('files', blob, filename); // ใช้ 'files' ตามที่ External API ต้องการ
-
-    console.log(`🌐 Uploading ${filename} to external API...`);
-    console.log(`📍 API URL: ${EXTERNAL_API_BASE}/upload/maintenance`);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // เพิ่ม timeout เป็น 20 วินาที
-    
-    const response = await fetch(`${EXTERNAL_API_BASE}/upload/maintenance`, {
-      method: 'POST',
-      body: formData,
-      signal: controller.signal,
-      headers: {
-        // ไม่ต้องใส่ Content-Type เพราะ FormData จะจัดการเอง
-        'Accept': 'application/json',
-        'User-Agent': 'GolfCart-Maintenance-App/1.0',
-      },
-    });
-
-    clearTimeout(timeoutId);
-    
-    console.log(`📊 External API response status: ${response.status}`);
-    
-    if (response.ok) {
+// ฟังก์ชันส่งไฟล์ไปยัง External API พร้อม retry logic
+async function uploadToExternalAPI(buffer: Buffer, filename: string, fileHash?: string): Promise<string> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+    try {
+      console.log(`🌐 Uploading ${filename} to external API (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})...`);
+      
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(buffer)], { type: 'image/jpeg' });
+      formData.append('files', blob, filename);
+      
+      // เพิ่ม file hash ถ้ามี
+      if (fileHash) {
+        formData.append('fileHash', fileHash);
+      }
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), EXTERNAL_API_TIMEOUT);
+      
+      const response = await fetch(`${EXTERNAL_API_BASE}/upload/maintenance`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'GolfCart-Maintenance-App/1.0',
+          'Accept': 'application/json',
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`External API responded with status ${response.status}: ${response.statusText}`);
+      }
+      
       let result;
-      try {
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
         result = await response.json();
-        console.log(`✅ External API upload success for ${filename}:`, result);
-      } catch (jsonError) {
-        // ถ้า response ไม่ใช่ JSON ให้ลองอ่านเป็น text
-        const textResult = await response.text();
-        console.log(`📝 External API text response:`, textResult);
-        result = { message: textResult };
-      }
-      
-      let fileUrl = '';
-      
-      // ส่งกลับ URL จาก External API
-      if (result.files && result.files.length > 0) {
-        fileUrl = result.files[0];
-      } else if (result.file) {
-        fileUrl = result.file;
-      } else if (result.url) {
-        fileUrl = result.url;
-      } else if (result.path) {
-        fileUrl = result.path;
       } else {
-        // ถ้า External API ไม่ส่ง URL กลับมา ให้สร้าง URL เอง
-        fileUrl = `/uploads/maintenance/${filename}`;
-      }
-      
-      // ตรวจสอบว่า URL เป็น relative path หรือไม่ ถ้าใช่ให้เพิ่ม domain
-      if (fileUrl.startsWith('/')) {
-        const baseUrl = EXTERNAL_API_BASE.replace('/api', '');
-        fileUrl = `${baseUrl}${fileUrl}`;
-      }
-      
-      console.log(`🔗 Final URL: ${fileUrl}`);
-      return fileUrl;
-    } else {
-      // อ่าน error response
-      let errorMessage = `HTTP ${response.status}`;
-      try {
-        const errorResult = await response.json();
-        errorMessage = errorResult.message || errorResult.error || errorMessage;
-      } catch {
+        const textResult = await response.text();
+        console.log('📄 External API returned non-JSON response:', textResult);
+        
         try {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
+          result = JSON.parse(textResult);
         } catch {
-          // ใช้ default error message
+          result = { success: true, files: [textResult] };
         }
       }
       
-      console.error(`❌ External API upload failed for ${filename}:`, response.status, errorMessage);
-      throw new Error(`External API upload failed: ${errorMessage}`);
+      console.log('📊 External API response:', result);
+      
+      // ตรวจสอบ response format และดึง URL
+      let imageUrl: string;
+      
+      if (result.files && Array.isArray(result.files) && result.files.length > 0) {
+        imageUrl = result.files[0];
+      } else if (result.file) {
+        imageUrl = result.file;
+      } else if (result.url) {
+        imageUrl = result.url;
+      } else if (result.path) {
+        imageUrl = result.path;
+      } else {
+        throw new Error('Invalid response format from external API');
+      }
+      
+      // ถ้าได้ relative path ให้สร้าง full URL
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = `${EXTERNAL_API_BASE.replace('/api', '')}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+      }
+      
+      console.log(`✅ External API upload successful: ${imageUrl}`);
+      return imageUrl;
+      
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`❌ External API upload attempt ${attempt} failed:`, lastError.message);
+      
+      // ถ้าเป็นความผิดพลาดที่ไม่ควร retry (เช่น 400, 401, 403) ให้หยุดทันที
+      if (lastError.message.includes('400') || lastError.message.includes('401') || lastError.message.includes('403')) {
+        break;
+      }
+      
+      // รอสักครู่ก่อน retry (exponential backoff)
+      if (attempt < MAX_RETRY_ATTEMPTS) {
+        const delay = Math.pow(2, attempt - 1) * 2000; // 2s, 4s, 8s... (เพิ่มเวลารอ)
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.error(`⏰ External API timeout for ${filename}`);
-      throw new Error('External API timeout');
-    }
-    console.error(`❌ Error uploading ${filename} to external API:`, error);
-    throw error;
   }
+  
+  // ถ้า retry หมดแล้วยังไม่สำเร็จ
+  if (lastError) {
+    if (lastError.name === 'AbortError' || lastError.message.includes('aborted')) {
+      console.warn('⚠️ External API upload timed out, will use local fallback');
+      throw new Error('External API upload timed out after multiple attempts');
+    } else if (lastError.message.includes('fetch') || lastError.message.includes('network')) {
+      console.warn('⚠️ Network error connecting to external API, will use local fallback');
+      throw new Error('Network error when connecting to external API after multiple attempts');
+    }
+    console.warn('⚠️ External API upload failed, will use local fallback');
+    throw new Error(`External API upload failed after ${MAX_RETRY_ATTEMPTS} attempts: ${lastError.message}`);
+  }
+  
+  throw new Error('External API upload failed for unknown reason');
 }
 
 // ฟังก์ชัน fallback สำหรับกรณีที่ External API ไม่ทำงาน
 function createLocalFileUrl(filename: string): string {
   // สร้าง URL สำหรับไฟล์ local ผ่าน API route
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/uploads/maintenance/${filename}`;
+  
+  // Ensure baseUrl doesn't end with slash to avoid double slashes
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  
+  // Primary: Use API route for serving files (recommended for production)
+  // This provides better control over headers, caching, and security
+  const apiUrl = `${cleanBaseUrl}/api/uploads/maintenance/${filename}`;
+  
+  // Fallback: Direct access to public directory (for development or if API route fails)
+  // Note: This requires files to be stored in public/uploads/maintenance/
+  // const publicUrl = `${cleanBaseUrl}/uploads/maintenance/${filename}`;
+  
+  return apiUrl;
 }
 
 export async function POST(request: NextRequest) {
@@ -272,6 +306,16 @@ export async function POST(request: NextRequest) {
 
       const data = await request.formData();
       const files = data.getAll('files') as File[];
+      const fileHashesString = data.get('fileHashes') as string;
+      
+      let fileHashes: string[] = [];
+      if (fileHashesString) {
+        try {
+          fileHashes = JSON.parse(fileHashesString);
+        } catch (error) {
+          console.warn('Failed to parse file hashes:', error);
+        }
+      }
       
       if (!files || files.length === 0) {
         return NextResponse.json({ 
@@ -290,6 +334,7 @@ export async function POST(request: NextRequest) {
       // ประมวลผลไฟล์ทีละไฟล์เพื่อลด memory usage
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const fileHash = fileHashes[i];
         
         // Validate file type
         if (!ALLOWED_TYPES.includes(file.type)) {
@@ -309,17 +354,33 @@ export async function POST(request: NextRequest) {
           const bytes = await file.arrayBuffer();
           const buffer = Buffer.from(bytes);
 
-          // Generate unique filename
+          // Generate unique filename with UUID to prevent duplicates
           const timestamp = Date.now();
-          const randomString = Math.random().toString(36).substring(2, 15);
-          const filename = `${timestamp}-${randomString}.jpg`; // บันทึกเป็น JPEG เสมอ
+          const uuid = randomUUID().replace(/-/g, ''); // Remove hyphens for shorter filename
+          const hashPrefix = fileHash ? fileHash.slice(0, 8) : Buffer.from(file.name + timestamp).toString('base64').slice(0, 8).replace(/[+/=]/g, '');
+          let filename = `${timestamp}-${uuid.slice(0, 12)}-${hashPrefix}.jpg`; // บันทึกเป็น JPEG เสมอ
+          
+          // Check if file already exists and generate new name if needed
+          let filepath = path.join(UPLOAD_DIR, filename);
+          let attempts = 0;
+          while (existsSync(filepath) && attempts < 5) {
+            attempts++;
+            console.warn(`⚠️ File ${filename} already exists, generating new name (attempt ${attempts})...`);
+            const newUuid = randomUUID().replace(/-/g, '');
+            filename = `${Date.now()}-${newUuid.slice(0, 12)}-${fileHash}-${attempts}.jpg`;
+            filepath = path.join(UPLOAD_DIR, filename);
+          }
+          
+          if (attempts >= 5) {
+            errors.push(`${file.name}: ไม่สามารถสร้างชื่อไฟล์ที่ไม่ซ้ำได้`);
+            continue;
+          }
           
           // บีบอัดรูปภาพ
           const compressedBuffer = await compressImage(buffer, filename);
           
           // บันทึกไฟล์ local เป็น backup (optional)
           try {
-            const filepath = path.join(UPLOAD_DIR, filename);
             await writeFile(filepath, compressedBuffer);
             console.log(`📁 Local backup saved: ${filename}`);
           } catch (localError) {
@@ -331,10 +392,19 @@ export async function POST(request: NextRequest) {
           let fileUrl: string;
           if (isExternalAPIAvailable) {
             try {
-              fileUrl = await uploadToExternalAPI(compressedBuffer, filename);
+              fileUrl = await uploadToExternalAPI(compressedBuffer, filename, fileHash);
               console.log(`✅ External API upload success: ${filename} -> ${fileUrl}`);
             } catch (externalError) {
-              console.warn(`⚠️ External API failed for ${filename}, using local fallback:`, externalError);
+              const errorMessage = externalError instanceof Error ? externalError.message : String(externalError);
+              
+              if (errorMessage.includes('timed out') || errorMessage.includes('aborted')) {
+                console.warn(`⏰ External API timeout for ${filename}, using local fallback`);
+              } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                console.warn(`🌐 Network error for ${filename}, using local fallback`);
+              } else {
+                console.warn(`⚠️ External API failed for ${filename}, using local fallback:`, errorMessage);
+              }
+              
               // ใช้ local file URL เป็น fallback
               fileUrl = createLocalFileUrl(filename);
               console.log(`📁 Using local fallback: ${filename} -> ${fileUrl}`);
@@ -349,8 +419,19 @@ export async function POST(request: NextRequest) {
           console.log(`✅ Successfully processed: ${filename} (${(compressedBuffer.length / 1024).toFixed(2)}KB)`);
           
         } catch (error) {
-          console.error(`❌ Error processing ${file.name}:`, error);
-          errors.push(`${file.name}: การอัปโหลดล้มเหลว - ${error instanceof Error ? error.message : 'Unknown error'}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`❌ Error processing ${file.name}:`, errorMessage);
+          
+          // ให้ข้อความ error ที่เข้าใจง่ายขึ้น
+          if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+            errors.push(`${file.name}: การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่`);
+          } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+            errors.push(`${file.name}: เกิดปัญหาการเชื่อมต่อเครือข่าย กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต`);
+          } else if (errorMessage.includes('size') || errorMessage.includes('large')) {
+            errors.push(`${file.name}: ไฟล์มีขนาดใหญ่เกินไป กรุณาใช้ไฟล์ขนาดเล็กกว่า`);
+          } else {
+            errors.push(`${file.name}: การอัปโหลดล้มเหลว - ${errorMessage}`);
+          }
         }
       }
 
@@ -384,18 +465,33 @@ export async function POST(request: NextRequest) {
     return await Promise.race([processPromise(), timeoutPromise]) as NextResponse;
 
   } catch (error) {
-    console.error('Upload error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Upload error:', errorMessage);
     
-    if (error instanceof Error && error.message === 'Request timeout') {
+    if (errorMessage === 'Request timeout') {
       return NextResponse.json({ 
         success: false,
         error: 'การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่หรือใช้ไฟล์ขนาดเล็กกว่า' 
       }, { status: 408 });
     }
     
+    if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง' 
+      }, { status: 408 });
+    }
+    
+    if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'เกิดปัญหาการเชื่อมต่อเครือข่าย กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต' 
+      }, { status: 503 });
+    }
+    
     return NextResponse.json({ 
       success: false,
-      error: 'เกิดข้อผิดพลาดในการอัปโหลด' 
+      error: 'เกิดข้อผิดพลาดในการอัปโหลด กรุณาลองใหม่อีกครั้ง' 
     }, { status: 500 });
   }
 }
