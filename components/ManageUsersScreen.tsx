@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, UserRole, GolfCourse, View } from '@/lib/data';
+import EditUserModal from './EditUserModal';
 
 interface ManageUsersScreenProps {
     setView: (view: View) => void;
@@ -32,8 +33,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
         managed_golf_courses: [],
         password: ''
     });
-    const [editMode, setEditMode] = useState(false);
-    const [editUserId, setEditUserId] = useState<number | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
 
     // ตรวจสอบสิทธิ์ admin หรือ supervisor
     if (user.role !== 'admin' && user.role !== 'supervisor') {
@@ -108,46 +109,22 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
         };
 
         try {
-            if (editMode && editUserId !== null) {
-                // Update existing user
-                const response = await fetch(`/api/users/${editUserId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(userData)
-                });
+            // Add new user
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
 
-                if (response.ok) {
-                    const result = await response.json();
-                    setUsers(users.map(user => 
-                        user.id === editUserId ? result.data : user
-                    ));
-                    alert('อัปเดตข้อมูลผู้ใช้สำเร็จ');
-                } else {
-                    const error = await response.json();
-                    alert(`เกิดข้อผิดพลาด: ${error.message}`);
-                }
-                setEditMode(false);
-                setEditUserId(null);
+            if (response.ok) {
+                const result = await response.json();
+                setUsers([...users, result.data]);
+                alert('เพิ่มผู้ใช้สำเร็จ');
             } else {
-                // Add new user
-                const response = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(userData)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    setUsers([...users, result.data]);
-                    alert('เพิ่มผู้ใช้สำเร็จ');
-                } else {
-                    const error = await response.json();
-                    alert(`เกิดข้อผิดพลาด: ${error.message}`);
-                }
+                const error = await response.json();
+                alert(`เกิดข้อผิดพลาด: ${error.message}`);
             }
         } catch (error) {
             console.error('Error saving user:', error);
@@ -167,17 +144,42 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
     };
 
     const handleEditUser = (user: User) => {
-        setNewUser({
-            code: user.code,
-            username: user.username || user.code, // ใช้ code เป็น username หากไม่มี
-            name: user.name,
-            role: user.role,
-            golf_course_id: user.golf_course_id,
-            managed_golf_courses: user.managed_golf_courses || [],
-            password: '' // ไม่แสดง password เดิม
-        });
-        setEditMode(true);
-        setEditUserId(user.id);
+        setEditingUser(user);
+        setIsEditModalOpen(true);
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingUser(null);
+    };
+
+    const handleSaveUser = async (userData: any) => {
+        if (!editingUser) return;
+
+        try {
+            const response = await fetch(`/api/users/${editingUser.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                setUsers(users.map(user => 
+                    user.id === editingUser.id ? result.data : user
+                ));
+                alert('อัปเดตข้อมูลผู้ใช้สำเร็จ');
+            } else {
+                const error = await response.json();
+                alert(`เกิดข้อผิดพลาด: ${error.message}`);
+            }
+        } catch (error) {
+            console.error('Error updating user:', error);
+            alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+            throw error;
+        }
     };
 
     const handleDeleteUser = async (userId: number) => {
@@ -227,7 +229,10 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                 <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
             </div>
 
-            <form onSubmit={handleAddUser} className="form-grid">
+            {/* Add User Section */}
+            <div className="section-card">
+                <h3 className="section-title">เพิ่มผู้ใช้ใหม่</h3>
+                <form onSubmit={handleAddUser} className="form-grid">
                 <div className="form-group">
                     <label htmlFor="code">รหัสพนักงาน</label>
                     <input 
@@ -297,7 +302,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                 {(newUser.role === 'admin' || newUser.role === 'supervisor' || newUser.role === 'central') && (
                     <div className="form-group">
                         <label htmlFor="password">
-                            รหัสผ่าน {editMode ? '(เว้นว่างหากไม่ต้องการเปลี่ยน)' : ''}
+                            รหัสผ่าน
                         </label>
                         <input 
                             type="password" 
@@ -305,8 +310,8 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                             name="password" 
                             value={newUser.password || ''} 
                             onChange={handleInputChange} 
-                            required={!editMode} // required เฉพาะเมื่อเพิ่มใหม่
-                            placeholder={editMode ? 'เว้นว่างหากไม่ต้องการเปลี่ยน' : 'ใส่รหัสผ่าน'}
+                            required
+                            placeholder="ใส่รหัสผ่าน"
                         />
                     </div>
                 )}
@@ -368,34 +373,16 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
 
                 <div className="form-actions">
                     <button type="submit" className="btn-primary">
-                        {editMode ? 'อัพเดทข้อมูล' : 'เพิ่มผู้ใช้'}
+                        เพิ่มผู้ใช้
                     </button>
-                    {editMode && (
-                        <button 
-                            type="button" 
-                            className="btn-secondary" 
-                            onClick={() => {
-                                setEditMode(false);
-                                setEditUserId(null);
-                                setNewUser({
-                                    code: '',
-                                    username: '',
-                                    name: '',
-                                    role: 'staff',
-                                    golf_course_id: '',
-                                    managed_golf_courses: [],
-                                    password: ''
-                                });
-                            }}
-                        >
-                            ยกเลิก
-                        </button>
-                    )}
                 </div>
-            </form>
+                </form>
+            </div>
 
-            <h3 className="section-title">รายชื่อผู้ใช้ทั้งหมด</h3>
-            <div style={{overflowX: 'auto'}}>
+            {/* Users List Section */}
+            <div className="section-card">
+                <h3 className="section-title">รายชื่อผู้ใช้ทั้งหมด</h3>
+                <div className="table-container">
                 <table className="parts-table">
                     <thead>
                         <tr>
@@ -446,7 +433,18 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
+
+            {/* Edit User Modal */}
+            <EditUserModal
+                isOpen={isEditModalOpen}
+                onClose={handleCloseEditModal}
+                user={editingUser}
+                golfCourses={golfCourses}
+                onSave={handleSaveUser}
+                currentUserRole={user.role}
+            />
         </div>
     );
 };
