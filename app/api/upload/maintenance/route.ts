@@ -137,7 +137,6 @@ async function testExternalAPIUpload(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // เพิ่มเป็น 10 วินาที
     
-    // ใช้ OPTIONS method เพื่อทดสอบว่า endpoint มีอยู่จริงหรือไม่
     const response = await fetch(`${EXTERNAL_API_BASE}/upload/maintenance`, {
       method: 'OPTIONS',
       signal: controller.signal,
@@ -284,7 +283,6 @@ function createLocalFileUrl(filename: string): string {
   // This provides better control over headers, caching, and security
   const apiUrl = `${cleanBaseUrl}/api/uploads/maintenance/${filename}`;
   
-  // Fallback: Direct access to public directory (for development or if API route fails)
   // Note: This requires files to be stored in public/uploads/maintenance/
   // const publicUrl = `${cleanBaseUrl}/uploads/maintenance/${filename}`;
   
