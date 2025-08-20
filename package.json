@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p ${PORT:-8080}",
+    "start:production": "node start-production.js",
+    "start:standalone": "node .next/standalone/server.js",
     "lint": "next lint",
     "reset-password": "npx ts-node scripts/reset-password.ts",
     "migrate": "npx ts-node --project scripts/tsconfig.json scripts/migrate-data.ts",

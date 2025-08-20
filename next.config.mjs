@@ -54,6 +54,16 @@ const nextConfig = {
       {
         source: '/external-api/:path*',
         destination: `${process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api'}/:path*`
+      },
+      // Image proxy rewrites to handle external images
+      {
+        source: '/api/proxy/images/:path*',
+        destination: `${process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080'}/:path*`
+      },
+      // Direct image proxy for maintenance uploads
+      {
+        source: '/proxy-image/:path*',
+        destination: `${process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080'}/:path*`
       }
     ]
   },
@@ -62,12 +72,33 @@ const nextConfig = {
   // Image optimization
   images: {
     domains: ['localhost', 'golfcar.go2kt.com'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'golfcar.go2kt.com',
+        port: '8080',
+        pathname: '/api/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8080',
+        pathname: '/**',
+      }
+    ],
     formats: ['image/webp', 'image/avif'],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     minimumCacheTTL: 60,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    unoptimized: process.env.NODE_ENV === 'production',
   },
 
   // Compression

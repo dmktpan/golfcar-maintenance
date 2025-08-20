@@ -36,6 +36,23 @@ export function middleware(request: NextRequest) {
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
   }
 
+  // Handle image proxy requests
+  if (request.nextUrl.pathname.startsWith('/proxy-image/')) {
+    const path = request.nextUrl.pathname.replace('/proxy-image/', '');
+    const externalApiBaseUrl = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080';
+    const imageUrl = `${externalApiBaseUrl}/${path}`;
+    
+    console.log(`🖼️ Middleware: Redirecting image request to: ${imageUrl}`);
+    
+    // Redirect to the actual image URL with proper headers
+    return NextResponse.redirect(imageUrl, {
+      headers: {
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
+  }
+
   return response
 }
 
