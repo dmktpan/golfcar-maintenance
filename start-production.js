@@ -29,8 +29,8 @@ if (!fs.existsSync(standaloneServerPath)) {
 // Create Express app
 const app = express();
 
-// Serve static files from standalone directory
-const staticPath = path.join(standaloneDir, '.next', 'static');
+// Serve static files from main directory
+const staticPath = path.join(__dirname, '.next', 'static');
 const publicPath = path.join(__dirname, 'public');
 
 if (fs.existsSync(staticPath)) {
