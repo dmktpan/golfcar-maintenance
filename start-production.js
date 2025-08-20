@@ -44,52 +44,20 @@ if (fs.existsSync(publicPath)) {
   console.log('✅ Public files served from:', publicPath);
 }
 
-// Start Next.js in standalone mode
+// Start standalone server directly
+console.log('🔄 Starting standalone Next.js server...');
 process.chdir(standaloneDir);
-const nextApp = next({ 
-  dev: false, 
-  dir: standaloneDir,
-  hostname,
-  port 
-});
 
-const handle = nextApp.getRequestHandler();
+// Set environment variables for standalone server
+process.env.PORT = port.toString();
+process.env.HOSTNAME = hostname;
 
-nextApp.prepare().then(() => {
-  // Handle all other requests with Next.js
-  app.all('*', (req, res) => {
-    return handle(req, res);
-  });
-
-  const server = app.listen(port, hostname, (err) => {
-     if (err) {
-       console.error('❌ Failed to start server:', err);
-       process.exit(1);
-     }
-     console.log('✅ Production server started successfully!');
-     console.log(`🌐 Access your application at: http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}`);
-   });
-
-   // Handle server events
-   server.on('error', (error) => {
-     console.error('❌ Server error:', error);
-   });
-
-   // Handle process termination
-   process.on('SIGINT', () => {
-     console.log('\n🛑 Received SIGINT, shutting down gracefully...');
-     server.close(() => {
-       process.exit(0);
-     });
-   });
-
-   process.on('SIGTERM', () => {
-     console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
-     server.close(() => {
-       process.exit(0);
-     });
-   });
-}).catch((err) => {
-  console.error('❌ Failed to prepare Next.js app:', err);
+// Require and start the standalone server
+try {
+  require(standaloneServerPath);
+  console.log('✅ Standalone server started successfully!');
+  console.log(`🌐 Access your application at: http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${port}`);
+} catch (err) {
+  console.error('❌ Failed to start standalone server:', err);
   process.exit(1);
-});
+}
