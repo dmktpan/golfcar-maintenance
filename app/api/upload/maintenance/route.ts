@@ -279,12 +279,10 @@ function createLocalFileUrl(filename: string): string {
   // Ensure baseUrl doesn't end with slash to avoid double slashes
   const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   
-  // Primary: Use API route for serving files (recommended for production)
-  // This provides better control over headers, caching, and security
+  // Use the new uploads API route that works with standalone server
   const apiUrl = `${cleanBaseUrl}/api/uploads/maintenance/${filename}`;
   
-  // Note: This requires files to be stored in public/uploads/maintenance/
-  // const publicUrl = `${cleanBaseUrl}/uploads/maintenance/${filename}`;
+  console.log(`📁 Created local file URL: ${apiUrl}`);
   
   return apiUrl;
 }

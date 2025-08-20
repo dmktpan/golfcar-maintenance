@@ -64,6 +64,11 @@ const nextConfig = {
       {
         source: '/proxy-image/:path*',
         destination: `${process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080'}/:path*`
+      },
+      // External API uploads proxy
+      {
+        source: '/api/uploads/external/:path*',
+        destination: `${process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080'}/uploads/:path*`
       }
     ]
   },

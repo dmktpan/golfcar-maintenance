@@ -39,18 +39,12 @@ export function middleware(request: NextRequest) {
   // Handle image proxy requests
   if (request.nextUrl.pathname.startsWith('/proxy-image/')) {
     const path = request.nextUrl.pathname.replace('/proxy-image/', '');
-    const externalApiBaseUrl = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080';
-    const imageUrl = `${externalApiBaseUrl}/${path}`;
     
-    console.log(`🖼️ Middleware: Redirecting image request to: ${imageUrl}`);
+    console.log(`🖼️ Middleware: Proxying image request for: ${path}`);
     
-    // Redirect to the actual image URL with proper headers
-    return NextResponse.redirect(imageUrl, {
-      headers: {
-        'Cache-Control': 'public, max-age=3600',
-        'Access-Control-Allow-Origin': '*',
-      }
-    });
+    // Rewrite to use our image proxy API instead of direct redirect
+    const proxyUrl = new URL(`/api/proxy/images/${path}`, request.url);
+    return NextResponse.rewrite(proxyUrl);
   }
 
   return response
