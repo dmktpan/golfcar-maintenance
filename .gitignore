@@ -251,7 +251,7 @@ test-prisma-direct.js
 production-config.*
 
 # PM2 ecosystem files (may contain sensitive data)
-ecosystem.config.js
+#ecosystem.config.js
 pm2.config.js
 
 # Any files containing "password" or "secret" in filename
