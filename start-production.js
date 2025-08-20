@@ -18,7 +18,7 @@ console.log(`📍 Server will run on port: ${port}`);
 console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
 
 // Check if standalone server exists
-const standaloneDir = path.join(__dirname, '.next', 'standalone', 'Documents', 'GitHub', 'golfcar-maintenance-1');
+const standaloneDir = path.join(__dirname, '.next', 'standalone');
 const standaloneServerPath = path.join(standaloneDir, 'server.js');
 
 if (!fs.existsSync(standaloneServerPath)) {
