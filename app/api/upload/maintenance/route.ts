@@ -11,8 +11,8 @@ const MAX_COMPRESSED_SIZE = 150 * 1024; // 150KB (ขนาดหลังบี
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const UPLOAD_DIR = path.join(process.cwd(), 'public/uploads/maintenance');
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
-const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '30000'); // เพิ่มเป็น 30 วินาที
-const MAX_RETRY_ATTEMPTS = 3; // เพิ่มจำนวน retry
+const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '15000'); // ลดเป็น 15 วินาที
+const MAX_RETRY_ATTEMPTS = 2; // ลดจำนวน retry
 
 // ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 100KB
 async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> {
@@ -51,12 +51,12 @@ async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> 
 
     // ถ้ายังใหญ่เกิน 100KB ให้ลดขนาดและคุณภาพเพิ่มเติม
     let attempts = 0;
-    while (compressedBuffer.length > MAX_COMPRESSED_SIZE && attempts < 3) {
+    while (compressedBuffer.length > MAX_COMPRESSED_SIZE && attempts < 2) {
       attempts++;
       
       // ลดขนาดและคุณภาพในแต่ละรอบ
-      targetWidth = Math.max(400, targetWidth - 150);
-      quality = Math.max(25, quality - 15);
+      targetWidth = Math.max(400, targetWidth - 200);
+      quality = Math.max(20, quality - 20);
       
       compressedBuffer = await sharp(buffer)
         .resize(targetWidth, targetWidth, { 
@@ -291,7 +291,7 @@ export async function POST(request: NextRequest) {
   try {
     // เพิ่ม timeout สำหรับ request
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), 25000); // ลดเป็น 25 วินาที
+      setTimeout(() => reject(new Error('Request timeout')), 20000); // ลดเป็น 20 วินาที
     });
 
     const processPromise = async () => {
