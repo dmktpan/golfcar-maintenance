@@ -69,7 +69,7 @@ fi
 print_info "Starting server on port 8080..."
 
 # Start the server in background
-node .next/standalone/server.js > logs/app.log 2>&1 &
+npm run start:production > logs/app.log 2>&1 &
 
 # Get the process ID
 PID=$!

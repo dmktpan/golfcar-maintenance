@@ -30,7 +30,7 @@ if [ ! -f "server.pid" ]; then
     
     # Try to find node processes
     print_info "Looking for node processes..."
-    NODE_PROCESSES=$(ps aux | grep "node .next/standalone/server.js\|npm start\|next start" | grep -v grep)
+    NODE_PROCESSES=$(ps aux | grep "node .next/standalone/server.js\|npm.*start\|next start" | grep -v grep)
     
     if [ -n "$NODE_PROCESSES" ]; then
         echo "Found running processes:"
@@ -41,7 +41,7 @@ if [ ! -f "server.pid" ]; then
         if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
             print_info "Killing node processes..."
             pkill -f "node .next/standalone/server.js" 2>/dev/null || true
-            pkill -f "npm start" 2>/dev/null || true
+            pkill -f "npm.*start" 2>/dev/null || true
             pkill -f "next start" 2>/dev/null || true
             print_success "Processes killed"
         fi
