@@ -1,7 +1,7 @@
 // components/ImageUpload.tsx
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { default as NextImage } from 'next/image';
 import styles from './ImageUpload.module.css';
 
@@ -43,6 +43,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   // Use maxImages if provided, otherwise use maxFiles
   const actualMaxFiles = maxImages || maxFiles;
 
+  // ทำความสะอาด preview URLs เมื่อ component unmount
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(({ preview }) => {
+        URL.revokeObjectURL(preview);
+      });
+    };
+  }, [selectedFiles]);
+
   // ฟังก์ชันคำนวณ hash ของไฟล์
   const calculateFileHash = async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
@@ -58,59 +67,122 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // ฟังก์ชันลดขนาดรูปภาพ
   const compressImage = useCallback((file: File, maxSizeKB: number): Promise<File> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // ตรวจสอบ file type ก่อน
+      if (!file.type.startsWith('image/')) {
+        reject(new Error('ไฟล์ไม่ใช่รูปภาพ'));
+        return;
+      }
+
+      // ตรวจสอบขนาดไฟล์ (จำกัดที่ 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        reject(new Error('ไฟล์มีขนาดใหญ่เกินไป (เกิน 50MB)'));
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      let objectUrl: string | null = null;
+      let timeoutId: NodeJS.Timeout;
+
+      // ฟังก์ชันทำความสะอาด
+      const cleanup = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      // ตั้ง timeout 30 วินาที
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('การบีบอัดรูปภาพใช้เวลานานเกินไป'));
+      }, 30000);
+
+      // จัดการ error ของ image
+      img.onerror = () => {
+        cleanup();
+        reject(new Error('ไม่สามารถโหลดรูปภาพได้ รูปแบบไฟล์อาจไม่ถูกต้อง'));
+      };
 
       img.onload = () => {
-        // คำนวณขนาดใหม่ (รักษาอัตราส่วน)
-        const maxWidth = 1200;
-        const maxHeight = 1200;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
+        try {
+          // ตรวจสอบ canvas context
+          if (!ctx) {
+            cleanup();
+            reject(new Error('ไม่สามารถสร้าง canvas context ได้'));
+            return;
           }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
+
+          // คำนวณขนาดใหม่ (รักษาอัตราส่วน)
+          const maxWidth = 1200;
+          const maxHeight = 1200;
+          let { width, height } = img;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
           }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
+          canvas.width = width;
+          canvas.height = height;
 
-        // วาดรูปภาพลงบน canvas
-        ctx?.drawImage(img, 0, 0, width, height);
+          // วาดรูปภาพลงบน canvas
+          ctx.drawImage(img, 0, 0, width, height);
 
-        // ลดคุณภาพจนกว่าขนาดไฟล์จะเหมาะสม
-        let quality = 0.9;
-        const tryCompress = () => {
-          canvas.toBlob((blob) => {
-            if (blob) {
+          // ลดคุณภาพจนกว่าขนาดไฟล์จะเหมาะสม
+          let quality = 0.9;
+          let attempts = 0;
+          const maxAttempts = 10; // จำกัดจำนวนครั้งเพื่อป้องกัน infinite loop
+          
+          const tryCompress = () => {
+            attempts++;
+            
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                cleanup();
+                reject(new Error('ไม่สามารถสร้างไฟล์บีบอัดได้'));
+                return;
+              }
+
               const sizeKB = blob.size / 1024;
-              if (sizeKB <= maxSizeKB || quality <= 0.1) {
+              
+              if (sizeKB <= maxSizeKB || quality <= 0.1 || attempts >= maxAttempts) {
                 const compressedFile = new File([blob], file.name, {
                   type: 'image/jpeg',
                   lastModified: Date.now(),
                 });
+                cleanup();
                 resolve(compressedFile);
               } else {
                 quality -= 0.1;
-                tryCompress();
+                // ใช้ setTimeout เพื่อป้องกัน call stack overflow
+                setTimeout(tryCompress, 0);
               }
-            }
-          }, 'image/jpeg', quality);
-        };
+            }, 'image/jpeg', quality);
+          };
 
-        tryCompress();
+          tryCompress();
+        } catch (error) {
+          cleanup();
+          reject(new Error(`เกิดข้อผิดพลาดในการประมวลผลรูปภาพ: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
       };
 
-      img.src = URL.createObjectURL(file);
+      // สร้าง object URL และเก็บ reference
+      objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
   }, []);
 
@@ -184,10 +256,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       
       let errorMessage = 'เกิดข้อผิดพลาดในการประมวลผลรูปภาพ';
       if (error instanceof Error) {
-        if (error.message.includes('memory') || error.message.includes('size')) {
-          errorMessage = 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป\n\nคำแนะนำ:\n• ใช้ไฟล์ขนาดเล็กกว่า (< 10MB)\n• ลองอัปโหลดทีละไฟล์';
-        } else if (error.message.includes('format') || error.message.includes('type')) {
+        if (error.message.includes('ไฟล์มีขนาดใหญ่เกินไป')) {
+          errorMessage = 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป\n\nคำแนะนำ:\n• ใช้ไฟล์ขนาดเล็กกว่า (< 50MB)\n• ลองอัปโหลดทีละไฟล์';
+        } else if (error.message.includes('ไฟล์ไม่ใช่รูปภาพ') || error.message.includes('รูปแบบไฟล์')) {
           errorMessage = 'รูปแบบไฟล์ไม่ถูกต้อง\nกรุณาใช้ไฟล์ JPG, PNG หรือ WebP เท่านั้น';
+        } else if (error.message.includes('การบีบอัดรูปภาพใช้เวลานานเกินไป')) {
+          errorMessage = 'การบีบอัดรูปภาพใช้เวลานานเกินไป\n\nคำแนะนำ:\n• ลองใช้ไฟล์ขนาดเล็กกว่า\n• ตรวจสอบรูปแบบไฟล์';
+        } else if (error.message.includes('ไม่สามารถโหลดรูปภาพได้')) {
+          errorMessage = 'ไม่สามารถโหลดรูปภาพได้\nไฟล์อาจเสียหายหรือรูปแบบไม่ถูกต้อง';
+        } else {
+          errorMessage = `เกิดข้อผิดพลาด: ${error.message}`;
         }
       }
       
@@ -227,6 +305,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const removeImage = useCallback((index: number) => {
     setSelectedFiles(prev => {
       const newFiles = [...prev];
+      // ทำความสะอาด preview URL เพื่อป้องกัน memory leak
       URL.revokeObjectURL(newFiles[index].preview);
       newFiles.splice(index, 1);
       return newFiles;
@@ -329,6 +408,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         const newImages = [...images, ...result.files];
         onImagesUploaded?.(result.files);
         onImagesChange?.(newImages);
+        
+        // ทำความสะอาด preview URLs หลังอัปโหลดสำเร็จ
+        selectedFiles.forEach(({ preview }) => {
+          URL.revokeObjectURL(preview);
+        });
         setSelectedFiles([]);
         
         // แสดงผลสำเร็จหลังจาก progress bar เสร็จ
@@ -422,6 +506,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <h5>รูปภาพที่อัปโหลดแล้ว</h5>
               <div className={styles.previewGrid}>
                 {images.map((imagePath, index) => {
+                  // ---- เพิ่มการตรวจสอบ 2 บรรทัดนี้เข้าไป ----
+                  if (!imagePath || typeof imagePath !== 'string') {
+                    return null; // ไม่ต้องแสดงผลถ้า path ไม่ถูกต้อง
+                  }
+                  // ------------------------------------
+                  
                   // ตรวจสอบว่าเป็น URL ภายนอกหรือไฟล์ local
                   const isExternalUrl = imagePath.startsWith('http');
                   const displaySrc = isExternalUrl ? imagePath : `/api/uploads/maintenance/${imagePath.split('/').pop()}`;
