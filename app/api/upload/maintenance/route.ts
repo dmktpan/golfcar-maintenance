@@ -14,7 +14,43 @@ const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.g
 const EXTERNAL_API_TIMEOUT = parseInt(process.env.EXTERNAL_API_TIMEOUT || '15000'); // ลดเป็น 15 วินาที
 const MAX_RETRY_ATTEMPTS = 2; // ลดจำนวน retry
 
-// ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 150KB พร้อม error handling ที่ดีขึ้น
+// ฟังก์ชันคำนวณขนาดและคุณภาพเป้าหมายแบบ adaptive
+function calculateOptimalSettings(originalSize: number, targetSize: number = MAX_COMPRESSED_SIZE): { width: number; quality: number; format: 'webp' | 'jpeg' } {
+  const ratio = targetSize / originalSize;
+  
+  // เลือกรูปแบบไฟล์ที่เหมาะสม
+  const format = originalSize > 1024 * 1024 ? 'webp' : 'jpeg'; // ใช้ WebP สำหรับไฟล์ใหญ่
+  
+  // คำนวณขนาดและคุณภาพตามอัตราส่วน
+  let width: number;
+  let quality: number;
+  
+  if (ratio >= 1) {
+    // ไฟล์เล็กแล้ว ใช้การตั้งค่าอนุรักษ์
+    width = 1200;
+    quality = 85;
+  } else if (ratio >= 0.5) {
+    // ไฟล์ใหญ่ปานกลาง
+    width = 1000;
+    quality = 75;
+  } else if (ratio >= 0.2) {
+    // ไฟล์ใหญ่
+    width = 800;
+    quality = 60;
+  } else if (ratio >= 0.1) {
+    // ไฟล์ใหญ่มาก
+    width = 600;
+    quality = 45;
+  } else {
+    // ไฟล์ใหญ่มากๆ
+    width = 400;
+    quality = 30;
+  }
+  
+  return { width, quality, format };
+}
+
+// ฟังก์ชันบีบอัดรูปภาพให้ไม่เกิน 150KB พร้อม adaptive algorithm
 async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> {
   try {
     // ตรวจสอบว่า buffer ถูกต้องหรือไม่
@@ -22,70 +58,45 @@ async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> 
       throw new Error('Invalid image buffer');
     }
 
-    // ตรวจสอบขนาดไฟล์ก่อน ถ้าเล็กแล้วแต่ยังต้องปรับคุณภาพ
-    if (buffer.length <= MAX_COMPRESSED_SIZE) {
+    const originalSize = buffer.length;
+    console.log(`🔄 Starting compression for ${filename}: ${(originalSize / 1024).toFixed(2)}KB`);
+
+    // ถ้าไฟล์เล็กกว่า 150KB แล้ว ให้ปรับคุณภาพเล็กน้อยเพื่อประหยัดพื้นที่
+    if (originalSize <= MAX_COMPRESSED_SIZE) {
       try {
-        return await sharp(buffer)
-          .jpeg({ quality: 85, progressive: true })
+        const result = await sharp(buffer)
+          .jpeg({ quality: 80, progressive: true })
           .toBuffer();
+        console.log(`✅ Small file optimized: ${filename} -> ${(result.length / 1024).toFixed(2)}KB`);
+        return result;
       } catch (sharpError) {
-        console.warn(`Sharp processing failed for small file ${filename}, trying fallback:`, sharpError);
-        // ถ้า Sharp ล้มเหลว ให้ส่งคืน buffer เดิม
+        console.warn(`Sharp processing failed for small file ${filename}, using original:`, sharpError);
         return buffer;
       }
     }
 
-    // เริ่มต้นด้วยการลดขนาดและคุณภาพอย่างรุนแรงเพื่อให้ได้ไฟล์ขนาด 150KB
-    let targetWidth = 800;
-    let quality = 60;
-    
-    // ถ้าไฟล์ใหญ่มาก ลดขนาดและคุณภาพมากขึ้น
-    if (buffer.length > 5 * 1024 * 1024) {
-      targetWidth = 600;
-      quality = 45;
-    } else if (buffer.length > 2 * 1024 * 1024) {
-      targetWidth = 700;
-      quality = 50;
-    }
+    // คำนวณการตั้งค่าที่เหมาะสม
+    const { width, quality, format } = calculateOptimalSettings(originalSize);
+    console.log(`📊 Calculated settings for ${filename}: ${width}px, ${quality}% quality, ${format} format`);
 
     let compressedBuffer: Buffer;
+    
     try {
-      compressedBuffer = await sharp(buffer)
-        .resize(targetWidth, targetWidth, { 
-          fit: 'inside', 
-          withoutEnlargement: true 
-        })
-        .jpeg({ 
-          quality,
-          progressive: true,
-          mozjpeg: true
-        })
-        .toBuffer();
-    } catch (initialSharpError) {
-      console.warn(`Initial Sharp processing failed for ${filename}, trying simpler compression:`, initialSharpError);
-      // ลองใช้การบีบอัดแบบง่ายๆ
-      try {
+      // ลองบีบอัดด้วยการตั้งค่าที่คำนวณได้
+      if (format === 'webp') {
         compressedBuffer = await sharp(buffer)
-          .jpeg({ quality: 70 })
+          .resize(width, width, { 
+            fit: 'inside', 
+            withoutEnlargement: true 
+          })
+          .webp({ 
+            quality,
+            effort: 6 // ใช้ effort สูงเพื่อการบีบอัดที่ดีขึ้น
+          })
           .toBuffer();
-      } catch (fallbackError) {
-        console.error(`All Sharp processing failed for ${filename}:`, fallbackError);
-        throw new Error('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใช้ไฟล์รูปภาพอื่น');
-      }
-    }
-
-    // ถ้ายังใหญ่เกิน 150KB ให้ลดขนาดและคุณภาพเพิ่มเติม
-    let attempts = 0;
-    while (compressedBuffer.length > MAX_COMPRESSED_SIZE && attempts < 2) {
-      attempts++;
-      
-      // ลดขนาดและคุณภาพในแต่ละรอบ
-      targetWidth = Math.max(400, targetWidth - 200);
-      quality = Math.max(20, quality - 20);
-      
-      try {
+      } else {
         compressedBuffer = await sharp(buffer)
-          .resize(targetWidth, targetWidth, { 
+          .resize(width, width, { 
             fit: 'inside', 
             withoutEnlargement: true 
           })
@@ -95,40 +106,101 @@ async function compressImage(buffer: Buffer, filename: string): Promise<Buffer> 
             mozjpeg: true
           })
           .toBuffer();
-          
-        console.log(`Compression attempt ${attempts}: ${targetWidth}px, quality ${quality}%, size: ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
-      } catch (retryError) {
-        console.warn(`Compression attempt ${attempts} failed for ${filename}:`, retryError);
-        break; // หยุดการลองใหม่ถ้า Sharp ล้มเหลว
+      }
+    } catch (initialError) {
+      console.warn(`Initial compression failed for ${filename}, trying JPEG fallback:`, initialError);
+      // ลองใช้ JPEG แบบง่ายๆ
+      try {
+        compressedBuffer = await sharp(buffer)
+          .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 70 })
+          .toBuffer();
+      } catch (fallbackError) {
+        console.error(`All compression methods failed for ${filename}:`, fallbackError);
+        throw new Error('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใช้ไฟล์รูปภาพอื่น');
       }
     }
 
-    // ถ้ายังใหญ่เกินไป ให้บีบอัดสุดท้ายด้วยขนาดและคุณภาพต่ำสุด
+    console.log(`🔄 First compression result: ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
+
+    // ถ้ายังใหญ่เกิน 150KB ให้ใช้วิธี iterative compression
+    let attempts = 0;
+    const maxAttempts = 3;
+    let currentWidth = width;
+    let currentQuality = quality;
+    
+    while (compressedBuffer.length > MAX_COMPRESSED_SIZE && attempts < maxAttempts) {
+      attempts++;
+      
+      // ลดขนาดและคุณภาพแบบ progressive
+      const reductionFactor = 0.8; // ลด 20% ในแต่ละรอบ
+      currentWidth = Math.max(300, Math.floor(currentWidth * reductionFactor));
+      currentQuality = Math.max(15, Math.floor(currentQuality * reductionFactor));
+      
+      try {
+        if (format === 'webp' && attempts <= 2) {
+          // ลอง WebP ก่อนในรอบแรกๆ
+          compressedBuffer = await sharp(buffer)
+            .resize(currentWidth, currentWidth, { 
+              fit: 'inside', 
+              withoutEnlargement: true 
+            })
+            .webp({ 
+              quality: currentQuality,
+              effort: 6
+            })
+            .toBuffer();
+        } else {
+          // ใช้ JPEG ในรอบสุดท้าย
+          compressedBuffer = await sharp(buffer)
+            .resize(currentWidth, currentWidth, { 
+              fit: 'inside', 
+              withoutEnlargement: true 
+            })
+            .jpeg({ 
+              quality: currentQuality,
+              progressive: true,
+              mozjpeg: true
+            })
+            .toBuffer();
+        }
+        
+        console.log(`🔄 Compression attempt ${attempts}: ${currentWidth}px, ${currentQuality}% quality -> ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
+      } catch (retryError) {
+        console.warn(`Compression attempt ${attempts} failed for ${filename}:`, retryError);
+        break;
+      }
+    }
+
+    // ถ้ายังใหญ่เกินไป ให้บีบอัดสุดท้ายด้วยการตั้งค่าต่ำสุด
     if (compressedBuffer.length > MAX_COMPRESSED_SIZE) {
+      console.log(`⚠️ File still too large, applying final aggressive compression for ${filename}`);
       try {
         compressedBuffer = await sharp(buffer)
-          .resize(400, 400, { 
+          .resize(300, 300, { 
             fit: 'inside', 
             withoutEnlargement: true 
           })
           .jpeg({ 
-            quality: 20,
+            quality: 15,
             progressive: true,
             mozjpeg: true
           })
           .toBuffer();
       } catch (finalError) {
         console.warn(`Final compression failed for ${filename}, using previous result:`, finalError);
-        // ใช้ผลลัพธ์ก่อนหน้าถ้าการบีบอัดสุดท้ายล้มเหลว
       }
     }
 
+    const finalSize = compressedBuffer.length;
+    const compressionRatio = ((originalSize - finalSize) / originalSize * 100).toFixed(1);
+    console.log(`✅ Compression completed for ${filename}: ${(originalSize / 1024).toFixed(2)}KB -> ${(finalSize / 1024).toFixed(2)}KB (${compressionRatio}% reduction)`);
+
     return compressedBuffer;
   } catch (error) {
-    console.error(`Error compressing ${filename}:`, error);
-    // ให้ข้อความ error ที่เข้าใจง่ายในภาษาไทย
+    console.error(`❌ Error compressing ${filename}:`, error);
     if (error instanceof Error && error.message.includes('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ')) {
-      throw error; // ส่งต่อข้อความ error ที่เป็นภาษาไทยแล้ว
+      throw error;
     }
     throw new Error('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาตรวจสอบไฟล์รูปภาพและลองใหม่อีกครั้ง');
   }

@@ -54,10 +54,37 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // ฟังก์ชันคำนวณ hash ของไฟล์
   const calculateFileHash = async (file: File): Promise<string> => {
-    const buffer = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    try {
+      // ตรวจสอบว่า crypto.subtle มีอยู่และสามารถใช้งานได้
+      if (!crypto || !crypto.subtle || !crypto.subtle.digest) {
+        console.warn('crypto.subtle.digest not available, using fallback hash');
+        return generateFallbackHash(file);
+      }
+
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      console.warn('Error calculating file hash with crypto.subtle, using fallback:', error);
+      return generateFallbackHash(file);
+    }
+  };
+
+  // ฟังก์ชัน fallback สำหรับการสร้าง hash เมื่อ crypto.subtle ไม่สามารถใช้งานได้
+  const generateFallbackHash = (file: File): string => {
+    // สร้าง hash จากชื่อไฟล์, ขนาด, และเวลาปัจจุบัน
+    const data = `${file.name}-${file.size}-${file.lastModified}-${Date.now()}`;
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // แปลงเป็น hex string และเพิ่ม random suffix
+    const hexHash = Math.abs(hash).toString(16).padStart(8, '0');
+    const randomSuffix = Math.random().toString(36).substring(2, 10);
+    return `${hexHash}${randomSuffix}`;
   };
 
   // ฟังก์ชันตรวจสอบว่าไฟล์ซ้ำหรือไม่
