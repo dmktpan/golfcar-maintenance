@@ -62,11 +62,11 @@ npm ci --production=false
 
 print_success "Dependencies installed"
 
-# Build the application
+# Build the application with static files copy
 print_status "Building application for production..."
-NODE_ENV=production npm run build
+NODE_ENV=production npm run build:production
 
-print_success "Application built successfully"
+print_success "Application built successfully with static files copied"
 
 # Check if PM2 is available
 if command -v pm2 &> /dev/null; then

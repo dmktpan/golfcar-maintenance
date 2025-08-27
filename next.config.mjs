@@ -112,6 +112,14 @@ const nextConfig = {
   // Output configuration for production
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 
+  // Ensure static files are copied to standalone directory
+  ...(process.env.NODE_ENV === 'production' && {
+    experimental: {
+      ...nextConfig.experimental,
+      outputFileTracingRoot: process.cwd(),
+    },
+  }),
+
   // Webpack configuration
   webpack: (config, { isServer }) => {
     if (!isServer) {
