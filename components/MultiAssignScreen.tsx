@@ -40,6 +40,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
         remarks: ''
     }]);
     const [successMessage, setSuccessMessage] = useState('');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const getFilteredStaffUsers = (golfCourseId: string | number) => {
         if (golfCourseId === 0 || golfCourseId === '') return [];
@@ -163,6 +164,11 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             return;
         }
         
+        // Show confirmation modal instead of directly submitting
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmAssignment = async () => {
         // Create new jobs from assignments using API
         try {
             const jobPromises = assignments.map(async (assignment) => {
@@ -201,7 +207,8 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             // Add created jobs to the jobs list
             setJobs(prevJobs => [...prevJobs, ...createdJobs]);
             
-            // Show success message
+            // Hide modal and show success message
+            setShowConfirmModal(false);
             setSuccessMessage(`มอบหมายงานสำเร็จ ${assignments.length} รายการ`);
             
             // Reset form after 3 seconds
@@ -221,7 +228,21 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             }, 3000);
         } catch (error) {
             console.error('Error creating jobs:', error);
+            setShowConfirmModal(false);
             alert(`เกิดข้อผิดพลาดในการสร้างงาน: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    };
+
+    const handleCancelAssignment = () => {
+        setShowConfirmModal(false);
+    };
+
+    const getJobTypeDisplayName = (jobType: JobType) => {
+        switch (jobType) {
+            case 'PM': return 'บำรุงรักษาเชิงป้องกัน';
+            case 'BM': return 'ซ่อมด่วน';
+            case 'Recondition': return 'ปรับสภาพ';
+            default: return jobType;
         }
     };
 
@@ -239,6 +260,86 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             {successMessage && (
                 <div className="success-message">
                     {successMessage}
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h3>สรุปรายการมอบหมายงาน</h3>
+                            <button 
+                                className="modal-close" 
+                                onClick={handleCancelAssignment}
+                                aria-label="ปิด"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p>คุณต้องการมอบหมายงานจำนวน <strong>{assignments.length}</strong> รายการ ดังนี้:</p>
+                            <div className="assignment-summary">
+                                {assignments.map((assignment, index) => {
+                                    const golfCourse = golfCourses.find(gc => String(gc.id) === String(assignment.golfCourseId));
+                                    const assignedUser = users.find(u => String(u.id) === String(assignment.userId));
+                                    const systemName = assignment.jobType === 'PM' ? 
+                                        MOCK_SYSTEMS.find(s => s.id === assignment.system)?.name || assignment.system : 
+                                        '-';
+                                    
+                                    return (
+                                        <div key={assignment.id} className="summary-item">
+                                            <h4>รายการที่ {index + 1}</h4>
+                                            <div className="summary-details">
+                                                <div className="summary-row">
+                                                    <span className="label">ชื่อสนาม:</span>
+                                                    <span className="value">{golfCourse?.name || 'ไม่พบข้อมูล'}</span>
+                                                </div>
+                                                <div className="summary-row">
+                                                    <span className="label">เบอร์รถ:</span>
+                                                    <span className="value">{assignment.vehicleNumber}</span>
+                                                </div>
+                                                <div className="summary-row">
+                                                    <span className="label">ชื่อพนักงาน:</span>
+                                                    <span className="value">{assignedUser?.name || 'ไม่พบข้อมูล'}</span>
+                                                </div>
+                                                <div className="summary-row">
+                                                    <span className="label">ประเภทงาน:</span>
+                                                    <span className="value">{getJobTypeDisplayName(assignment.jobType)}</span>
+                                                </div>
+                                                {assignment.jobType === 'PM' && (
+                                                    <div className="summary-row">
+                                                        <span className="label">ระบบ:</span>
+                                                        <span className="value">{systemName}</span>
+                                                    </div>
+                                                )}
+                                                {assignment.remarks && (
+                                                    <div className="summary-row">
+                                                        <span className="label">หมายเหตุ:</span>
+                                                        <span className="value">{assignment.remarks}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button 
+                                className="btn-secondary" 
+                                onClick={handleCancelAssignment}
+                            >
+                                ยกเลิก
+                            </button>
+                            <button 
+                                className="btn-success" 
+                                onClick={handleConfirmAssignment}
+                            >
+                                ยืนยันการมอบหมายงาน
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
             
@@ -342,9 +443,9 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                     onChange={(e) => handleInputChange(assignment.id, 'jobType', e.target.value as JobType)}
                                     required
                                 >
-                                    <option value="PM">Preventive Maintenance (PM)</option>
-                                    <option value="BM">Breakdown Maintenance (BM)</option>
-                                    <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
+                                    <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
+                                    <option value="BM">ซ่อมด่วน</option>
+                                    <option value="Recondition">ปรับสภาพ</option>
                                 </select>
                             </div>
                             

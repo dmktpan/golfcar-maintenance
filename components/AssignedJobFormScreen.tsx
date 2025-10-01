@@ -272,7 +272,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
                 <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
                 <p><strong>มอบหมายโดย:</strong> {jobInfo.assignedBy}</p>
-                <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}</p>
+                <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}</p>
                 {system && <p><strong>ระบบที่ต้องซ่อม:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}</p>}
             </div>
 
@@ -310,9 +310,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภทการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)} disabled>
-                        <option value="PM">Preventive Maintenance (PM)</option>
-                        <option value="BM">Breakdown Maintenance (BM)</option>
-                        <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
+                        <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
+                        <option value="BM">ซ่อมด่วน</option>
+                        <option value="Recondition">ปรับสภาพ</option>
                     </select>
                 </div>
 
@@ -510,7 +510,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <h3>สรุปข้อมูลงาน</h3>
                     <div className="summary-box">
                         <div className="summary-item">
-                            <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
+                            <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}
                         </div>
                         {jobType === 'BM' && bmCause && (
                             <div className="summary-item">

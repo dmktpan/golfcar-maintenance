@@ -6072,3 +6072,78 @@ datalist {
     min-width: 50px;
   }
 }
+
+/* Assignment Summary Modal Styles */
+.assignment-summary {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 1rem;
+}
+
+.summary-item {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+}
+
+.summary-item h4 {
+    margin: 0 0 0.75rem 0;
+    color: #007bff;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.summary-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-row .label {
+    font-weight: 600;
+    color: #495057;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+
+.summary-row .value {
+    color: #212529;
+    text-align: right;
+    flex: 1;
+    margin-left: 1rem;
+}
+
+@media (max-width: 768px) {
+    .summary-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .summary-row .label {
+        min-width: auto;
+    }
+    
+    .summary-row .value {
+        text-align: left;
+        margin-left: 0;
+    }
+}
