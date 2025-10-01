@@ -459,9 +459,21 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
               </h3>
               <div className={styles['image-gallery']}>
                 {job.images.map((image, index) => {
-                  // ตรวจสอบว่าเป็น URL ภายนอกหรือไฟล์ local
-                  const isExternalUrl = image.startsWith('http');
-                  const displaySrc = isExternalUrl ? image : `/api/uploads/maintenance/${image.split('/').pop()}`;
+                  // ตรวจสอบและสร้าง URL ที่ถูกต้องสำหรับการแสดงผล
+                  let displaySrc = image;
+                  
+                  // ถ้าเป็น external URL ให้ใช้ตามเดิม
+                  if (image.startsWith('http://') || image.startsWith('https://')) {
+                    displaySrc = image;
+                  }
+                  // ถ้ามี path ของ API อยู่แล้ว ให้ใช้ตามเดิม
+                  else if (image.startsWith('/api/uploads/maintenance/')) {
+                    displaySrc = image;
+                  }
+                  // ถ้าเป็นชื่อไฟล์เปล่า ให้เพิ่ม path
+                  else {
+                    displaySrc = `/api/uploads/maintenance/${image}`;
+                  }
                   
                   return (
                     <div key={`image-${index}-${image.slice(-10)}`} className={styles['image-item']}>
@@ -476,6 +488,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                           // Fallback ถ้าโหลดรูปไม่ได้
                           const target = e.target as HTMLImageElement;
                           target.src = '/placeholder-image.svg';
+                          console.error('Failed to load image:', displaySrc);
                         }}
                       />
                     </div>

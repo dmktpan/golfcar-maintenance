@@ -32,6 +32,7 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
     });
 
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const isAdmin = currentUserRole === 'admin';
 
     useEffect(() => {
@@ -43,7 +44,7 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                 role: user.role,
                 golf_course_id: user.golf_course_id,
                 managed_golf_courses: user.managed_golf_courses || [],
-                password: ''
+                password: user.password || ''
             });
         }
     }, [user, isOpen]);
@@ -221,15 +222,37 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                                 <label htmlFor="edit-password">
                                     รหัสผ่าน (เว้นว่างหากไม่ต้องการเปลี่ยน)
                                 </label>
-                                <input 
-                                    type="password" 
-                                    id="edit-password" 
-                                    name="password" 
-                                    value={formData.password || ''} 
-                                    onChange={handleInputChange} 
-                                    disabled={isLoading}
-                                    placeholder="เว้นว่างหากไม่ต้องการเปลี่ยน"
-                                />
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input 
+                                        type={showPassword ? "text" : "password"}
+                                        id="edit-password" 
+                                        name="password" 
+                                        value={formData.password || ''} 
+                                        onChange={handleInputChange} 
+                                        disabled={isLoading}
+                                        placeholder="เว้นว่างหากไม่ต้องการเปลี่ยน"
+                                        style={{ paddingRight: '50px', flex: 1 }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '10px',
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            color: '#666',
+                                            padding: '5px',
+                                            zIndex: 1
+                                        }}
+                                        disabled={isLoading}
+                                        title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                                    >
+                                        {showPassword ? "🙈" : "👁️"}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

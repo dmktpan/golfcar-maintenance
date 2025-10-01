@@ -13,6 +13,7 @@ interface ViewAssignedJobsScreenProps {
   partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
   onUpdateStatus: (jobId: string, status: JobStatus) => void;
   onFillJobForm?: (job: Job) => void;
+  onDeleteJob?: (jobId: string) => void; // เพิ่มฟังก์ชันสำหรับลบงาน
 }
 
 function ViewAssignedJobsScreen({ 
@@ -23,7 +24,8 @@ function ViewAssignedJobsScreen({
   vehicles,
   partsUsageLog = [],
   onUpdateStatus,
-  onFillJobForm 
+  onFillJobForm,
+  onDeleteJob 
 }: ViewAssignedJobsScreenProps) {
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
@@ -53,6 +55,33 @@ function ViewAssignedJobsScreen({
 
         setFilteredJobs(filtered);
     }, [jobs, selectedCourseId, selectedEmployeeId]);
+
+    // ฟังก์ชันสำหรับลบงาน
+    const handleDeleteJob = async (jobId: string) => {
+        try {
+            const response = await fetch(`/api/jobs/${jobId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                // เรียกใช้ callback function ที่ส่งมาจาก parent component
+                if (onDeleteJob) {
+                    onDeleteJob(jobId);
+                }
+                
+                // อัปเดต filteredJobs โดยลบงานที่ถูกลบออก
+                setFilteredJobs(prev => prev.filter(job => job.id !== jobId));
+                
+                alert('ลบงานเรียบร้อยแล้ว');
+            } else {
+                const errorData = await response.json();
+                alert(`เกิดข้อผิดพลาดในการลบงาน: ${errorData.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting job:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+        }
+    };
 
     return (
         <div style={{ padding: '20px' }}>
@@ -140,6 +169,7 @@ function ViewAssignedJobsScreen({
                             partsUsageLog={partsUsageLog}
                             onUpdateStatus={onUpdateStatus}
                             onFillJobForm={onFillJobForm}
+                            onDeleteJob={handleDeleteJob}
                         />
                     ))
                 )}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
+import { getPartsBySystem, PartsBySystem, CategorizedPart, searchParts } from '@/lib/partsService';
 import ImageUpload from './ImageUpload';
 
 // Interface สำหรับ local state ของอะไหล่ที่เลือก
@@ -21,63 +22,22 @@ interface AssignedJobFormScreenProps {
     golfCourses: GolfCourse[];
 }
 
-// รายการอะไหล่ตามระบบ (เอาราคาออกแล้ว)
-const PARTS_BY_SYSTEM = {
-    'brake': [
-        { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น' },
-        { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด' },
-        { id: 3, name: 'เฟืองปาร์คเบรค', unit: 'ชิ้น' },
-        { id: 4, name: 'สปริงคันเร่ง', unit: 'ชิ้น' },
-        { id: 5, name: 'สายเบรกสั้น', unit: 'เส้น' },
-        { id: 6, name: 'สายเบรกยาว', unit: 'เส้น' },
-        { id: 7, name: 'ผ้าเบรก EZGO', unit: 'ชุด' },
-        { id: 8, name: 'ผ้าเบรก EZGO สั้น', unit: 'ชุด' },
-        { id: 9, name: 'ผ้าเบรก EZGO ยาว', unit: 'ชุด' },
-        { id: 10, name: 'ซีลล้อหลัง', unit: 'ชิ้น' },
-        { id: 11, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
-        { id: 12, name: 'น๊อตยึดแป้นเบรก', unit: 'ชิ้น' }
-    ],
-    'steering': [
-        { id: 13, name: 'ยอยด์', unit: 'ชิ้น' },
-        { id: 14, name: 'ระปุกพวงมาลัย', unit: 'ชิ้น' },
-        { id: 15, name: 'เอ็นแร็ค', unit: 'ชิ้น' },
-        { id: 16, name: 'ลูกหมาก', unit: 'ชิ้น' },
-        { id: 17, name: 'ลูกหมากใต้โช๊ค', unit: 'ชิ้น' },
-        { id: 18, name: 'ลูกปืน 6005', unit: 'ชิ้น' },
-        { id: 19, name: 'ลูกปืน 6204', unit: 'ชิ้น' },
-        { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น' },
-        { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น' },
-        { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น' },
-        { id: 23, name: 'ปีกนก L+R', unit: 'คู่' }
-    ],
-    'motor': [
-        { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น' },
-        { id: 25, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
-        { id: 26, name: 'แม่เหล็กมอเตอร์', unit: 'ชิ้น' },
-        { id: 27, name: 'เซ็นเซอร์มอเตอร์', unit: 'ชิ้น' }
-    ],
-    'electric': [
-        { id: 28, name: 'แบตเตอรี่ 12V', unit: 'ก้อน' },
-        { id: 29, name: 'ชุดควบคุมมอเตอร์', unit: 'ชุด' },
-        { id: 30, name: 'สายไฟหลัก', unit: 'เมตร' }
-    ],
-    'others': [
-        { id: 31, name: 'บอดี้หน้า', unit: 'ชิ้น' },
-        { id: 32, name: 'บอดี้หลัง', unit: 'ชิ้น' },
-        { id: 33, name: 'โครงหลังคาหน้า', unit: 'ชิ้น' },
-        { id: 34, name: 'โครงหลังคาหลัง', unit: 'ชิ้น' },
-        { id: 35, name: 'หลังคา', unit: 'ชิ้น' },
-        { id: 36, name: 'เบาะนั่ง', unit: 'ชิ้น' },
-        { id: 37, name: 'พนักพิง', unit: 'ชิ้น' },
-        { id: 38, name: 'ยาง', unit: 'เส้น' },
-        { id: 39, name: 'แคดดี้เพลต', unit: 'ชิ้น' }
-    ]
-};
+// รายการอะไหล่ตามระบบ - จะถูกโหลดจากระบบ stock management
 
 const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golfCourses }: AssignedJobFormScreenProps) => {
     // ข้อมูลรถและสนามจาก job ที่ได้รับมอบหมาย
     const assignedVehicle = vehicles.find(v => v.id === job.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === assignedVehicle?.golf_course_id);
+    
+    // State สำหรับข้อมูลอะไหล่จากระบบ stock
+    const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
+        brake: [],
+        steering: [],
+        motor: [],
+        electric: [],
+        other: []
+    });
+    const [isLoadingParts, setIsLoadingParts] = useState(true);
     
     // ใช้ข้อมูลจาก job ที่ได้รับมอบหมาย
     const [jobType, setJobType] = useState<JobType>(job.type);
@@ -89,17 +49,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [batterySerial, setBatterySerial] = useState(job.battery_serial || assignedVehicle?.battery_serial || ''); // ใช้ค่าจาก job หรือ vehicle
     const [selectedParts, setSelectedParts] = useState<LocalSelectedPart[]>(() => {
         // แปลงข้อมูลอะไหล่จาก job.parts ให้เป็น LocalSelectedPart[]
-        return job.parts?.map(part => {
-            // หาข้อมูลอะไหล่จาก PARTS_BY_SYSTEM
-            const allParts = Object.values(PARTS_BY_SYSTEM).flat();
-            const partInfo = allParts.find(p => p.id.toString() === part.part_id.toString());
-            return {
-                id: part.part_id, // ไม่ใช้ parseInt กับ ObjectID
-                name: part.part_name || partInfo?.name || 'ไม่ทราบชื่อ',
-                quantity: part.quantity_used,
-                unit: partInfo?.unit || 'ชิ้น'
-            };
-        }) || [];
+        return job.parts?.map(part => ({
+            id: part.part_id, // ไม่ใช้ parseInt กับ ObjectID
+            name: part.part_name || 'ไม่ทราบชื่อ',
+            quantity: part.quantity_used,
+            unit: 'ชิ้น' // ค่าเริ่มต้น จะถูกอัพเดทเมื่อโหลดข้อมูลอะไหล่เสร็จ
+        })) || [];
     });
     const [images, setImages] = useState<string[]>(job.images || []);
     const [showPartsModal, setShowPartsModal] = useState(false);
@@ -108,6 +63,33 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    
+    // โหลดข้อมูลอะไหล่จากระบบ stock เมื่อ component mount
+    useEffect(() => {
+        const loadParts = async () => {
+            setIsLoadingParts(true);
+            try {
+                const parts = await getPartsBySystem();
+                setPartsBySystem(parts);
+                
+                // อัพเดท unit ของ selectedParts ที่มีอยู่แล้ว
+                setSelectedParts(prev => prev.map(selectedPart => {
+                    const allParts = Object.values(parts).flat();
+                    const partInfo = allParts.find(p => p.id.toString() === selectedPart.id.toString());
+                    return {
+                        ...selectedPart,
+                        unit: partInfo?.unit || selectedPart.unit
+                    };
+                }));
+            } catch (error) {
+                console.error('Error loading parts:', error);
+            } finally {
+                setIsLoadingParts(false);
+            }
+        };
+        
+        loadParts();
+    }, []);
     
     // ฟังก์ชันสำหรับเปิด/ปิด dropdown
     const toggleDropdown = () => {
@@ -134,14 +116,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     
     // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
     const getFilteredParts = () => {
-        const currentParts = PARTS_BY_SYSTEM[activePartsTab as keyof typeof PARTS_BY_SYSTEM];
+        const currentParts = partsBySystem[activePartsTab as keyof PartsBySystem];
         if (!partsSearchTerm.trim()) {
             return currentParts;
         }
         
         // ถ้ามีคำค้นหา ให้ค้นหาจากทุก category
-        const allParts = Object.values(PARTS_BY_SYSTEM).flat();
-        return allParts.filter(part => 
+        const allParts = Object.values(partsBySystem).flat();
+        return allParts.filter((part: CategorizedPart) => 
             part.name.toLowerCase().includes(partsSearchTerm.toLowerCase())
         );
     };
@@ -161,7 +143,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         setAdditionalSubTasks(prev => prev.filter(task => task !== taskToRemove));
     };
     
-    const handlePartSelection = (part: { id: number; name: string; unit: string }) => {
+    const handlePartSelection = (part: CategorizedPart) => {
         const existingPart = selectedParts.find(p => p.id === part.id);
         if (existingPart) {
             // ถ้ามีอะไหล่นี้แล้ว ให้เพิ่มจำนวน
@@ -290,7 +272,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
                 <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
                 <p><strong>มอบหมายโดย:</strong> {jobInfo.assignedBy}</p>
-                <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}</p>
+                <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}</p>
                 {system && <p><strong>ระบบที่ต้องซ่อม:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}</p>}
             </div>
 
@@ -328,9 +310,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภทการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)} disabled>
-                        <option value="PM">Preventive Maintenance (PM)</option>
-                        <option value="BM">Breakdown Maintenance (BM)</option>
-                        <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
+                        <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
+                        <option value="BM">ซ่อมด่วน</option>
+                        <option value="Recondition">ปรับสภาพ</option>
                     </select>
                 </div>
 
@@ -528,7 +510,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <h3>สรุปข้อมูลงาน</h3>
                     <div className="summary-box">
                         <div className="summary-item">
-                            <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
+                            <strong>ประเภทการบำรุงรักษา:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}
                         </div>
                         {jobType === 'BM' && bmCause && (
                             <div className="summary-item">
@@ -604,15 +586,15 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </button>
                                 {isDropdownOpen && (
                                     <div className="header-category-dropdown-menu">
-                                        {Object.keys(PARTS_BY_SYSTEM).map(tab => (
-                                            <div
-                                                key={tab}
-                                                className="header-category-dropdown-item"
-                                                onClick={() => handleCategorySelect(tab)}
-                                            >
-                                                {getTabDisplayName(tab)}
-                                            </div>
-                                        ))}
+                                        {Object.keys(partsBySystem).map(tab => (
+                                    <div
+                                        key={tab}
+                                        className="header-category-dropdown-item"
+                                        onClick={() => handleCategorySelect(tab)}
+                                    >
+                                        {getTabDisplayName(tab)}
+                                    </div>
+                                ))}
                                     </div>
                                 )}
                             </div>
@@ -626,7 +608,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         </div>
                         
                         <div className="modal-tabs">
-                            {Object.keys(PARTS_BY_SYSTEM).map(tab => (
+                            {Object.keys(partsBySystem).map(tab => (
                                 <button
                                     key={tab}
                                     type="button"
@@ -662,35 +644,45 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         </div>
                         
                         <div className="modal-body">
-                            <div className="parts-grid">
-                                {getFilteredParts().length > 0 ? (
-                                    getFilteredParts().map(part => {
-                                        const selectedPart = selectedParts.find(p => p.id === part.id);
-                                        return (
-                                            <div key={part.id} className="part-item">
-                                                <div className="part-name">{part.name}</div>
-                                                <div className="part-details">({part.unit})</div>
-                                                {selectedPart && (
-                                                    <div className="selected-quantity">
-                                                        เลือกแล้ว: {selectedPart.quantity} {part.unit}
-                                                    </div>
-                                                )}
-                                                <button 
-                                                    type="button" 
-                                                    className="btn-select-part"
-                                                    onClick={() => handlePartSelection(part)}
-                                                >
-                                                    เลือก
-                                                </button>
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="no-parts-found">
-                                        ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;
-                                    </div>
-                                )}
-                            </div>
+                            {isLoadingParts ? (
+                                <div className="loading-parts">
+                                    <div className="loading-spinner"></div>
+                                    <p>กำลังโหลดข้อมูลอะไหล่...</p>
+                                </div>
+                            ) : (
+                                <div className="parts-grid">
+                                    {getFilteredParts().length > 0 ? (
+                                        getFilteredParts().map(part => {
+                                            const selectedPart = selectedParts.find(p => p.id === part.id);
+                                            return (
+                                                <div key={part.id} className="part-item">
+                                                    <div className="part-name">{part.name}</div>
+                                                    <div className="part-details">({part.unit})</div>
+                                                    {selectedPart && (
+                                                        <div className="selected-quantity">
+                                                            เลือกแล้ว: {selectedPart.quantity} {part.unit}
+                                                        </div>
+                                                    )}
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn-select-part"
+                                                        onClick={() => handlePartSelection(part)}
+                                                    >
+                                                        เลือก
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="no-parts-found">
+                                            {partsSearchTerm ? 
+                                                `ไม่พบอะไหล่ที่ค้นหา "${partsSearchTerm}"` : 
+                                                'ไม่มีอะไหล่ในหมวดหมู่นี้'
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         
                         <div className="modal-footer">
