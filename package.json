@@ -24,6 +24,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.13.0",
     "@types/multer": "^2.0.0",
     "@types/xlsx": "^0.0.35",

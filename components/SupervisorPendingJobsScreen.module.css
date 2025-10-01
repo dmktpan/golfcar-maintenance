@@ -334,6 +334,24 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .headerLeft {
     display: flex;
     align-items: center;
@@ -362,7 +380,7 @@
 .pageTitle {
     font-size: 2rem;
     font-weight: 700;
-    color: white;
+    color: rgb(250, 248, 248);
     margin: 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

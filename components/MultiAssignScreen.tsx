@@ -230,13 +230,6 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
             <div className="page-header">
                 <h2>มอบหมายงานหลายรายการ</h2>
                 <div className="header-actions">
-                    <button 
-                        className="btn-outline" 
-                        onClick={() => setView('view_assigned_jobs')}
-                        style={{ marginRight: '10px' }}
-                    >
-                        ดูงานที่มอบหมาย
-                    </button>
                     <button className="btn-outline" onClick={() => setView('admin_dashboard')}>
                         กลับไปหน้าหลัก
                     </button>

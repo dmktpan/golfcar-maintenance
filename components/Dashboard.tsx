@@ -22,7 +22,7 @@ interface DashboardProps {
 
 const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [], setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history'>('assigned');
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('all');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('assigned');
     
     // ใช้ useMemo เพื่อลด re-calculation
     const filteredJobs = useMemo(() => {
@@ -91,6 +91,20 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
         }
     }, [onUpdateStatus, jobs, setJobs, addPartsUsageLog]);
 
+    // Debug: ตรวจสอบ user role
+    console.log('🔍 Dashboard Debug - User data:', {
+        name: user.name,
+        role: user.role,
+        id: user.id,
+        fullUserObject: user
+    });
+    console.log('🔍 Dashboard Debug - Role check:', {
+        isStaff: user.role === 'staff',
+        isSupervisor: user.role === 'supervisor',
+        isAdmin: user.role === 'admin',
+        shouldShowStockButton: (user.role === 'supervisor' || user.role === 'admin')
+    });
+
     return (
         <div className={styles.dashboard}>
             {/* Quick Actions */}
@@ -104,12 +118,14 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                     </button>
                 )}
                 {(user.role === 'supervisor' || user.role === 'admin') && (
-                    <button 
-                        className={styles.adminButton} 
-                        onClick={() => setView('admin_dashboard')}
-                    >
-                        <span className="btn-icon">⚙️</span> แดชบอร์ดผู้ดูแล
-                    </button>
+                    <>
+                        <button 
+                            className={styles.adminButton} 
+                            onClick={() => setView('admin_dashboard')}
+                        >
+                            <span className="btn-icon">⚙️</span> แดชบอร์ดผู้ดูแล
+                        </button>
+                    </>
                 )}
             </div>
 

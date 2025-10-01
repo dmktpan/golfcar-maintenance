@@ -16,11 +16,13 @@ interface JobCardProps {
   partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
   onUpdateStatus: (jobId: string, status: JobStatus) => void;
   onFillJobForm?: (job: Job) => void;
+  onDeleteJob?: (jobId: string) => void; // เพิ่ม callback สำหรับลบงาน
   isHistory?: boolean;
 }
 
-const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], onUpdateStatus, onFillJobForm }: JobCardProps) => {
+const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], onUpdateStatus, onFillJobForm, onDeleteJob }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
     // ดึงข้อมูลรถจาก vehicles prop แทน MOCK_VEHICLES
     const vehicleInfo = vehicles.find(v => v.id === job.vehicle_id);
@@ -43,6 +45,18 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
             timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
         });
     };
+
+    // ฟังก์ชันสำหรับจัดการการลบงาน
+    const handleDeleteConfirm = () => {
+        if (onDeleteJob) {
+            onDeleteJob(job.id);
+        }
+        setShowDeleteConfirm(false);
+    };
+
+    // ตรวจสอบสิทธิ์ในการลบงาน (เฉพาะหัวหน้างานและผู้ดูแลระบบ)
+    const canDeleteJob = (user.role === 'supervisor' || user.role === 'admin') && 
+                        (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed');
 
     // ฟังก์ชันสำหรับแสดงปุ่มตามสถานะและบทบาท
     const renderActionButtons = () => {
@@ -67,22 +81,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                     className={`${styles.actionButton} ${styles.primary}`} 
                     onClick={() => onFillJobForm(job)}
                 >
-                    <span className="btn-icon">📝</span> กรอกรายละเอียด
-                </button>
-            );
-        }
-
-        // ปุ่มเสร็จสิ้นงาน
-        if (user.role === 'staff' && 
-            (job.status === 'assigned' || job.status === 'in_progress') && 
-            job.assigned_to === user.id.toString()) {
-            buttons.push(
-                <button 
-                    key="complete"
-                    className={`${styles.actionButton} ${styles.success}`} 
-                    onClick={() => onUpdateStatus(job.id, 'completed')}
-                >
-                    <span className="btn-icon">✓</span> เสร็จสิ้น
+                    <span className="btn-icon">📝</span> เริ่มปฏิบัติงาน
                 </button>
             );
         }
@@ -145,6 +144,17 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
     return (
         <>
             <div className={`${styles.jobCard} ${styles[`status${job.status.charAt(0).toUpperCase() + job.status.slice(1)}`]}`}>
+                {/* Delete Button - แสดงเฉพาะสำหรับหัวหน้างานและผู้ดูแลระบบ */}
+                {canDeleteJob && onDeleteJob && (
+                    <button 
+                        className={styles.deleteButton}
+                        onClick={() => setShowDeleteConfirm(true)}
+                        title="ลบงานที่มอบหมาย"
+                    >
+                        ✕
+                    </button>
+                )}
+                
                 <div className={styles.jobCardHeader}>
                     <div className={styles.jobHeaderLeft}>
                         <h3 className={styles.vehicleNumber}>รถเบอร์ {job.vehicle_number}</h3>
@@ -196,6 +206,35 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                     {renderActionButtons()}
                 </div>
             </div>
+
+            {/* Confirmation Modal สำหรับลบงาน */}
+            {showDeleteConfirm && (
+                <div className={styles.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
+                    <div className={styles.confirmModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.confirmHeader}>
+                            <h3>ยืนยันการลบงาน</h3>
+                        </div>
+                        <div className={styles.confirmBody}>
+                            <p>คุณต้องการลบงาน <strong>รถเบอร์ {job.vehicle_number}</strong> หรือไม่?</p>
+                            <p className={styles.warningText}>การดำเนินการนี้ไม่สามารถยกเลิกได้</p>
+                        </div>
+                        <div className={styles.confirmFooter}>
+                            <button 
+                                className={styles.cancelButton}
+                                onClick={() => setShowDeleteConfirm(false)}
+                            >
+                                ยกเลิก
+                            </button>
+                            <button 
+                                className={styles.confirmDeleteButton}
+                                onClick={handleDeleteConfirm}
+                            >
+                                ลบงาน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showDetails && (
                 <JobDetailsModal 

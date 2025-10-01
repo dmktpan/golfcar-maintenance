@@ -260,7 +260,6 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                 action_type: 'registration',
                 action_date: new Date().toISOString(),
                 details: `เพิ่มรถใหม่ - หมายเลขรถ: ${result.data.vehicle_number}, สนาม: ${golfCourse?.name || 'ไม่ระบุ'}`,
-                performed_by: 'administrator',
                 performed_by_id: "000000000000000000000001",
                 golf_course_id: result.data.golf_course_id,
                 golf_course_name: golfCourse?.name || 'ไม่ระบุ',
@@ -593,8 +592,8 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         return;
       }
 
-      // เรียก API เพื่อย้ายรถ
-      const response = await fetch('/api/proxy/vehicles/transfer', {
+      // เรียก API เพื่อย้ายรถ (ใช้ internal API แทน proxy)
+      const response = await fetch('/api/vehicles/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -605,8 +604,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           to_golf_course_id: targetCourseId,
           to_golf_course_name: targetCourse.name,
           transfer_date: transferDate,
-          user_id: user?.id?.toString() || 'unknown',
-          performed_by: user?.name || 'Unknown'
+          user_id: user?.id?.toString() || 'unknown'
         }),
       });
 

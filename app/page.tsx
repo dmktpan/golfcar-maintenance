@@ -10,6 +10,7 @@ import Dashboard from '@/components/Dashboard';
 import CreateJobScreen from '@/components/CreateJobScreen';
 import CentralCreateJobScreen from '@/components/CentralCreateJobScreen';
 import PartsManagementScreen from '@/components/PartsManagementScreen';
+import StockManagementScreen from '@/components/StockManagementScreen';
 import AdminDashboard from '@/components/AdminDashboard';
 import WelcomeBanner from '@/components/WelcomeBanner';
 import ManageUsersScreen from '@/components/ManageUsersScreen';
@@ -323,13 +324,15 @@ export default function HomePage() {
         serialHistoryResult,
         partsUsageLogsResult,
         vehiclesResult,
-        usersResult
+        usersResult,
+        partsResult
       ] = await Promise.allSettled([
         jobsApi.getAll(),
         serialHistoryApi.getAll(),
         partsUsageLogsApi.getAll(),
         vehiclesApi.getAll(),
-        localUsersApi.getAll()
+        localUsersApi.getAll(),
+        partsApi.getAll()
       ]);
 
       // อัพเดต Jobs
@@ -370,6 +373,14 @@ export default function HomePage() {
         console.log('✅ Users data force refreshed:', (usersResult.value.data as User[]).length, 'items');
       } else {
         console.error('❌ Failed to refresh users data');
+      }
+
+      // อัพเดต Parts
+      if (partsResult.status === 'fulfilled' && partsResult.value.success) {
+        setParts(partsResult.value.data as Part[]);
+        console.log('✅ Parts data force refreshed:', (partsResult.value.data as Part[]).length, 'items');
+      } else {
+        console.error('❌ Failed to refresh parts data');
       }
 
       console.log('✅ Force refresh completed');
@@ -644,7 +655,6 @@ export default function HomePage() {
         action_type: 'maintenance',
         action_date: actionDate,
         details: `${job.type} - ${job.system || 'ไม่ระบุระบบ'}: ${job.remarks || 'ไม่มีหมายเหตุ'}`,
-        performed_by: user.name,
         performed_by_id: job.user_id, // ไม่ใช้ parseInt กับ ObjectID
         golf_course_id: job.golf_course_id, // ไม่ใช้ parseInt กับ ObjectID
         golf_course_name: golfCourse.name,
@@ -910,6 +920,111 @@ export default function HomePage() {
     }
   };
 
+  // ฟังก์ชันสำหรับลบงาน
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      console.log('🗑️ handleDeleteJob called:', { jobId, timestamp: new Date().toISOString() });
+      
+      // หาข้อมูลงานปัจจุบัน
+      const currentJob = jobs.find(job => job.id === jobId);
+      if (!currentJob) {
+        console.error('❌ Job not found in local state:', { 
+          jobId, 
+          searchedId: jobId,
+          availableJobs: jobs.map(j => ({ id: j.id, status: j.status })) 
+        });
+        alert('ไม่พบงานที่ต้องการลบในระบบ กรุณาลองรีเฟรชหน้าเว็บ');
+        return;
+      }
+
+      console.log('📋 Job to delete:', { 
+        id: currentJob.id, 
+        status: currentJob.status,
+        vehicleNumber: currentJob.vehicle_number,
+        userName: currentJob.userName
+      });
+
+      console.log('📤 Sending API request to delete job...', {
+        url: `/api/jobs/${currentJob.id}`,
+        method: 'DELETE',
+        jobId: currentJob.id
+      });
+
+      // เรียก API เพื่อลบงานจากฐานข้อมูล
+      const response = await fetch(`/api/jobs/${currentJob.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🌐 API response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('📥 API response data:', result);
+      } catch (parseError) {
+        console.error('❌ Failed to parse API response:', parseError);
+        throw new Error('ไม่สามารถอ่านข้อมูลตอบกลับจากเซิร์ฟเวอร์ได้');
+      }
+      
+      if (!response.ok || !result.success) {
+        const errorMessage = result?.message || result?.details || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('❌ API delete failed:', {
+          message: errorMessage,
+          jobId: currentJob.id,
+          responseStatus: response.status,
+          result
+        });
+        
+        // แสดงข้อความ error ที่เข้าใจง่าย
+        if (response.status === 404) {
+          alert('ไม่พบงานที่ต้องการลบในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
+        } else if (response.status >= 500) {
+          alert('เซิร์ฟเวอร์ขัดข้อง กรุณาลองใหม่อีกครั้ง');
+        } else {
+          alert(`เกิดข้อผิดพลาดในการลบงาน: ${errorMessage}`);
+        }
+        return;
+      } else {
+        console.log('✅ Job deleted successfully from database', {
+          jobId: currentJob.id,
+          timestamp: new Date().toISOString()
+        });
+        
+        // อัปเดต jobs state โดยลบงานที่ถูกลบออกแบบ real-time
+        setJobs(prevJobs => {
+          const updatedJobs = prevJobs.filter(job => job.id !== jobId);
+          console.log('🔄 Jobs state updated after deletion. Remaining jobs:', updatedJobs.length);
+          return updatedJobs;
+        });
+        
+        // แสดงข้อความสำเร็จ
+        alert('ลบงานเรียบร้อยแล้ว');
+      }
+    } catch (error) {
+      console.error('💥 Error deleting job:', {
+        error,
+        jobId,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // แสดงข้อความ error ที่เข้าใจง่าย
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+      if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        alert('การเชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่');
+      } else {
+        alert(`เกิดข้อผิดพลาดในการลบงาน: ${errorMessage}`);
+      }
+    }
+  };
+
   // ฟังก์ชันสำหรับจัดการสิทธิ์ผู้ใช้
   const getUserPermissions = (userId: number): string[] => {
     const userPermission = userPermissions.find(up => up.userId === userId);
@@ -1072,7 +1187,7 @@ export default function HomePage() {
 
   return (
     <div className="app">
-      <Header user={user} onLogout={handleLogout} setView={handleSetView} />
+      <Header user={user} onLogout={handleLogout} setView={handleSetView} parts={parts} />
       {showWelcome && <WelcomeBanner user={user} onDismiss={() => setShowWelcome(false)} />}
       
       <main className="main-content">
@@ -1100,7 +1215,7 @@ export default function HomePage() {
             jobs={jobs}
           />
         )}
-        {view === 'central_create_job' && user.role === 'central' && (
+        {view === 'central_create_job' && (user.role === 'central' || user.role === 'admin' || user.role === 'supervisor') && (
           <CentralCreateJobScreen 
             user={user} 
             onJobCreate={handleCreateJob} 
@@ -1116,6 +1231,12 @@ export default function HomePage() {
             setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
+          />
+        )}
+        {view === 'stock_management' && (
+          <StockManagementScreen 
+            parts={parts}
+            onPartsUpdate={forceRefreshAllData}
           />
         )}
         {view === 'admin_dashboard' && (
@@ -1205,6 +1326,7 @@ export default function HomePage() {
             partsUsageLog={partsUsageLog}
             onUpdateStatus={onUpdateStatus}
             onFillJobForm={handleFillJobForm}
+            onDeleteJob={handleDeleteJob}
           />
         )}
         {view === 'supervisor_pending_jobs' && (
@@ -1218,6 +1340,7 @@ export default function HomePage() {
             partsUsageLog={partsUsageLog}
             onUpdateStatus={onUpdateStatus}
             addPartsUsageLog={addPartsUsageLog}
+            setView={setView}
           />
         )}
       </main>

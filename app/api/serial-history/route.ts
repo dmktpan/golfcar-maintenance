@@ -63,7 +63,6 @@ export async function POST(request: Request) {
       action_date, 
       actual_transfer_date, 
       details, 
-      performed_by, 
       performed_by_id, 
       golf_course_id, 
       golf_course_name, 
@@ -77,10 +76,10 @@ export async function POST(request: Request) {
     } = body;
 
     // Validation
-    if (!serial_number || !vehicle_id || !vehicle_number || !action_type || !action_date || !details || !performed_by || !performed_by_id || !golf_course_id || !golf_course_name || is_active === undefined) {
+    if (!serial_number || !vehicle_id || !vehicle_number || !action_type || !action_date || !details || !performed_by_id || !golf_course_id || !golf_course_name || is_active === undefined) {
       return NextResponse.json({
         success: false,
-        message: 'Required fields: serial_number, vehicle_id, vehicle_number, action_type, action_date, details, performed_by, performed_by_id, golf_course_id, golf_course_name, is_active'
+        message: 'Required fields: serial_number, vehicle_id, vehicle_number, action_type, action_date, details, performed_by_id, golf_course_id, golf_course_name, is_active'
       }, { status: 400 });
     }
 

@@ -365,6 +365,30 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       }, { status: 400 });
     }
 
+    // ตรวจสอบว่างานมีอยู่จริงก่อนลบ
+    const existingJob = await prisma.job.findUnique({
+      where: { id }
+    });
+
+    if (!existingJob) {
+      return NextResponse.json({
+        success: false,
+        message: 'Job not found or already deleted'
+      }, { status: 404 });
+    }
+
+    // ลบข้อมูลที่เกี่ยวข้องก่อน (ถ้ามี)
+    await prisma.jobPart.deleteMany({
+      where: { jobId: id }
+    });
+
+    // อัปเดต SerialHistoryEntry ที่เกี่ยวข้อง
+    await prisma.serialHistoryEntry.updateMany({
+      where: { related_job_id: id },
+      data: { related_job_id: null }
+    });
+
+    // ลบงาน
     await prisma.job.delete({
       where: { id }
     });
@@ -376,10 +400,22 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   } catch (error: unknown) {
     console.error('Error deleting job:', error);
+    
+    // จัดการ Prisma errors เฉพาะ
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        return NextResponse.json({
+          success: false,
+          message: 'Job not found or already deleted'
+        }, { status: 404 });
+      }
+    }
+    
     let errorMessage = 'An unknown error occurred.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
+    
     return NextResponse.json({
       success: false,
       message: 'Failed to delete job',

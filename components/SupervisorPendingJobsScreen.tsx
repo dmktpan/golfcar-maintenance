@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Job, JobStatus, User, GolfCourse, Vehicle } from '@/lib/data';
+import { Job, JobStatus, User, GolfCourse, Vehicle, View } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './SupervisorPendingJobsScreen.module.css';
 import { getSystemDisplayName } from '../lib/systemUtils';
@@ -18,6 +18,7 @@ interface SupervisorPendingJobsScreenProps {
     onUpdateStatus: (jobId: string, status: JobStatus) => void;
     onFillJobForm?: (job: Job) => void;
     addPartsUsageLog?: (jobId: string, partsNotes?: string, jobData?: Job) => Promise<void>;
+    setView: (view: View) => void; // เพิ่ม setView prop
 }
 
 function SupervisorPendingJobsScreen({ 
@@ -29,11 +30,32 @@ function SupervisorPendingJobsScreen({
     partsUsageLog = [],
     onUpdateStatus,
     onFillJobForm,
-    addPartsUsageLog 
+    addPartsUsageLog,
+    setView // เพิ่ม setView ใน destructuring
 }: SupervisorPendingJobsScreenProps) {
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [selectedJobType, setSelectedJobType] = useState<string>('');
+
+    // Calculate assigned jobs count (assigned + in_progress status)
+    const getAssignedJobsCount = () => {
+        let assignedJobs = jobs.filter(job => 
+            job.status === 'assigned' || job.status === 'in_progress'
+        );
+
+        // Filter by golf course if user is not admin
+        if (user.role !== 'admin') {
+            if (user.managed_golf_courses && user.managed_golf_courses.length > 0) {
+                assignedJobs = assignedJobs.filter(job => 
+                    user.managed_golf_courses!.includes(String(job.golf_course_id))
+                );
+            } else if (user.golf_course_id) {
+                assignedJobs = assignedJobs.filter(job => String(job.golf_course_id) === user.golf_course_id);
+            }
+        }
+
+        return assignedJobs.length;
+    };
 
     // Filter jobs based on user permissions and selected course
     useEffect(() => {
@@ -305,6 +327,32 @@ function SupervisorPendingJobsScreen({
                             {filteredJobs.length} งานรออนุมัติ
                         </span>
                     )}
+                </div>
+                <div className={styles.headerActions}>
+                    <button 
+                        className="btn-outline" 
+                        onClick={() => setView('view_assigned_jobs')}
+                        style={{ marginRight: '10px', position: 'relative' }}
+                    >
+                        ดูงานที่มอบหมาย
+                        {getAssignedJobsCount() > 0 && (
+                            <span 
+                                style={{
+                                    marginLeft: '8px',
+                                    backgroundColor: '#007bff',
+                                    color: 'white',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    minWidth: '20px',
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {getAssignedJobsCount()}
+                            </span>
+                        )}
+                    </button>
                 </div>
             </div>
 
