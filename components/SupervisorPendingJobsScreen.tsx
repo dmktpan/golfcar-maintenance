@@ -668,9 +668,21 @@ function SupervisorPendingJobsScreen({
                                     <h4>รูปภาพ</h4>
                                     <div className={styles.imagesGrid}>
                                         {selectedJobForDetails.images.map((image, index) => {
-                                            // ตรวจสอบว่าเป็น URL ภายนอกหรือไฟล์ local
-                                            const isExternalUrl = image.startsWith('http');
-                                            const displaySrc = isExternalUrl ? image : `/api/uploads/maintenance/${image.split('/').pop()}`;
+                                            // ตรวจสอบและสร้าง URL ที่ถูกต้อง
+                                            let displaySrc = image;
+                                            
+                                            // ถ้าเป็น URL ภายนอกที่เริ่มด้วย http
+                                            if (image.startsWith('http')) {
+                                                displaySrc = image;
+                                            }
+                                            // ถ้าเป็น path ที่เริ่มด้วย /api/uploads/maintenance/ แล้ว
+                                            else if (image.startsWith('/api/uploads/maintenance/')) {
+                                                displaySrc = image;
+                                            }
+                                            // ถ้าเป็นแค่ชื่อไฟล์
+                                            else {
+                                                displaySrc = `/api/uploads/maintenance/${image}`;
+                                            }
                                             
                                             return (
                                                 <img 
@@ -683,6 +695,7 @@ function SupervisorPendingJobsScreen({
                                                         // Fallback ถ้าโหลดรูปไม่ได้
                                                         const target = e.target as HTMLImageElement;
                                                         target.src = '/placeholder-image.svg';
+                                                        console.error('Failed to load image:', displaySrc);
                                                     }}
                                                 />
                                             );
