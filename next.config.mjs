@@ -115,8 +115,8 @@ const nextConfig = {
   // Ensure static files are copied to standalone directory
   ...(process.env.NODE_ENV === 'production' && {
     experimental: {
-      ...nextConfig.experimental,
-      outputFileTracingRoot: process.cwd(),
+     serverComponentsExternalPackages: ['@prisma/client'],
+     outputFileTracingRoot: process.cwd(),
     },
   }),
 
