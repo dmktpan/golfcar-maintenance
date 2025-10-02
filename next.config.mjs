@@ -3,6 +3,9 @@ const nextConfig = {
   // Production optimizations
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client'],
+    ...(process.env.NODE_ENV === 'production' && {
+      outputFileTracingRoot: process.cwd(),
+    }),
   },
   
   // API configuration
@@ -111,14 +114,6 @@ const nextConfig = {
 
   // Output configuration for production
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
-
-  // Ensure static files are copied to standalone directory
-  ...(process.env.NODE_ENV === 'production' && {
-    experimental: {
-     serverComponentsExternalPackages: ['@prisma/client'],
-     outputFileTracingRoot: process.cwd(),
-    },
-  }),
 
   // Webpack configuration
   webpack: (config, { isServer }) => {
