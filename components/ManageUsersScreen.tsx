@@ -35,6 +35,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
     });
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     // ตรวจสอบสิทธิ์ admin หรือ supervisor
     if (user.role !== 'admin' && user.role !== 'supervisor') {
@@ -304,15 +305,36 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                         <label htmlFor="password">
                             รหัสผ่าน
                         </label>
-                        <input 
-                            type="password" 
-                            id="password" 
-                            name="password" 
-                            value={newUser.password || ''} 
-                            onChange={handleInputChange} 
-                            required
-                            placeholder="ใส่รหัสผ่าน"
-                        />
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <input 
+                                type={showPassword ? "text" : "password"}
+                                id="password" 
+                                name="password" 
+                                value={newUser.password || ''} 
+                                onChange={handleInputChange} 
+                                required
+                                placeholder="ใส่รหัสผ่าน"
+                                style={{ paddingRight: '50px', flex: 1 }}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    color: '#666',
+                                    padding: '5px',
+                                    zIndex: 1
+                                }}
+                                title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                            >
+                                {showPassword ? "🙈" : "👁️"}
+                            </button>
+                        </div>
                     </div>
                 )}
 

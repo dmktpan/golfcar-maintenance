@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
       to_golf_course_name,
       transfer_date,
       user_id,
-      performed_by, // ชื่อผู้ทำการโอนย้าย
       reason // เหตุผลในการโอนย้าย
     } = body;
 
@@ -145,8 +144,7 @@ export async function POST(request: NextRequest) {
             status: vehicle.status,
             golf_course_name: to_golf_course_name,
             vehicle_id: vehicle.id,
-            performed_by_id: user_id,
-            performed_by: performed_by || 'Unknown'
+            performed_by_id: user_id
           }
         });
 
@@ -167,7 +165,7 @@ export async function POST(request: NextRequest) {
           to_golf_course_id,
           to_golf_course_name,
           transfer_date: transfer_date ? new Date(transfer_date) : new Date(),
-          performed_by: user_id
+          user_id: user_id
         }
       }
     }, { status: 200 });

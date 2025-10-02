@@ -330,9 +330,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)}>
-                        <option value="PM">Preventive Maintenance (PM)</option>
-                        <option value="BM">Breakdown Maintenance (BM)</option>
-                        <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
+                        <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
+                        <option value="BM">ซ่อมด่วน</option>
+                        <option value="Recondition">ปรับสภาพ</option>
                     </select>
                 </div>
 
@@ -564,7 +564,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     <h3>สรุปข้อมูลงาน</h3>
                     <div className="summary-box">
                         <div className="summary-item">
-                            <strong>ประเภการบำรุงรักษา:</strong> {jobType === 'PM' ? 'Preventive Maintenance (PM)' : jobType === 'BM' ? 'Breakdown Maintenance (BM)' : 'Recondition (ซ่อมปรับสภาพ)'}
+                            <strong>ประเภการบำรุงรักษา:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}
                         </div>
                         {jobType === 'BM' && bmCause && (
                             <div className="summary-item">

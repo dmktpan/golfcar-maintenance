@@ -364,9 +364,9 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)}>
-                        <option value="PM">Preventive Maintenance (PM)</option>
-                        <option value="BM">Breakdown Maintenance (BM)</option>
-                        <option value="Recondition">Recondition (ซ่อมปรับสภาพ)</option>
+                        <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
+                        <option value="BM">ซ่อมด่วน</option>
+                        <option value="Recondition">ปรับสภาพ</option>
                     </select>
                 </div>
 

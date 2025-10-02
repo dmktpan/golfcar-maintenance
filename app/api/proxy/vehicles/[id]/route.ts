@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
-const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE || 'https://api.example.com';
+const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {

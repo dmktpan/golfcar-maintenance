@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, User, Job } from '@/lib/data';
-import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon, HistoryIcon } from './icons';
+import { GearsIcon, UserPlusIcon, ChecklistIcon, ClipboardIcon, UserShieldIcon, SerialHistoryIcon, HistoryIcon, ToolsIcon } from './icons';
 import styles from './AdminDashboard.module.css';
 
 interface AdminDashboardCardProps {
@@ -76,7 +76,18 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     onClick={() => setView('supervisor_pending_jobs')}
                 />
                 
-                {/* 2. มอบหมายงานหลายคน */}
+                {/* 2. สร้างงานซ่อม - ส่วนกลาง */}
+                {(isAdmin || isSupervisor) && (
+                    <AdminDashboardCard 
+                        icon={<ToolsIcon />} 
+                        title="สร้างงานซ่อม - ส่วนกลาง"
+                        description="สร้างงานซ่อมบำรุงสำหรับรถในสนามต่างๆ"
+                        buttonText="สร้างงาน"
+                        onClick={() => setView('central_create_job')}
+                    />
+                )}
+                
+                {/* 3. มอบหมายงานหลายคน */}
                 <AdminDashboardCard 
                     icon={<ClipboardIcon />} 
                     title="มอบหมายงานหลายคน"
@@ -85,7 +96,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     onClick={() => setView('multi_assign')}
                 />
                 
-                {/* 3. ประวัติซ่อมบำรุง - ย้ายมาจาก Header */}
+                {/* 4. ประวัติซ่อมบำรุง - ย้ายมาจาก Header */}
                 <AdminDashboardCard 
                     icon={<HistoryIcon />} 
                     title="ประวัติซ่อมบำรุง"
@@ -94,7 +105,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     onClick={() => setView('history')}
                 />
                 
-                {/* 4. จัดการสนามและซีเรียล */}
+                {/* 5. จัดการสนามและซีเรียล */}
                 <AdminDashboardCard 
                     icon={<GearsIcon />} 
                     title="จัดการสนามและซีเรียล"
@@ -103,7 +114,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     onClick={() => setView('golf_course_management')}
                 />
                 
-                {/* 5. จัดการผู้ใช้งาน */}
+                {/* 6. จัดการผู้ใช้งาน */}
                 {(isAdmin || isSupervisor) && (
                     <AdminDashboardCard 
                         icon={<UserPlusIcon />} 
@@ -114,7 +125,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     />
                 )}
                 
-                {/* 6. จัดการระบบ */}
+                {/* 7. จัดการระบบ */}
                 {isAdmin && (
                     <AdminDashboardCard 
                         icon={<UserShieldIcon />} 
@@ -125,7 +136,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     />
                 )}
                 
-                {/* 7. ประวัติซีเรียล */}
+                {/* 8. ประวัติซีเรียล */}
                 <AdminDashboardCard 
                     icon={<SerialHistoryIcon />} 
                     title="ประวัติซีเรียล"

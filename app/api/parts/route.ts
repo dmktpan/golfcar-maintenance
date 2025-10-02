@@ -63,7 +63,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, unit, stock_qty, min_qty, max_qty } = body;
+    const { name, part_number, category, unit, stock_qty, min_qty, max_qty } = body;
 
     // Validation
     if (!name || !unit || stock_qty === undefined || min_qty === undefined || max_qty === undefined) {
@@ -90,6 +90,8 @@ export async function POST(request: Request) {
     const part = await prisma.part.create({
       data: {
         name: name.trim(),
+        part_number: part_number ? part_number.trim() : null,
+        category: category ? category.trim() : null,
         unit: unit.trim(),
         stock_qty: parseInt(stock_qty),
         min_qty: parseInt(min_qty),
