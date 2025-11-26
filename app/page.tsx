@@ -57,10 +57,10 @@ export default function HomePage() {
         setLoadingError('');
         setConnectionStatus('checking');
         setLoadingProgress(0);
-        
+
         console.log('🚀 เริ่มโหลดข้อมูล...');
         console.log('🌐 API Base URL:', process.env.NODE_ENV === 'production' ? 'http://golfcar.go2kt.com:8080/api' : 'http://golfcar.go2kt.com:8080/api');
-        
+
         // ทดสอบการเชื่อมต่อก่อน
         setLoadingProgress(10);
         try {
@@ -83,15 +83,15 @@ export default function HomePage() {
         }
 
         setLoadingProgress(20);
-        
+
         // โหลดข้อมูลพื้นฐานทั้งหมดพร้อมกัน
         console.log('📡 กำลังเรียก API ทั้งหมด...');
-        
+
         // เรียง API calls ตามความสำคัญ - เรียกข้อมูลสำคัญก่อน
         const criticalApiCalls = [
           { name: 'golfCourses', call: golfCoursesApi.getAll() }
         ];
-        
+
         const optionalApiCalls = [
           { name: 'vehicles', call: vehiclesApi.getAll() },
           { name: 'parts', call: partsApi.getAll() },
@@ -105,7 +105,7 @@ export default function HomePage() {
           try {
             console.log(`🔑 กำลังโหลดข้อมูลสำคัญ: ${criticalApiCalls[i].name}`);
             const result = await criticalApiCalls[i].call;
-            
+
             if (result.success) {
               // Handle different data types for critical API calls
               if (criticalApiCalls[i].name === 'golfCourses') {
@@ -115,11 +115,11 @@ export default function HomePage() {
             } else {
               throw new Error(`API call failed: ${result.message}`);
             }
-            
+
             setLoadingProgress(20 + ((i + 1) / criticalApiCalls.length) * 30);
           } catch (error) {
             console.error(`❌ ข้อมูลสำคัญ ${criticalApiCalls[i].name} ล้มเหลว:`, error);
-            
+
             // ถ้าข้อมูลสำคัญโหลดไม่ได้ ให้แสดง error
             setLoadingError(`ไม่สามารถโหลดข้อมูลสำคัญ (${criticalApiCalls[i].name}) ได้ กรุณาตรวจสอบการเชื่อมต่อ`);
             setConnectionStatus('disconnected');
@@ -154,7 +154,7 @@ export default function HomePage() {
                   setPartsUsageLog(result.data as PartsUsageLog[]);
                   console.log('🔧 PartsUsageLog sample data:', (result.data as PartsUsageLog[]).slice(0, 3));
                   console.log('🔧 PartsUsageLog total count:', (result.data as PartsUsageLog[]).length);
-                  
+
                   // แสดง jobId ทั้งหมดใน PartsUsageLog
                   const jobIds = Array.from(new Set((result.data as PartsUsageLog[]).map(log => log.jobId)));
                   console.log('🔧 Unique jobIds in PartsUsageLog:', jobIds);
@@ -191,7 +191,7 @@ export default function HomePage() {
           } else {
             console.log('👤 ไม่พบข้อมูลผู้ใช้ใน localStorage');
           }
-          
+
           const savedView = localStorage.getItem('currentView');
           if (savedView) {
             setView(savedView as View);
@@ -201,7 +201,7 @@ export default function HomePage() {
 
         setLoadingProgress(100);
         console.log('✨ การโหลดข้อมูลเริ่มต้นเสร็จสิ้น');
-        
+
         // Debug: แสดงจำนวนข้อมูลที่โหลดได้
         console.log('📊 สรุปข้อมูลที่โหลดได้:');
         console.log('- Users:', users.length);
@@ -272,7 +272,7 @@ export default function HomePage() {
     const resetTimeout = () => {
       lastActivity = Date.now();
       clearTimeout(timeoutId);
-      
+
       timeoutId = setTimeout(() => {
         // ตรวจสอบว่าผ่านไป 5 นาทีจริงๆ หรือไม่
         if (Date.now() - lastActivity >= SESSION_TIMEOUT) {
@@ -291,7 +291,7 @@ export default function HomePage() {
 
     // ติดตาม activity ต่างๆ
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
+
     events.forEach(event => {
       document.addEventListener(event, handleActivity, true);
     });
@@ -313,11 +313,11 @@ export default function HomePage() {
       console.log('⏳ Already refreshing data, skipping...');
       return;
     }
-    
+
     try {
       setIsRefreshing(true);
       console.log('🔄 Force refreshing all data...');
-      
+
       // โหลดข้อมูลทั้งหมดใหม่แบบ parallel
       const [
         jobsResult,
@@ -419,9 +419,9 @@ export default function HomePage() {
           loginType
         })
       });
-  
+
       const result = await response.json();
-  
+
       if (result.success) {
         setUser(result.data);
         setLoginError('');
@@ -444,13 +444,13 @@ export default function HomePage() {
     setShowWelcome(false);
     localStorage.removeItem('currentUser');
   };
-  
+
   const handleCreateJob = async (newJob: Job) => {
     try {
       // ตรวจสอบข้อมูลที่จำเป็นก่อนส่ง
-      if (!newJob.type || !newJob.status || !newJob.vehicle_id || 
-          !newJob.vehicle_number || !newJob.golf_course_id || 
-          !newJob.user_id || !newJob.userName) {
+      if (!newJob.type || !newJob.status || !newJob.vehicle_id ||
+        !newJob.vehicle_number || !newJob.golf_course_id ||
+        !newJob.user_id || !newJob.userName) {
         alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลอีกครั้ง');
         return;
       }
@@ -460,7 +460,7 @@ export default function HomePage() {
       if (result.success) {
         const createdJob = result.data as Job;
         setJobs(prev => [createdJob, ...prev]);
-        
+
         // อัปเดต stock ของอะไหล่ถ้ามี
         if (createdJob.parts && createdJob.parts.length > 0) {
           for (const part of createdJob.parts) {
@@ -488,10 +488,10 @@ export default function HomePage() {
       }
     } catch (error: any) {
       console.error('Error creating job:', error);
-      
+
       // แสดงข้อความแจ้งเตือนที่เหมาะสม
       let errorMessage = 'เกิดข้อผิดพลาดในการสร้างงาน';
-      
+
       if (error.message && error.message.includes('400')) {
         errorMessage = 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง';
       } else if (error.message && error.message.includes('500')) {
@@ -499,11 +499,11 @@ export default function HomePage() {
       } else if (error.message && error.message.includes('network')) {
         errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
       }
-      
+
       alert(errorMessage);
     }
   };
-  
+
   const handleSetView = useCallback((newView: View) => {
     setView(newView);
   }, []);
@@ -536,9 +536,9 @@ export default function HomePage() {
       });
 
       // ตรวจสอบข้อมูลที่จำเป็นก่อนส่ง
-      if (!updatedJob.type || !updatedJob.status || !updatedJob.vehicle_id || 
-          !updatedJob.vehicle_number || !updatedJob.golf_course_id || 
-          !updatedJob.user_id || !updatedJob.userName) {
+      if (!updatedJob.type || !updatedJob.status || !updatedJob.vehicle_id ||
+        !updatedJob.vehicle_number || !updatedJob.golf_course_id ||
+        !updatedJob.user_id || !updatedJob.userName) {
         alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลอีกครั้ง');
         return;
       }
@@ -547,12 +547,12 @@ export default function HomePage() {
       const result = await jobsApi.update(updatedJob.id, updatedJob);
       if (result.success) {
         const updated = result.data as Job;
-        
+
         // เพิ่ม Log การใช้อะไหล่เฉพาะเมื่องานได้รับการอนุมัติแล้ว
         if (updated.status === 'approved') {
           await addPartsUsageLog(updated.id, updated.partsNotes, updated);
         }
-        
+
         setJobs(prev => prev.map(job => job.id === updated.id ? updated : job));
         setSelectedJobForForm(null);
         alert('บันทึกข้อมูลงานเรียบร้อยแล้ว');
@@ -562,10 +562,10 @@ export default function HomePage() {
       }
     } catch (error: any) {
       console.error('Error updating job:', error);
-      
+
       // แสดงข้อความแจ้งเตือนที่เหมาะสม
       let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
-      
+
       if (error.message && error.message.includes('400')) {
         errorMessage = 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง';
       } else if (error.message && error.message.includes('500')) {
@@ -573,7 +573,7 @@ export default function HomePage() {
       } else if (error.message && error.message.includes('network')) {
         errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
       }
-      
+
       alert(errorMessage);
     }
   };
@@ -593,7 +593,7 @@ export default function HomePage() {
         const now = new Date();
         const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
         const usedDate = thailandTime.toISOString();
-        
+
         for (const part of job.parts) {
           const logData = {
             jobId: jobId, // เก็บเป็น string แทน parseInt
@@ -639,7 +639,7 @@ export default function HomePage() {
       }
 
       // เตรียมข้อมูลอะไหล่จาก job.parts
-      const partsUsed = job.parts && job.parts.length > 0 
+      const partsUsed = job.parts && job.parts.length > 0
         ? job.parts.map(part => `${part.part_name} (จำนวน: ${part.quantity_used})`)
         : [];
 
@@ -685,22 +685,22 @@ export default function HomePage() {
   const onUpdateStatus = async (jobId: string, status: JobStatus) => {
     try {
       console.log('🔄 onUpdateStatus called:', { jobId, status, timestamp: new Date().toISOString() });
-      
+
       // หาข้อมูลงานปัจจุบัน
       const currentJob = jobs.find(job => job.id === jobId);
       if (!currentJob) {
-        console.error('❌ Job not found in local state:', { 
-          jobId, 
+        console.error('❌ Job not found in local state:', {
+          jobId,
           searchedId: jobId,
-          availableJobs: jobs.map(j => ({ id: j.id, status: j.status })) 
+          availableJobs: jobs.map(j => ({ id: j.id, status: j.status }))
         });
         alert('ไม่พบงานที่ต้องการอัปเดตในระบบ กรุณาลองรีเฟรชหน้าเว็บ');
         return;
       }
 
-      console.log('📋 Current job before update:', { 
-        id: currentJob.id, 
-        currentStatus: currentJob.status, 
+      console.log('📋 Current job before update:', {
+        id: currentJob.id,
+        currentStatus: currentJob.status,
         newStatus: status,
         vehicleNumber: currentJob.vehicle_number,
         userName: currentJob.userName
@@ -715,17 +715,17 @@ export default function HomePage() {
 
       // อัปเดต jobs state โดยตรงเพื่อให้ UI อัปเดตทันที
       setJobs(prevJobs => {
-        const updatedJobs = prevJobs.map(job => 
-          job.id === jobId 
-            ? { ...job, status } 
+        const updatedJobs = prevJobs.map(job =>
+          job.id === jobId
+            ? { ...job, status }
             : job
         );
-        
+
         console.log('🔄 Jobs state updated. Job statuses:', updatedJobs.reduce((acc, job) => {
           acc[job.status] = (acc[job.status] || 0) + 1;
           return acc;
         }, {} as Record<string, number>));
-        
+
         return updatedJobs;
       });
 
@@ -734,7 +734,7 @@ export default function HomePage() {
       const now = new Date();
       const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
       const updatedAt = thailandTime.toISOString();
-      
+
       const updateData = {
         id: currentJob.id, // เพิ่ม id เพื่อให้ External API รู้ว่าต้องอัปเดตงานไหน
         status,
@@ -788,7 +788,7 @@ export default function HomePage() {
         console.error('❌ Failed to parse API response:', parseError);
         throw new Error('ไม่สามารถอ่านข้อมูลตอบกลับจากเซิร์ฟเวอร์ได้');
       }
-      
+
       if (!response.ok || !result.success) {
         const errorMessage = result?.message || result?.details || `HTTP ${response.status}: ${response.statusText}`;
         console.error('❌ API update failed:', {
@@ -799,16 +799,16 @@ export default function HomePage() {
           responseStatus: response.status,
           result
         });
-        
+
         // หากการอัปเดตใน API ล้มเหลว ให้กลับสถานะเดิม
-        setJobs(prevJobs => 
-          prevJobs.map(job => 
-            job.id === jobId 
+        setJobs(prevJobs =>
+          prevJobs.map(job =>
+            job.id === jobId
               ? { ...job, status: currentJob.status } // กลับสถานะเดิม
               : job
           )
         );
-        
+
         // แสดงข้อความ error ที่เข้าใจง่าย
         if (response.status === 404) {
           alert('ไม่พบงานที่ต้องการอัปเดตในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
@@ -825,7 +825,7 @@ export default function HomePage() {
           newStatus: status,
           timestamp: new Date().toISOString()
         });
-        
+
         // เพิ่ม Log การใช้อะไหล่และ Serial History เมื่องานได้รับการอนุมัติ
         if (status === 'approved') {
           console.log('🔧 Adding parts usage log and serial history for approved job...', {
@@ -833,7 +833,7 @@ export default function HomePage() {
             partsNotes: currentJob.partsNotes,
             hasParts: currentJob.parts && currentJob.parts.length > 0
           });
-          
+
           try {
             // เพิ่ม Parts Usage Log
             await addPartsUsageLog(jobId, currentJob.partsNotes, { ...currentJob, status });
@@ -845,7 +845,7 @@ export default function HomePage() {
 
           // Serial History จะถูกสร้างโดยอัตโนมัติใน API แล้ว ไม่ต้องสร้างซ้ำที่นี่
         }
-        
+
         // โหลดข้อมูลงานใหม่จากฐานข้อมูลเพื่อให้แน่ใจว่าข้อมูลอัปเดต
         console.log('🔄 Refreshing jobs data from database...');
         try {
@@ -857,19 +857,19 @@ export default function HomePage() {
               updatedJob: (jobsResult.data as Job[]).find(j => j.id === currentJob.id)
             });
           }
-          
+
           // โหลดข้อมูล Serial History และ Parts Usage Logs เฉพาะเมื่อ approve เท่านั้น
           if (status === 'approved') {
             const [serialHistoryResult, partsUsageLogsResult] = await Promise.allSettled([
               serialHistoryApi.getAll(),
               partsUsageLogsApi.getAll()
             ]);
-            
+
             if (serialHistoryResult.status === 'fulfilled' && serialHistoryResult.value.success) {
               setSerialHistory(serialHistoryResult.value.data as SerialHistoryEntry[]);
               console.log('✅ Serial history data refreshed successfully');
             }
-            
+
             if (partsUsageLogsResult.status === 'fulfilled' && partsUsageLogsResult.value.success) {
               setPartsUsageLog(partsUsageLogsResult.value.data as PartsUsageLog[]);
               console.log('✅ Parts usage logs data refreshed successfully');
@@ -878,11 +878,11 @@ export default function HomePage() {
         } catch (refreshError) {
           console.error('❌ Error refreshing data:', refreshError);
         }
-        
+
         // แสดงข้อความสำเร็จ
-        const statusText = status === 'approved' ? 'อนุมัติ' : 
-                          status === 'rejected' ? 'ไม่อนุมัติ' : 
-                          status === 'completed' ? 'เสร็จสิ้น' : status;
+        const statusText = status === 'approved' ? 'อนุมัติ' :
+          status === 'rejected' ? 'ไม่อนุมัติ' :
+            status === 'completed' ? 'เสร็จสิ้น' : status;
         alert(`${statusText}งานเรียบร้อยแล้ว`);
       }
     } catch (error) {
@@ -893,7 +893,7 @@ export default function HomePage() {
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
-      
+
       // กลับสถานะเดิมในกรณีเกิดข้อผิดพลาด
       const currentJob = jobs.find(job => job.id === jobId);
       if (currentJob) {
@@ -901,15 +901,15 @@ export default function HomePage() {
           jobId,
           revertingTo: currentJob.status
         });
-        setJobs(prevJobs => 
-          prevJobs.map(job => 
-            job.id === jobId 
+        setJobs(prevJobs =>
+          prevJobs.map(job =>
+            job.id === jobId
               ? { ...job, status: currentJob.status }
               : job
           )
         );
       }
-      
+
       // แสดงข้อความ error ที่เข้าใจง่าย
       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
       if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
@@ -924,21 +924,21 @@ export default function HomePage() {
   const handleDeleteJob = async (jobId: string) => {
     try {
       console.log('🗑️ handleDeleteJob called:', { jobId, timestamp: new Date().toISOString() });
-      
+
       // หาข้อมูลงานปัจจุบัน
       const currentJob = jobs.find(job => job.id === jobId);
       if (!currentJob) {
-        console.error('❌ Job not found in local state:', { 
-          jobId, 
+        console.error('❌ Job not found in local state:', {
+          jobId,
           searchedId: jobId,
-          availableJobs: jobs.map(j => ({ id: j.id, status: j.status })) 
+          availableJobs: jobs.map(j => ({ id: j.id, status: j.status }))
         });
         alert('ไม่พบงานที่ต้องการลบในระบบ กรุณาลองรีเฟรชหน้าเว็บ');
         return;
       }
 
-      console.log('📋 Job to delete:', { 
-        id: currentJob.id, 
+      console.log('📋 Job to delete:', {
+        id: currentJob.id,
         status: currentJob.status,
         vehicleNumber: currentJob.vehicle_number,
         userName: currentJob.userName
@@ -972,7 +972,7 @@ export default function HomePage() {
         console.error('❌ Failed to parse API response:', parseError);
         throw new Error('ไม่สามารถอ่านข้อมูลตอบกลับจากเซิร์ฟเวอร์ได้');
       }
-      
+
       if (!response.ok || !result.success) {
         const errorMessage = result?.message || result?.details || `HTTP ${response.status}: ${response.statusText}`;
         console.error('❌ API delete failed:', {
@@ -981,7 +981,7 @@ export default function HomePage() {
           responseStatus: response.status,
           result
         });
-        
+
         // แสดงข้อความ error ที่เข้าใจง่าย
         if (response.status === 404) {
           alert('ไม่พบงานที่ต้องการลบในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
@@ -996,14 +996,14 @@ export default function HomePage() {
           jobId: currentJob.id,
           timestamp: new Date().toISOString()
         });
-        
+
         // อัปเดต jobs state โดยลบงานที่ถูกลบออกแบบ real-time
         setJobs(prevJobs => {
           const updatedJobs = prevJobs.filter(job => job.id !== jobId);
           console.log('🔄 Jobs state updated after deletion. Remaining jobs:', updatedJobs.length);
           return updatedJobs;
         });
-        
+
         // แสดงข้อความสำเร็จ
         alert('ลบงานเรียบร้อยแล้ว');
       }
@@ -1014,7 +1014,7 @@ export default function HomePage() {
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
-      
+
       // แสดงข้อความ error ที่เข้าใจง่าย
       const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
       if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
@@ -1047,7 +1047,7 @@ export default function HomePage() {
   // แสดง loading screen ขณะโหลดข้อมูล
   if (loading) {
     return (
-      <div 
+      <div
         className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center z-50 overflow-hidden"
         style={{
           position: 'fixed',
@@ -1069,28 +1069,28 @@ export default function HomePage() {
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="text-center relative z-10 px-8 flex flex-col items-center justify-center">
           {/* Golf Cart Icon */}
           <div className="mb-12 transform hover:scale-110 transition-transform duration-300">
             <div className="relative">
-              <svg 
-                width="120" 
-                height="120" 
-                viewBox="0 0 100 100" 
+              <svg
+                width="120"
+                height="120"
+                viewBox="0 0 100 100"
                 className="mx-auto text-white drop-shadow-2xl"
                 fill="currentColor"
               >
                 {/* Golf Cart Body */}
-                <rect x="20" y="40" width="50" height="25" rx="3" fill="white"/>
+                <rect x="20" y="40" width="50" height="25" rx="3" fill="white" />
                 {/* Golf Cart Roof */}
-                <rect x="15" y="25" width="60" height="20" rx="5" fill="white"/>
+                <rect x="15" y="25" width="60" height="20" rx="5" fill="white" />
                 {/* Golf Cart Wheels */}
-                <circle cx="30" cy="70" r="8" fill="white"/>
-                <circle cx="60" cy="70" r="8" fill="white"/>
+                <circle cx="30" cy="70" r="8" fill="white" />
+                <circle cx="60" cy="70" r="8" fill="white" />
                 {/* Golf Cart Details */}
-                <rect x="25" y="45" width="15" height="15" rx="2" fill="black"/>
-                <rect x="50" y="45" width="15" height="15" rx="2" fill="black"/>
+                <rect x="25" y="45" width="15" height="15" rx="2" fill="black" />
+                <rect x="50" y="45" width="15" height="15" rx="2" fill="black" />
               </svg>
               {/* Glow Effect */}
               <div className="absolute inset-0 bg-cyan-400 rounded-full blur-xl opacity-20 animate-pulse"></div>
@@ -1103,9 +1103,9 @@ export default function HomePage() {
               LOADING
             </h2>
             <div className="flex justify-center space-x-1">
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
           </div>
 
@@ -1120,7 +1120,7 @@ export default function HomePage() {
           <div className="relative w-40 h-40 mx-auto mb-8">
             {/* Outer Glow Ring */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 opacity-20 blur-md"></div>
-            
+
             {/* Background Circle */}
             <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
               {/* Gradient Definition - ต้องอยู่ก่อน circle ที่ใช้งาน */}
@@ -1130,7 +1130,7 @@ export default function HomePage() {
                   <stop offset="100%" stopColor="#3b82f6" />
                 </linearGradient>
               </defs>
-              
+
               <circle
                 cx="50"
                 cy="50"
@@ -1139,7 +1139,7 @@ export default function HomePage() {
                 strokeWidth="2"
                 fill="none"
               />
-              
+
               {/* Progress Circle */}
               <circle
                 cx="50"
@@ -1158,7 +1158,7 @@ export default function HomePage() {
                 }}
               />
             </svg>
-            
+
             {/* Center Dot */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full animate-pulse"></div>
           </div>
@@ -1189,13 +1189,13 @@ export default function HomePage() {
     <div className="app">
       <Header user={user} onLogout={handleLogout} setView={handleSetView} parts={parts} />
       {showWelcome && <WelcomeBanner user={user} onDismiss={() => setShowWelcome(false)} />}
-      
+
       <main className="main-content">
         {view === 'dashboard' && (
-          <Dashboard 
-            user={user} 
-            jobs={jobs} 
-            setJobs={setJobs} 
+          <Dashboard
+            user={user}
+            jobs={jobs}
+            setJobs={setJobs}
             setView={handleSetView}
             onFillJobForm={handleFillJobForm}
             addPartsUsageLog={addPartsUsageLog}
@@ -1206,9 +1206,9 @@ export default function HomePage() {
           />
         )}
         {view === 'create_job' && (
-          <CreateJobScreen 
-            user={user} 
-            onJobCreate={handleCreateJob} 
+          <CreateJobScreen
+            user={user}
+            onJobCreate={handleCreateJob}
             setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
@@ -1216,9 +1216,9 @@ export default function HomePage() {
           />
         )}
         {view === 'central_create_job' && (user.role === 'central' || user.role === 'admin' || user.role === 'supervisor') && (
-          <CentralCreateJobScreen 
-            user={user} 
-            onJobCreate={handleCreateJob} 
+          <CentralCreateJobScreen
+            user={user}
+            onJobCreate={handleCreateJob}
             setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
@@ -1226,7 +1226,7 @@ export default function HomePage() {
           />
         )}
         {view === 'parts_management' && (
-          <PartsManagementScreen 
+          <PartsManagementScreen
             partsUsageLog={partsUsageLog}
             setView={handleSetView}
             vehicles={vehicles}
@@ -1234,7 +1234,7 @@ export default function HomePage() {
           />
         )}
         {view === 'stock_management' && (
-          <StockManagementScreen 
+          <StockManagementScreen
             parts={parts}
             onPartsUpdate={forceRefreshAllData}
           />
@@ -1243,16 +1243,16 @@ export default function HomePage() {
           <AdminDashboard setView={handleSetView} user={user} jobs={jobs} />
         )}
         {view === 'manage_users' && (user.role === 'admin' || user.role === 'supervisor') && (
-          <ManageUsersScreen 
-            users={users} 
-            setUsers={setUsers} 
+          <ManageUsersScreen
+            users={users}
+            setUsers={setUsers}
             setView={handleSetView}
             golfCourses={golfCourses}
             user={user}
           />
         )}
         {view === 'history' && (
-          <HistoryScreen 
+          <HistoryScreen
             vehicles={vehicles}
             jobs={jobs}
             users={users}
@@ -1261,7 +1261,7 @@ export default function HomePage() {
           />
         )}
         {view === 'multi_assign' && (
-          <MultiAssignScreen 
+          <MultiAssignScreen
             setView={handleSetView}
             user={user}
             jobs={jobs}
@@ -1272,7 +1272,7 @@ export default function HomePage() {
           />
         )}
         {view === 'serial_history' && (
-          <SerialHistoryScreen 
+          <SerialHistoryScreen
             user={user}
             setView={handleSetView}
             jobs={jobs}
@@ -1284,7 +1284,7 @@ export default function HomePage() {
           />
         )}
         {view === 'admin_management' && user.role === 'admin' && (
-          <AdminManagementScreen 
+          <AdminManagementScreen
             setView={handleSetView}
             users={users}
             setUsers={setUsers}
@@ -1295,7 +1295,7 @@ export default function HomePage() {
           />
         )}
         {view === 'golf_course_management' && (
-          <GolfCourseManagementScreen 
+          <GolfCourseManagementScreen
             onBack={() => setView('admin_dashboard')}
             golfCourses={golfCourses}
             setGolfCourses={setGolfCourses}
@@ -1307,7 +1307,7 @@ export default function HomePage() {
           />
         )}
         {view === 'assigned_job_form' && selectedJobForForm && (
-          <AssignedJobFormScreen 
+          <AssignedJobFormScreen
             job={selectedJobForForm}
             user={user}
             onJobUpdate={handleJobUpdate}
@@ -1317,7 +1317,7 @@ export default function HomePage() {
           />
         )}
         {view === 'view_assigned_jobs' && (
-          <ViewAssignedJobsScreen 
+          <ViewAssignedJobsScreen
             currentUser={user}
             jobs={jobs}
             golfCourses={golfCourses}
@@ -1330,16 +1330,14 @@ export default function HomePage() {
           />
         )}
         {view === 'supervisor_pending_jobs' && (
-          <SupervisorPendingJobsScreen 
+          <SupervisorPendingJobsScreen
             key={`supervisor-pending-${jobs.filter(j => j.status === 'pending').length}`}
-            user={user} 
+            user={user}
             jobs={jobs}
             golfCourses={golfCourses}
             users={users}
             vehicles={vehicles}
-            partsUsageLog={partsUsageLog}
             onUpdateStatus={onUpdateStatus}
-            addPartsUsageLog={addPartsUsageLog}
             setView={setView}
           />
         )}
