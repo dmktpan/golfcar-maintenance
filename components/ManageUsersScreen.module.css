@@ -1,0 +1,138 @@
+.tableContainer {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    margin-top: 1rem;
+    border: 1px solid #e2e8f0;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.table th {
+    background-color: #667eea;
+    color: white;
+    font-weight: 600;
+    text-align: left;
+    padding: 16px 24px;
+    border-bottom: 2px solid #e2e8f0;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e293b;
+    vertical-align: middle;
+    border-right: 1px solid #f1f5f9;
+}
+
+.table td:last-child {
+    border-right: none;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.table tr:hover {
+    background-color: #f8fafc;
+    transition: background-color 0.2s ease;
+}
+
+.roleBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.roleAdmin {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.roleSupervisor {
+    background-color: #e0e7ff;
+    color: #3730a3;
+}
+
+.roleCentral {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.roleStaff {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+.editButton,
+.deleteButton {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.editButton {
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.editButton:hover {
+    background-color: #dbeafe;
+}
+
+.deleteButton {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.deleteButton:hover {
+    background-color: #fee2e2;
+}
+
+.noData {
+    text-align: center;
+    padding: 48px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.userCode {
+    font-family: monospace;
+    background-color: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.managedCourses {
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #64748b;
+}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
-import { getPartsBySystem, PartsBySystem, CategorizedPart, searchParts } from '@/lib/partsService';
+import { getPartsBySystem, PartsBySystem, CategorizedPart } from '@/lib/partsService';
 import ImageUpload from './ImageUpload';
 
 // Interface สำหรับ local state ของอะไหล่ที่เลือก
@@ -28,7 +28,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     // ข้อมูลรถและสนามจาก job ที่ได้รับมอบหมาย
     const assignedVehicle = vehicles.find(v => v.id === job.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === assignedVehicle?.golf_course_id);
-    
+
     // State สำหรับข้อมูลอะไหล่จากระบบ stock
     const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
         brake: [],
@@ -38,7 +38,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         other: []
     });
     const [isLoadingParts, setIsLoadingParts] = useState(true);
-    
+
     // ใช้ข้อมูลจาก job ที่ได้รับมอบหมาย
     const [jobType, setJobType] = useState<JobType>(job.type);
     const [system, setSystem] = useState(job.system);
@@ -63,7 +63,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    
+
     // โหลดข้อมูลอะไหล่จากระบบ stock เมื่อ component mount
     useEffect(() => {
         const loadParts = async () => {
@@ -71,7 +71,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             try {
                 const parts = await getPartsBySystem();
                 setPartsBySystem(parts);
-                
+
                 // อัพเดท unit ของ selectedParts ที่มีอยู่แล้ว
                 setSelectedParts(prev => prev.map(selectedPart => {
                     const allParts = Object.values(parts).flat();
@@ -87,15 +87,15 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 setIsLoadingParts(false);
             }
         };
-        
+
         loadParts();
     }, []);
-    
+
     // ฟังก์ชันสำหรับเปิด/ปิด dropdown
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);
     };
-    
+
     // ฟังก์ชันสำหรับแสดงชื่อแท็บ
     const getTabDisplayName = (tab: string) => {
         const tabNames: Record<string, string> = {
@@ -103,27 +103,27 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             'steering': 'ระบบพวงมาลัย',
             'motor': 'ระบบมอเตอร์',
             'electric': 'ระบบไฟฟ้า',
-            'others': 'อื่นๆ'
+            'other': 'อื่นๆ'
         };
         return tabNames[tab] || tab;
     };
-    
+
     // ฟังก์ชันสำหรับเลือกหมวดหมู่
     const handleCategorySelect = (tab: string) => {
         setActivePartsTab(tab);
         setIsDropdownOpen(false);
     };
-    
+
     // ฟังก์ชันกรองอะไหล่ตามคำค้นหา
     const getFilteredParts = () => {
         const currentParts = partsBySystem[activePartsTab as keyof PartsBySystem];
         if (!partsSearchTerm.trim()) {
             return currentParts;
         }
-        
+
         // ถ้ามีคำค้นหา ให้ค้นหาจากทุก category
         const allParts = Object.values(partsBySystem).flat();
-        return allParts.filter((part: CategorizedPart) => 
+        return allParts.filter((part: CategorizedPart) =>
             part.name.toLowerCase().includes(partsSearchTerm.toLowerCase())
         );
     };
@@ -142,12 +142,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const handleRemoveAdditionalSubTask = (taskToRemove: string) => {
         setAdditionalSubTasks(prev => prev.filter(task => task !== taskToRemove));
     };
-    
+
     const handlePartSelection = (part: CategorizedPart) => {
         const existingPart = selectedParts.find(p => p.id === part.id);
         if (existingPart) {
             // ถ้ามีอะไหล่นี้แล้ว ให้เพิ่มจำนวน
-            setSelectedParts(prev => prev.map(p => 
+            setSelectedParts(prev => prev.map(p =>
                 p.id === part.id ? { ...p, quantity: p.quantity + 1 } : p
             ));
         } else {
@@ -164,7 +164,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         if (quantity <= 0) {
             setSelectedParts(prev => prev.filter(p => p.id !== partId));
         } else {
-            setSelectedParts(prev => prev.map(p => 
+            setSelectedParts(prev => prev.map(p =>
                 p.id === partId ? { ...p, quantity } : p
             ));
         }
@@ -172,20 +172,20 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const allSubTasks = [...subTasks, ...additionalSubTasks];
         // แก้ไข: เฉพาะ PM เท่านั้นที่ต้องมีงานย่อย สำหรับ BM และ RC ไม่บังคับ
         if (jobType === 'PM' && allSubTasks.length === 0) {
             alert('กรุณาเลือกงานย่อยอย่างน้อย 1 รายการ');
             return;
         }
-        
+
         // เพิ่ม validation สำหรับ BM cause
         if (jobType === 'BM' && !bmCause) {
             alert('กรุณาเลือกสาเหตุของการเสีย');
             return;
         }
-        
+
         try {
             // อัปเดตข้อมูลงาน - ส่งข้อมูลครบถ้วนตาม API requirements
             const updatedJob: Job = {
@@ -211,15 +211,15 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 updated_at: new Date().toISOString(),
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
-            
+
             onJobUpdate(updatedJob);
-            
+
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
             console.error('Error updating job:', error);
         }
     };
-    
+
     const jobInfo = {
         courseName: golfCourse?.name || '-',
         serialNumber: assignedVehicle?.serial_number || '-',
@@ -232,12 +232,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         if (!system) return {};
         const systemData = MOCK_SYSTEMS.find(s => s.id === system);
         if (!systemData || !systemData.tasks) return {};
-        
+
         return systemData.tasks;
     };
-    
+
     const subTaskCategories = getSubTasksByCategory();
-    
+
     const getCategoryDisplayName = (category: string) => {
         const categoryNames: Record<string, string> = {
             'ทำความสะอาด': 'ทำความสะอาด',
@@ -264,7 +264,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <span className="status-badge assigned">งานที่ได้รับมอบหมาย</span>
                 </div>
             </div>
-            
+
             <div className="info-box">
                 <h4>ข้อมูลงานที่ได้รับมอบหมาย:</h4>
                 <p><strong>สนาม:</strong> {jobInfo.courseName}</p>
@@ -292,10 +292,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     </div>
                     <div className="form-group">
                         <label htmlFor="battery-serial">ซีเรียลแบต *</label>
-                        <input 
-                            id="battery-serial" 
-                            type="text" 
-                            value={batterySerial} 
+                        <input
+                            id="battery-serial"
+                            type="text"
+                            value={batterySerial}
                             onChange={e => setBatterySerial(e.target.value)}
                             placeholder="กรอกซีเรียลแบต หรือ 'ไม่มีสติ๊กเกอร์' หรือ 'หลุด'"
                             required
@@ -352,7 +352,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         </select>
                     </div>
                 )}
-                
+
                 {jobType === 'PM' && Object.keys(subTaskCategories).length > 0 && (
                     <div className="form-group">
                         <label>รายการงานย่อยที่แนะนำ</label>
@@ -383,24 +383,24 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <label>เพิ่มงานย่อยเพิ่มเติม</label>
                         <div className="add-subtask-section">
                             <div className="input-with-button">
-                                <input 
-                                    type="text" 
-                                    value={newSubTask} 
+                                <input
+                                    type="text"
+                                    value={newSubTask}
                                     onChange={e => setNewSubTask(e.target.value)}
                                     placeholder="กรอกงานย่อยเพิ่มเติม..."
                                     onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubTask())}
                                 />
                                 <button type="button" onClick={handleAddSubTask} className="btn-add">เพิ่ม</button>
                             </div>
-                            
+
                             {additionalSubTasks.length > 0 && (
                                 <div className="additional-subtasks-list">
                                     <h5>งานย่อยเพิ่มเติม:</h5>
                                     {additionalSubTasks.map((task, index) => (
                                         <div key={`subtask-${index}-${task.slice(0, 10)}`} className="subtask-item">
                                             <span>{task}</span>
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 onClick={() => handleRemoveAdditionalSubTask(task)}
                                                 className="btn-remove"
                                             >
@@ -426,14 +426,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <div className="form-group">
                     <label>รายการอะไหล่ที่เปลี่ยน</label>
                     <div className="parts-section">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             className="btn-add-parts"
                             onClick={() => setShowPartsModal(true)}
                         >
                             + เพิ่มอะไหล่
                         </button>
-                        
+
                         {selectedParts.length > 0 && (
                             <div className="selected-parts-list">
                                 <div className="parts-table-header">
@@ -448,30 +448,30 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             <span className="part-unit">({part.unit})</span>
                                         </div>
                                         <div className="quantity-controls">
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 className="quantity-btn"
                                                 onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
                                             >
                                                 -
                                             </button>
-                                            <input 
-                                                type="number" 
+                                            <input
+                                                type="number"
                                                 value={part.quantity}
                                                 onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
                                                 className="quantity-input"
                                                 min="1"
                                             />
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 className="quantity-btn"
                                                 onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
                                             >
                                                 +
                                             </button>
                                         </div>
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             className="remove-part-btn"
                                             onClick={() => handleRemovePart(part.id)}
                                         >
@@ -498,10 +498,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
                 <div className="form-group">
                     <label>รูปภาพ</label>
-                    <ImageUpload 
+                    <ImageUpload
                         images={images}
                         onImagesChange={setImages}
-                        maxImages={5}
+                        maxImages={20}
                     />
                 </div>
 
@@ -568,7 +568,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     <button type="button" className="btn-secondary" onClick={() => setView('dashboard')}>ยกเลิก</button>
                 </div>
             </form>
-            
+
             {/* Parts Selection Modal */}
             {showPartsModal && (
                 <div className="modal-overlay">
@@ -576,8 +576,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <div className="modal-header">
                             <h3>เลือกอะไหล่</h3>
                             <div className="mobile-header-dropdown">
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className="header-category-dropdown-button"
                                     onClick={toggleDropdown}
                                 >
@@ -587,26 +587,26 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 {isDropdownOpen && (
                                     <div className="header-category-dropdown-menu">
                                         {Object.keys(partsBySystem).map(tab => (
-                                    <div
-                                        key={tab}
-                                        className="header-category-dropdown-item"
-                                        onClick={() => handleCategorySelect(tab)}
-                                    >
-                                        {getTabDisplayName(tab)}
-                                    </div>
-                                ))}
+                                            <div
+                                                key={tab}
+                                                className="header-category-dropdown-item"
+                                                onClick={() => handleCategorySelect(tab)}
+                                            >
+                                                {getTabDisplayName(tab)}
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="modal-close desktop-only"
                                 onClick={() => setShowPartsModal(false)}
                             >
                                 ×
                             </button>
                         </div>
-                        
+
                         <div className="modal-tabs">
                             {Object.keys(partsBySystem).map(tab => (
                                 <button
@@ -619,7 +619,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </button>
                             ))}
                         </div>
-                        
+
                         {/* เพิ่มส่วนค้นหาอะไหล่ */}
                         <div className="parts-search-section">
                             <div className="search-input-container">
@@ -642,7 +642,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 )}
                             </div>
                         </div>
-                        
+
                         <div className="modal-body">
                             {isLoadingParts ? (
                                 <div className="loading-parts">
@@ -663,8 +663,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                                             เลือกแล้ว: {selectedPart.quantity} {part.unit}
                                                         </div>
                                                     )}
-                                                    <button 
-                                                        type="button" 
+                                                    <button
+                                                        type="button"
                                                         className="btn-select-part"
                                                         onClick={() => handlePartSelection(part)}
                                                     >
@@ -675,8 +675,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                         })
                                     ) : (
                                         <div className="no-parts-found">
-                                            {partsSearchTerm ? 
-                                                `ไม่พบอะไหล่ที่ค้นหา "${partsSearchTerm}"` : 
+                                            {partsSearchTerm ?
+                                                `ไม่พบอะไหล่ที่ค้นหา "${partsSearchTerm}"` :
                                                 'ไม่มีอะไหล่ในหมวดหมู่นี้'
                                             }
                                         </div>
@@ -684,17 +684,17 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="modal-footer">
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="btn-secondary"
                                 onClick={() => setShowPartsModal(false)}
                             >
                                 ปิด
                             </button>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className="btn-primary"
                                 onClick={() => setShowPartsModal(false)}
                             >

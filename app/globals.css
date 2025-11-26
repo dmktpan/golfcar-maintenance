@@ -6147,3 +6147,32 @@ datalist {
         margin-left: 0;
     }
 }
+
+/* Filter Inputs */
+.golf-course-management .filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.golf-course-management .filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.golf-course-management .filter-input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 1rem;
+  min-width: 200px;
+  background-color: var(--surface-color);
+}
+
+.golf-course-management .filter-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}

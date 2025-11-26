@@ -10,27 +10,21 @@ import { getSystemDisplayName } from '../lib/systemUtils';
 
 interface SupervisorPendingJobsScreenProps {
     user: User;
-    jobs: Job[]; 
+    jobs: Job[];
     golfCourses: GolfCourse[];
     users: User[];
     vehicles: Vehicle[];
-    partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
     onUpdateStatus: (jobId: string, status: JobStatus) => void;
-    onFillJobForm?: (job: Job) => void;
-    addPartsUsageLog?: (jobId: string, partsNotes?: string, jobData?: Job) => Promise<void>;
     setView: (view: View) => void; // เพิ่ม setView prop
 }
 
-function SupervisorPendingJobsScreen({ 
-    user, 
-    jobs, 
-    golfCourses, 
-    users, 
+function SupervisorPendingJobsScreen({
+    user,
+    jobs,
+    golfCourses,
+    users,
     vehicles,
-    partsUsageLog = [],
     onUpdateStatus,
-    onFillJobForm,
-    addPartsUsageLog,
     setView // เพิ่ม setView ใน destructuring
 }: SupervisorPendingJobsScreenProps) {
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
@@ -39,14 +33,14 @@ function SupervisorPendingJobsScreen({
 
     // Calculate assigned jobs count (assigned + in_progress status)
     const getAssignedJobsCount = () => {
-        let assignedJobs = jobs.filter(job => 
+        let assignedJobs = jobs.filter(job =>
             job.status === 'assigned' || job.status === 'in_progress'
         );
 
         // Filter by golf course if user is not admin
         if (user.role !== 'admin') {
             if (user.managed_golf_courses && user.managed_golf_courses.length > 0) {
-                assignedJobs = assignedJobs.filter(job => 
+                assignedJobs = assignedJobs.filter(job =>
                     user.managed_golf_courses!.includes(String(job.golf_course_id))
                 );
             } else if (user.golf_course_id) {
@@ -72,7 +66,7 @@ function SupervisorPendingJobsScreen({
         // Filter by golf course if user is not admin
         if (user.role !== 'admin') {
             if (user.managed_golf_courses && user.managed_golf_courses.length > 0) {
-                filtered = filtered.filter(job => 
+                filtered = filtered.filter(job =>
                     user.managed_golf_courses!.includes(String(job.golf_course_id))
                 );
             } else if (user.golf_course_id) {
@@ -114,7 +108,7 @@ function SupervisorPendingJobsScreen({
             }
 
             let date: Date;
-            
+
             // ถ้าเป็น Date object อยู่แล้ว
             if (dateInput instanceof Date) {
                 date = dateInput;
@@ -125,7 +119,7 @@ function SupervisorPendingJobsScreen({
                 if (dateInput.trim() === '') {
                     return 'ไม่ระบุวันที่';
                 }
-                
+
                 // ถ้าเป็น timestamp (number string)
                 if (!isNaN(Number(dateInput))) {
                     date = new Date(Number(dateInput));
@@ -189,7 +183,7 @@ function SupervisorPendingJobsScreen({
 
     const handleApprove = async (jobId: string) => {
         console.log('🔄 handleApprove called:', { jobId, timestamp: new Date().toISOString() });
-        
+
         // ตรวจสอบว่างานยังมีอยู่ในรายการหรือไม่
         const jobToApprove = jobs.find(job => job.id === jobId);
         if (!jobToApprove) {
@@ -197,38 +191,38 @@ function SupervisorPendingJobsScreen({
             alert('ไม่พบงานที่ต้องการอนุมัติ กรุณารีเฟรชหน้าเว็บ');
             return;
         }
-        
+
         console.log('📋 Job to approve:', {
             id: jobToApprove.id,
             status: jobToApprove.status,
             vehicleNumber: jobToApprove.vehicle_number,
             type: jobToApprove.type
         });
-        
+
         if (jobToApprove.status !== 'pending') {
-            console.warn('⚠️ Job is not in pending status:', { 
-                jobId, 
-                currentStatus: jobToApprove.status 
+            console.warn('⚠️ Job is not in pending status:', {
+                jobId,
+                currentStatus: jobToApprove.status
             });
             alert(`งานนี้มีสถานะ "${jobToApprove.status}" อยู่แล้ว ไม่สามารถอนุมัติได้`);
             return;
         }
-        
+
         if (confirm('ยืนยันการอนุมัติงานนี้?')) {
             try {
                 console.log('✅ User confirmed approval, calling onUpdateStatus...');
-                
+
                 // ใช้ onUpdateStatus ที่จะจัดการทั้ง UI update และ API call
                 if (onUpdateStatus) {
                     await onUpdateStatus(jobId, 'approved');
-                    
+
                     // Force update filtered jobs immediately
                     console.log('🔄 Force updating filtered jobs after approval');
-                    const updatedFiltered = jobs.filter(job => 
+                    const updatedFiltered = jobs.filter(job =>
                         job.status === 'pending' && job.id !== jobId
                     );
                     setFilteredJobs(updatedFiltered);
-                    
+
                     console.log('✅ Job approval completed successfully');
                 } else {
                     console.error('❌ onUpdateStatus function is not available');
@@ -249,7 +243,7 @@ function SupervisorPendingJobsScreen({
 
     const handleReject = async (jobId: string) => {
         console.log('🔄 handleReject called:', { jobId, timestamp: new Date().toISOString() });
-        
+
         // ตรวจสอบว่างานยังมีอยู่ในรายการหรือไม่
         const jobToReject = jobs.find(job => job.id === jobId);
         if (!jobToReject) {
@@ -257,38 +251,38 @@ function SupervisorPendingJobsScreen({
             alert('ไม่พบงานที่ต้องการไม่อนุมัติ กรุณารีเฟรชหน้าเว็บ');
             return;
         }
-        
+
         console.log('📋 Job to reject:', {
             id: jobToReject.id,
             status: jobToReject.status,
             vehicleNumber: jobToReject.vehicle_number,
             type: jobToReject.type
         });
-        
+
         if (jobToReject.status !== 'pending') {
-            console.warn('⚠️ Job is not in pending status:', { 
-                jobId, 
-                currentStatus: jobToReject.status 
+            console.warn('⚠️ Job is not in pending status:', {
+                jobId,
+                currentStatus: jobToReject.status
             });
             alert(`งานนี้มีสถานะ "${jobToReject.status}" อยู่แล้ว ไม่สามารถไม่อนุมัติได้`);
             return;
         }
-        
+
         if (confirm('ยืนยันการไม่อนุมัติงานนี้?')) {
             try {
                 console.log('✅ User confirmed rejection, calling onUpdateStatus...');
-                
+
                 // ใช้ onUpdateStatus ที่จะจัดการทั้ง UI update และ API call
                 if (onUpdateStatus) {
                     await onUpdateStatus(jobId, 'rejected');
-                    
+
                     // Force update filtered jobs immediately
                     console.log('🔄 Force updating filtered jobs after rejection');
-                    const updatedFiltered = jobs.filter(job => 
+                    const updatedFiltered = jobs.filter(job =>
                         job.status === 'pending' && job.id !== jobId
                     );
                     setFilteredJobs(updatedFiltered);
-                    
+
                     console.log('✅ Job rejection completed successfully');
                 } else {
                     console.error('❌ onUpdateStatus function is not available');
@@ -329,14 +323,14 @@ function SupervisorPendingJobsScreen({
                     )}
                 </div>
                 <div className={styles.headerActions}>
-                    <button 
-                        className="btn-outline" 
+                    <button
+                        className="btn-outline"
                         onClick={() => setView('view_assigned_jobs')}
                         style={{ marginRight: '10px', position: 'relative' }}
                     >
                         ดูงานที่มอบหมาย
                         {getAssignedJobsCount() > 0 && (
-                            <span 
+                            <span
                                 style={{
                                     marginLeft: '8px',
                                     backgroundColor: '#007bff',
@@ -361,8 +355,8 @@ function SupervisorPendingJobsScreen({
                 <div className={styles.filtersGrid}>
                     <div className={styles.filterGroup}>
                         <label className={styles.filterLabel}>กรองตามสนาม:</label>
-                        <select 
-                            value={selectedCourseId || ''} 
+                        <select
+                            value={selectedCourseId || ''}
                             onChange={(e) => setSelectedCourseId(e.target.value || null)}
                             className={styles.filterSelect}
                         >
@@ -376,8 +370,8 @@ function SupervisorPendingJobsScreen({
                     </div>
                     <div className={styles.filterGroup}>
                         <label className={styles.filterLabel}>กรองตามประเภทงาน:</label>
-                        <select 
-                            value={selectedJobType} 
+                        <select
+                            value={selectedJobType}
                             onChange={(e) => setSelectedJobType(e.target.value)}
                             className={styles.filterSelect}
                         >
@@ -388,7 +382,7 @@ function SupervisorPendingJobsScreen({
                         </select>
                     </div>
                     <div className={styles.filterGroup}>
-                        <button 
+                        <button
                             className={styles.btnReset}
                             onClick={() => {
                                 setSelectedCourseId(null);
@@ -477,21 +471,21 @@ function SupervisorPendingJobsScreen({
                                 </div>
 
                                 <div className={styles.actionButtons}>
-                                    <button 
+                                    <button
                                         className={`${styles.actionButton} ${styles.approveButton}`}
                                         onClick={() => handleApprove(job.id)}
                                     >
                                         <span className={styles.buttonIcon}>✓</span>
                                         อนุมัติ
                                     </button>
-                                    <button 
+                                    <button
                                         className={`${styles.actionButton} ${styles.rejectButton}`}
                                         onClick={() => handleReject(job.id)}
                                     >
                                         <span className={styles.buttonIcon}>✕</span>
                                         ไม่อนุมัติ
                                     </button>
-                                    <button 
+                                    <button
                                         className={`${styles.actionButton} ${styles.detailsButton}`}
                                         onClick={() => handleViewDetails(job)}
                                     >
@@ -515,7 +509,7 @@ function SupervisorPendingJobsScreen({
                                 ✕
                             </button>
                         </div>
-                        
+
                         <div className={styles.modalBody}>
                             <div className={styles.detailsSection}>
                                 <h4>ข้อมูลทั่วไป</h4>
@@ -562,9 +556,9 @@ function SupervisorPendingJobsScreen({
                                         <div className={styles.detailItem}>
                                             <span className={styles.detailLabel}>สาเหตุ BM:</span>
                                             <span className={styles.detailValue}>
-                                                {selectedJobForDetails.bmCause === 'breakdown' ? 'เสีย' : 
-                                                 selectedJobForDetails.bmCause === 'accident' ? 'อุบัติเหตุ' :
-                                                 selectedJobForDetails.bmCause === 'wear' ? 'สึกหรอ' : 'อื่นๆ'}
+                                                {selectedJobForDetails.bmCause === 'breakdown' ? 'เสีย' :
+                                                    selectedJobForDetails.bmCause === 'accident' ? 'อุบัติเหตุ' :
+                                                        selectedJobForDetails.bmCause === 'wear' ? 'สึกหรอ' : 'อื่นๆ'}
                                             </span>
                                         </div>
                                     )}
@@ -583,76 +577,76 @@ function SupervisorPendingJobsScreen({
                             )}
 
                             {(() => {
-                // สำหรับงาน pending: ใช้ข้อมูลอะไหล่จาก job.parts (ที่เลือกตอนสร้างงาน)
-                let partsToDisplay = [];
-                
-                // Debug: แสดงข้อมูลที่ได้รับ
-                console.log('SupervisorPendingJobsScreen - Job parts data:', {
-                    jobId: selectedJobForDetails.id,
-                    parts: selectedJobForDetails.parts,
-                    parts_used: (selectedJobForDetails as any).parts_used,
-                    partsNotes: selectedJobForDetails.partsNotes
-                });
-                
-                // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
-                // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
-                // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
-                if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
-                    partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
-                        part_name: part.part_name,
-                        quantity_used: part.quantity_used,
-                        id: part.part_id,
-                        source: 'parts'
-                    }));
-                } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
-                    // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
-                    partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
-                        part_name: partString,
-                        quantity_used: 1,
-                        id: `parts_used-${index}`,
-                        source: 'parts_used'
-                    }));
-                }
+                                // สำหรับงาน pending: ใช้ข้อมูลอะไหล่จาก job.parts (ที่เลือกตอนสร้างงาน)
+                                let partsToDisplay = [];
 
-                return partsToDisplay.length > 0 ? (
-                    <div className={styles.detailsSection}>
-                        <h4>อะไหล่ที่ใช้</h4>
-                        <div className={styles.partsList}>
-                             {partsToDisplay.map((part: any, index: number) => (
-                                 <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
-                                     <span className={styles.partName}>{part.part_name}</span>
-                                     <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
-                                     {part.source && (
-                                         <span className={styles.partSource}>({part.source})</span>
-                                     )}
-                                 </div>
-                             ))}
-                        </div>
-                        {selectedJobForDetails.partsNotes && (
-                            <div className={styles.partsNotes}>
-                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className={styles.detailsSection}>
-                        <h4>อะไหล่ที่ใช้</h4>
-                        <div className={styles.noPartsMessage}>
-                            ไม่มีข้อมูลอะไหล่ที่เลือก
-                            <br />
-                            <small>
-                                Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ, 
-                                parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
-                            </small>
-                        </div>
-                        {selectedJobForDetails.partsNotes && (
-                            <div className={styles.partsNotes}>
-                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
-                            </div>
-                        )}
-                    </div>
-                );
-            })()}
+                                // Debug: แสดงข้อมูลที่ได้รับ
+                                console.log('SupervisorPendingJobsScreen - Job parts data:', {
+                                    jobId: selectedJobForDetails.id,
+                                    parts: selectedJobForDetails.parts,
+                                    parts_used: (selectedJobForDetails as any).parts_used,
+                                    partsNotes: selectedJobForDetails.partsNotes
+                                });
+
+                                // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
+                                // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
+                                // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
+                                if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
+                                    partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
+                                        part_name: part.part_name,
+                                        quantity_used: part.quantity_used,
+                                        id: part.part_id,
+                                        source: 'parts'
+                                    }));
+                                } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
+                                    // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
+                                    partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
+                                        part_name: partString,
+                                        quantity_used: 1,
+                                        id: `parts_used-${index}`,
+                                        source: 'parts_used'
+                                    }));
+                                }
+
+                                return partsToDisplay.length > 0 ? (
+                                    <div className={styles.detailsSection}>
+                                        <h4>อะไหล่ที่ใช้</h4>
+                                        <div className={styles.partsList}>
+                                            {partsToDisplay.map((part: any, index: number) => (
+                                                <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
+                                                    <span className={styles.partName}>{part.part_name}</span>
+                                                    <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
+                                                    {part.source && (
+                                                        <span className={styles.partSource}>({part.source})</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {selectedJobForDetails.partsNotes && (
+                                            <div className={styles.partsNotes}>
+                                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className={styles.detailsSection}>
+                                        <h4>อะไหล่ที่ใช้</h4>
+                                        <div className={styles.noPartsMessage}>
+                                            ไม่มีข้อมูลอะไหล่ที่เลือก
+                                            <br />
+                                            <small>
+                                                Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ,
+                                                parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
+                                            </small>
+                                        </div>
+                                        {selectedJobForDetails.partsNotes && (
+                                            <div className={styles.partsNotes}>
+                                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {selectedJobForDetails.remarks && (
                                 <div className={styles.detailsSection}>
@@ -670,7 +664,7 @@ function SupervisorPendingJobsScreen({
                                         {selectedJobForDetails.images.map((image, index) => {
                                             // ตรวจสอบและสร้าง URL ที่ถูกต้อง
                                             let displaySrc = image;
-                                            
+
                                             // ถ้าเป็น URL ภายนอกที่เริ่มด้วย http
                                             if (image.startsWith('http')) {
                                                 displaySrc = image;
@@ -683,11 +677,12 @@ function SupervisorPendingJobsScreen({
                                             else {
                                                 displaySrc = `/api/uploads/maintenance/${image}`;
                                             }
-                                            
+
                                             return (
-                                                <img 
-                                                    key={`image-${index}-${image.slice(-10)}`} 
-                                                    src={displaySrc} 
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    key={`image-${index}-${image.slice(-10)}`}
+                                                    src={displaySrc}
                                                     alt={`รูปภาพงาน ${index + 1}`}
                                                     className={styles.jobImage}
                                                     onClick={() => window.open(displaySrc, '_blank')}
@@ -706,7 +701,7 @@ function SupervisorPendingJobsScreen({
                         </div>
 
                         <div className={styles.modalFooter}>
-                            <button 
+                            <button
                                 className={`${styles.actionButton} ${styles.approveButton}`}
                                 onClick={() => {
                                     handleApprove(selectedJobForDetails.id);
@@ -716,7 +711,7 @@ function SupervisorPendingJobsScreen({
                                 <span className={styles.buttonIcon}>✓</span>
                                 อนุมัติ
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.actionButton} ${styles.rejectButton}`}
                                 onClick={() => {
                                     handleReject(selectedJobForDetails.id);
@@ -726,7 +721,7 @@ function SupervisorPendingJobsScreen({
                                 <span className={styles.buttonIcon}>✕</span>
                                 ไม่อนุมัติ
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.actionButton} ${styles.cancelButton}`}
                                 onClick={closeDetailsModal}
                             >

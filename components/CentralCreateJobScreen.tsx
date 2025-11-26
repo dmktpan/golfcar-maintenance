@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
+import { getPartsBySystem, PartsBySystem, CategorizedPart } from '@/lib/partsService';
 import ImageUpload from './ImageUpload';
 
 // Local interface for selected parts in this component
 interface LocalSelectedPart {
-    id: number;
+    id: string | number;
     name: string;
     unit: string;
     quantity: number;
@@ -38,23 +39,49 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    
+
+    // State for dynamic parts
+    const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
+        brake: [],
+        steering: [],
+        motor: [],
+        electric: [],
+        other: []
+    });
+    const [isLoadingParts, setIsLoadingParts] = useState(true);
+
+    // Load parts on mount
+    useEffect(() => {
+        const loadParts = async () => {
+            setIsLoadingParts(true);
+            try {
+                const parts = await getPartsBySystem();
+                setPartsBySystem(parts);
+            } catch (error) {
+                console.error('Error loading parts:', error);
+            } finally {
+                setIsLoadingParts(false);
+            }
+        };
+        loadParts();
+    }, []);
+
     // กรองรถตามสนามที่เลือกและคำค้นหา
     const availableVehicles = vehicles.filter(v => {
         const courseMatch = !selectedGolfCourseId || v.golf_course_id === selectedGolfCourseId;
-        const searchMatch = !vehicleSearchTerm || 
+        const searchMatch = !vehicleSearchTerm ||
             v.vehicle_number.toLowerCase().includes(vehicleSearchTerm.toLowerCase()) ||
             v.serial_number.toLowerCase().includes(vehicleSearchTerm.toLowerCase());
         return courseMatch && searchMatch;
     });
-    
+
     const selectedVehicle = availableVehicles.find(v => v.id === vehicleId);
     const selectedGolfCourse = golfCourses.find(gc => gc.id === selectedGolfCourseId);
-    
+
     useEffect(() => {
         setSubTasks([]);
     }, [system]);
-    
+
     useEffect(() => {
         // รีเซ็ตข้อมูลเมื่อเปลี่ยนประเภการบำรุงรักษา
         if (jobType !== 'PM') {
@@ -78,61 +105,10 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
     }
-    
-    // รายการอะไหล่ตามระบบ
-    const PARTS_BY_SYSTEM_DISPLAY = {
-        'brake': [
-            { id: 1, name: 'แป้นเบรค', unit: 'ชิ้น' },
-            { id: 2, name: 'ชุดล็อคเบรค', unit: 'ชุด' },
-            { id: 3, name: 'เฟืองปาร์คเบรค', unit: 'ชิ้น' },
-            { id: 4, name: 'สปริงคันเร่ง', unit: 'ชิ้น' },
-            { id: 5, name: 'สายเบรกสั้น', unit: 'เส้น' },
-            { id: 6, name: 'สายเบรกยาว', unit: 'เส้น' },
-            { id: 7, name: 'ผ้าเบรก EZGO', unit: 'ชุด' },
-            { id: 8, name: 'ผ้าเบรก EZGO สั้น', unit: 'ชุด' },
-            { id: 9, name: 'ผ้าเบรก EZGO ยาว', unit: 'ชุด' },
-            { id: 10, name: 'ซีลล้อหลัง', unit: 'ชิ้น' },
-            { id: 11, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
-            { id: 12, name: 'น๊อตยึดแป้นเบรก', unit: 'ชิ้น' }
-        ],
-        'steering': [
-            { id: 13, name: 'ยอยด์', unit: 'ชิ้น' },
-            { id: 14, name: 'ระปุกพวงมาลัย', unit: 'ชิ้น' },
-            { id: 15, name: 'เอ็นแร็ค', unit: 'ชิ้น' },
-            { id: 16, name: 'ลูกหมาก', unit: 'ชิ้น' },
-            { id: 17, name: 'ลูกหมากใต้โช๊ค', unit: 'ชิ้น' },
-            { id: 18, name: 'ลูกปืน 6005', unit: 'ชิ้น' },
-            { id: 19, name: 'ลูกปืน 6204', unit: 'ชิ้น' },
-            { id: 20, name: 'ยางกันฝุ่น', unit: 'ชิ้น' },
-            { id: 21, name: 'โช้คหน้า', unit: 'ชิ้น' },
-            { id: 22, name: 'ลูกหมากหัวโช้คบน', unit: 'ชิ้น' },
-            { id: 23, name: 'ปีกนก L+R', unit: 'คู่' }
-        ],
-        'motor': [
-            { id: 24, name: 'แปรงถ่าน', unit: 'ชิ้น' },
-            { id: 25, name: 'ลูกปืน 6205', unit: 'ชิ้น' },
-            { id: 26, name: 'แม่เหล็กมอเตอร์', unit: 'ชิ้น' },
-            { id: 27, name: 'เซ็นเซอร์มอเตอร์', unit: 'ชิ้น' }
-        ],
-        'electric': [
-            { id: 28, name: 'แบตเตอรี่ 12V', unit: 'ก้อน' },
-            { id: 29, name: 'ชุดควบคุมมอเตอร์', unit: 'ชุด' },
-            { id: 30, name: 'สายไฟหลัก', unit: 'เมตร' }
-        ],
-        'others': [
-            { id: 31, name: 'บอดี้หน้า', unit: 'ชิ้น' },
-            { id: 32, name: 'บอดี้หลัง', unit: 'ชิ้น' },
-            { id: 33, name: 'โครงหลังคาหน้า', unit: 'ชิ้น' },
-            { id: 34, name: 'โครงหลังคาหลัง', unit: 'ชิ้น' },
-            { id: 35, name: 'หลังคา', unit: 'ชิ้น' },
-            { id: 36, name: 'เบาะนั่ง', unit: 'ชิ้น' },
-            { id: 37, name: 'พนักพิง', unit: 'ชิ้น' },
-            { id: 38, name: 'ยาง', unit: 'เส้น' },
-            { id: 39, name: 'แคดดี้เพลต', unit: 'ชิ้น' }
-        ]
-    };
 
-    const handlePartSelection = (part: { id: number; name: string; unit: string }) => {
+
+
+    const handlePartSelection = (part: CategorizedPart) => {
         setSelectedParts(prev => {
             const existingPart = prev.find(p => p.id === part.id);
             if (existingPart) {
@@ -142,73 +118,74 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
             }
         });
     };
-    
-    const handleRemovePart = (partId: number) => {
+
+    const handleRemovePart = (partId: string | number) => {
         setSelectedParts(prev => prev.filter(p => p.id !== partId));
     };
 
-    const handlePartQuantityChange = (partId: number, quantity: number) => {
+    const handlePartQuantityChange = (partId: string | number, quantity: number) => {
         if (quantity <= 0) {
             setSelectedParts(prev => prev.filter(p => p.id !== partId));
         } else {
-            setSelectedParts(prev => prev.map(p => 
+            setSelectedParts(prev => prev.map(p =>
                 p.id === partId ? { ...p, quantity } : p
             ));
         }
     };
 
-    const getFilteredParts = (parts: { id: number; name: string; unit: string }[]) => {
+    const getFilteredParts = () => {
+        const currentParts = partsBySystem[activePartsTab as keyof PartsBySystem] || [];
         if (!partsSearchTerm.trim()) {
-            return parts;
+            return currentParts;
         }
-        
-        const allParts = Object.values(PARTS_BY_SYSTEM_DISPLAY).flat();
+
+        const allParts = Object.values(partsBySystem).flat();
         const searchTerm = partsSearchTerm.toLowerCase().trim();
-        return allParts.filter(part => 
+        return allParts.filter(part =>
             part.name.toLowerCase().includes(searchTerm)
         );
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!selectedGolfCourseId) {
             alert('กรุณาเลือกสนามกอล์ฟ');
             return;
         }
-        
+
         if (!selectedVehicle) {
             alert('กรุณาเลือกรถที่ต้องการซ่อม');
             return;
         }
-        
+
         if (jobType === 'PM' && !system) {
             alert('กรุณาเลือกระบบที่ต้องการบำรุงรักษา');
             return;
         }
-        
+
         if (jobType === 'BM' && !bmCause) {
             alert('กรุณาเลือกสาเหตุของการเสีย');
             return;
         }
-        
+
         if (jobType === 'PM' && subTasks.length === 0) {
             alert('กรุณาเพิ่มงานย่อยอย่างน้อย 1 รายการ');
             return;
         }
-        
+
         // ตรวจสอบว่ามีงานซ้ำหรือไม่
-        const duplicateJob = jobs.find(job => 
-            job.vehicle_id === selectedVehicle.id && 
+        const duplicateJob = jobs.find(job =>
+            job.vehicle_id === selectedVehicle.id &&
             job.status === 'pending' &&
             job.type === jobType
         );
-        
+
         if (duplicateJob) {
             const confirmCreate = confirm(`มีงาน ${jobType} สำหรับรถ ${selectedVehicle.vehicle_number} อยู่แล้ว\nต้องการสร้างงานใหม่หรือไม่?`);
             if (!confirmCreate) return;
         }
-        
+
         try {
             // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
             const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
@@ -232,9 +209,9 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 images: images, // เพิ่มรูปภาพ
                 ...(jobType === 'BM' && bmCause && { bmCause })
             };
-            
+
             onJobCreate(newJob as Job);
-            
+
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการสร้างงาน กรุณาลองใหม่อีกครั้ง');
             console.error('Error creating job:', error);
@@ -242,7 +219,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     };
 
     // Get subtasks by category for PM jobs
-    const subTaskCategories = jobType === 'PM' && system ? 
+    const subTaskCategories = jobType === 'PM' && system ?
         MOCK_SYSTEMS.find(s => s.id === system)?.tasks || {} : {};
 
     const getCategoryDisplayName = (category: string) => {
@@ -254,14 +231,14 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
         };
         return categoryNames[category] || category;
     };
-    
+
     const getTabDisplayName = (tab: string) => {
         const tabNames: Record<string, string> = {
             'brake': 'ระบบเบรก',
             'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
-            'others': 'อื่นๆ'
+            'other': 'อื่นๆ'
         };
         return tabNames[tab] || tab;
     };
@@ -281,15 +258,15 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 <h2>🏢 สร้างงานซ่อม - ส่วนกลาง</h2>
                 <p className="text-muted">สามารถเลือกสนามและรถได้ทุกสนาม</p>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="form-grid">
                     <div className="form-group">
                         <label htmlFor="golf-course">เลือกสนามกอล์ฟ *</label>
-                        <select 
-                            id="golf-course" 
-                            value={selectedGolfCourseId} 
-                            onChange={e => setSelectedGolfCourseId(e.target.value)} 
+                        <select
+                            id="golf-course"
+                            value={selectedGolfCourseId}
+                            onChange={e => setSelectedGolfCourseId(e.target.value)}
                             required
                         >
                             <option value="">-- เลือกสนามกอล์ฟ --</option>
@@ -298,25 +275,25 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             ))}
                         </select>
                     </div>
-                    
+
                     <div className="form-group">
                         <label htmlFor="vehicle-search">ค้นหารถ (เบอร์รถ หรือ ซีเรียล)</label>
-                        <input 
+                        <input
                             id="vehicle-search"
-                            type="text" 
+                            type="text"
                             value={vehicleSearchTerm}
                             onChange={e => setVehicleSearchTerm(e.target.value)}
                             placeholder="พิมพ์เบอร์รถหรือซีเรียลเพื่อค้นหา..."
                             disabled={!selectedGolfCourseId}
                         />
                     </div>
-                    
+
                     <div className="form-group">
                         <label htmlFor="vehicle-select">เลือกรถ *</label>
-                        <select 
-                            id="vehicle-select" 
-                            value={vehicleId} 
-                            onChange={e => setVehicleId(e.target.value)} 
+                        <select
+                            id="vehicle-select"
+                            value={vehicleId}
+                            onChange={e => setVehicleId(e.target.value)}
                             required
                             disabled={!selectedGolfCourseId}
                         >
@@ -328,7 +305,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             ))}
                         </select>
                     </div>
-                    
+
                     {selectedVehicle && (
                         <>
                             <div className="form-group">
@@ -342,19 +319,19 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             </div>
                         </>
                     )}
-                    
+
                     <div className="form-group">
                         <label htmlFor="battery-serial">ซีเรียลแบต *</label>
-                        <input 
-                            id="battery-serial" 
-                            type="text" 
-                            value={batterySerial} 
+                        <input
+                            id="battery-serial"
+                            type="text"
+                            value={batterySerial}
                             onChange={e => setBatterySerial(e.target.value)}
                             placeholder="กรอกซีเรียลแบต หรือ 'ไม่มีสติ๊กเกอร์' หรือ 'หลุด'"
                             required
                         />
                     </div>
-                    
+
                     <div className="form-group">
                         <label htmlFor="staff-name">ชื่อพนักงาน *</label>
                         <input id="staff-name" type="text" value={user.name} disabled />
@@ -404,7 +381,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                         </select>
                     </div>
                 )}
-                
+
                 {jobType === 'PM' && Object.keys(subTaskCategories).length > 0 && (
                     <div className="form-group">
                         <label>รายการงานย่อย</label>
@@ -441,14 +418,14 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
 
                 <div className="form-group">
                     <label>อะไหล่ที่เปลี่ยน</label>
-                    <button 
-                        type="button" 
-                        className="btn-secondary" 
+                    <button
+                        type="button"
+                        className="btn-secondary"
                         onClick={() => setShowPartsModal(true)}
                     >
                         🔧 เลือกอะไหล่
                     </button>
-                    
+
                     {selectedParts.length > 0 && (
                         <div className="selected-parts">
                             <h4>อะไหล่ที่เลือก:</h4>
@@ -466,22 +443,22 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                         </div>
                                         <div className="quantity-col">
                                             <div className="quantity-controls">
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     className="quantity-btn"
                                                     onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
                                                 >
                                                     -
                                                 </button>
-                                                <input 
-                                                    type="number" 
-                                                    min="1" 
+                                                <input
+                                                    type="number"
+                                                    min="1"
                                                     value={part.quantity}
                                                     onChange={e => handlePartQuantityChange(part.id, parseInt(e.target.value) || 1)}
                                                     className="quantity-input"
                                                 />
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     className="quantity-btn"
                                                     onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
                                                 >
@@ -490,8 +467,8 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                             </div>
                                         </div>
                                         <div className="remove-col">
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 className="remove-part-btn mobile-small-text"
                                                 onClick={() => handleRemovePart(part.id)}
                                             >
@@ -507,9 +484,9 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
 
                 <div className="form-group">
                     <label htmlFor="parts-notes">หมายเหตุอะไหล่</label>
-                    <textarea 
-                        id="parts-notes" 
-                        value={partsNotes} 
+                    <textarea
+                        id="parts-notes"
+                        value={partsNotes}
                         onChange={e => setPartsNotes(e.target.value)}
                         placeholder="ระบุหมายเหตุเกี่ยวกับอะไหล่ที่ใช้..."
                     />
@@ -517,27 +494,27 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
 
                 <div className="form-group">
                     <label htmlFor="remarks">หมายเหตุเพิ่มเติม</label>
-                    <textarea 
-                        id="remarks" 
-                        value={remarks} 
+                    <textarea
+                        id="remarks"
+                        value={remarks}
                         onChange={e => setRemarks(e.target.value)}
                         placeholder="ระบุหมายเหตุเพิ่มเติม..."
                     />
                 </div>
 
-                <ImageUpload 
-                    images={images} 
+                <ImageUpload
+                    images={images}
                     onImagesChange={setImages}
-                    maxImages={5}
+                    maxImages={20}
                 />
 
                 <div className="form-actions">
                     <button type="submit" className="btn-primary">
                         สร้างงานซ่อม
                     </button>
-                    <button 
-                        type="button" 
-                        className="btn-secondary" 
+                    <button
+                        type="button"
+                        className="btn-secondary"
                         onClick={() => setView('dashboard')}
                     >
                         ยกเลิก
@@ -552,8 +529,8 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                         <div className="modal-header">
                             <h3>เลือกอะไหล่</h3>
                             <div className="mobile-header-dropdown">
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className="header-category-dropdown-button"
                                     onClick={toggleDropdown}
                                 >
@@ -562,7 +539,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                 </button>
                                 {isDropdownOpen && (
                                     <div className="header-category-dropdown-menu">
-                                        {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
+                                        {Object.keys(partsBySystem).map(tab => (
                                             <div
                                                 key={tab}
                                                 className="header-category-dropdown-item"
@@ -574,17 +551,17 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                     </div>
                                 )}
                             </div>
-                            <button 
+                            <button
                                 className="modal-close desktop-only"
                                 onClick={() => setShowPartsModal(false)}
                             >
                                 ✕
                             </button>
                         </div>
-                        
+
                         <div className="modal-body">
                             <div className="parts-search">
-                                <input 
+                                <input
                                     type="text"
                                     placeholder="ค้นหาอะไหล่..."
                                     value={partsSearchTerm}
@@ -592,9 +569,9 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                     className="search-input"
                                 />
                             </div>
-                            
+
                             <div className="parts-tabs">
-                                {Object.keys(PARTS_BY_SYSTEM_DISPLAY).map(tab => (
+                                {Object.keys(partsBySystem).map(tab => (
                                     <button
                                         key={tab}
                                         type="button"
@@ -605,42 +582,41 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                     </button>
                                 ))}
                             </div>
-                            
+
                             <div className="parts-list">
-                                {partsSearchTerm.trim() ? (
-                                    getFilteredParts(PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY]).map(part => (
-                                        <div 
-                                            key={part.id} 
-                                            className={`part-item ${selectedParts.some(p => p.id === part.id) ? 'selected' : ''}`}
-                                            onClick={() => handlePartSelection(part)}
-                                        >
-                                            <span className="part-name">{part.name}</span>
-                                            <span className="part-unit">({part.unit})</span>
-                                            {selectedParts.some(p => p.id === part.id) && (
-                                                <span className="selected-indicator">✓</span>
-                                            )}
-                                        </div>
-                                    ))
+                                {isLoadingParts ? (
+                                    <div className="loading-parts" style={{ textAlign: 'center', padding: '20px' }}>
+                                        <p>กำลังโหลดข้อมูลอะไหล่...</p>
+                                    </div>
                                 ) : (
-                                    PARTS_BY_SYSTEM_DISPLAY[activePartsTab as keyof typeof PARTS_BY_SYSTEM_DISPLAY].map(part => (
-                                        <div 
-                                            key={part.id} 
-                                            className={`part-item ${selectedParts.some(p => p.id === part.id) ? 'selected' : ''}`}
-                                            onClick={() => handlePartSelection(part)}
-                                        >
-                                            <span className="part-name">{part.name}</span>
-                                            <span className="part-unit">({part.unit})</span>
-                                            {selectedParts.some(p => p.id === part.id) && (
-                                                <span className="selected-indicator">✓</span>
-                                            )}
-                                        </div>
-                                    ))
+                                    <>
+                                        {getFilteredParts().map(part => (
+                                            <div
+                                                key={part.id}
+                                                className={`part-item ${selectedParts.some(p => p.id === part.id) ? 'selected' : ''}`}
+                                                onClick={() => handlePartSelection(part)}
+                                            >
+                                                <span className="part-name">{part.name}</span>
+                                                <span className="part-unit">({part.unit})</span>
+                                                {selectedParts.some(p => p.id === part.id) && (
+                                                    <span className="selected-indicator">✓</span>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {getFilteredParts().length === 0 && (
+                                            <div className="no-parts-found">
+                                                <p>ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;</p>
+                                                <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
-                        
+
                         <div className="modal-footer">
-                            <button 
+                            <button
                                 type="button"
                                 className="btn-primary"
                                 onClick={() => setShowPartsModal(false)}
