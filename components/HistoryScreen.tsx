@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Job, Vehicle, Part, View, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse, SerialHistoryEntry } from '@/lib/data';
+import { Job, Vehicle, Part, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import * as XLSX from 'xlsx';
 
@@ -11,7 +11,7 @@ interface HistoryScreenProps {
     jobs: Job[];
     users: User[];
     golfCourses: GolfCourse[];
-    serialHistory: SerialHistoryEntry[];
+    parts: Part[]; // เพิ่ม props parts
 }
 
 interface PartsUsageLog {
@@ -29,10 +29,10 @@ interface PartsModalProps {
     isOpen: boolean;
     onClose: () => void;
     parts: PartsUsageLog[];
-    jobId: string;
+    allParts: Part[]; // เพิ่ม props allParts
 }
 
-const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: HistoryScreenProps) => {
+const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVehicle, setFilterVehicle] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
@@ -47,12 +47,12 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     const [partsModalOpen, setPartsModalOpen] = useState(false);
     const [selectedJobParts, setSelectedJobParts] = useState<PartsUsageLog[]>([]);
     const [selectedJobId, setSelectedJobId] = useState<string>('');
-    
+
     // ใช้ข้อมูลงานจากระบบแทนข้อมูล mock
     // กรองเฉพาะงานที่เสร็จสิ้นแล้วหรืออนุมัติแล้วเพื่อแสดงในประวัติ
-    const historyJobs = jobs.filter(job => 
-        job.status === 'completed' || 
-        job.status === 'approved' || 
+    const historyJobs = jobs.filter(job =>
+        job.status === 'completed' ||
+        job.status === 'approved' ||
         job.status === 'rejected'
     );
 
@@ -70,7 +70,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             if (result.success && result.data) {
                 // สร้าง Map ของ parts โดยใช้ jobId เป็น key
                 const partsMap = new Map<string, PartsUsageLog[]>();
-                
+
                 result.data.forEach((log: any) => {
                     if (log.jobId) {
                         const partsLog: PartsUsageLog = {
@@ -113,53 +113,53 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     }, [users, filterGolfCourse]);
 
     // Reset filter พนักงานเมื่อเปลี่ยนสนาม
-  useEffect(() => {
-    if (filterGolfCourse && filterUser) {
-      // ตรวจสอบว่าพนักงานที่เลือกอยู่ในสนามใหม่หรือไม่
-      const userInSelectedCourse = filteredUsers.find(user => user.id.toString() === filterUser);
-      if (!userInSelectedCourse) {
-        setFilterUser(''); // reset ถ้าพนักงานไม่อยู่ในสนามที่เลือก
-      }
-    }
-  }, [filterGolfCourse, filteredUsers, filterUser]);
+    useEffect(() => {
+        if (filterGolfCourse && filterUser) {
+            // ตรวจสอบว่าพนักงานที่เลือกอยู่ในสนามใหม่หรือไม่
+            const userInSelectedCourse = filteredUsers.find(user => user.id.toString() === filterUser);
+            if (!userInSelectedCourse) {
+                setFilterUser(''); // reset ถ้าพนักงานไม่อยู่ในสนามที่เลือก
+            }
+        }
+    }, [filterGolfCourse, filteredUsers, filterUser]);
 
     // Apply filters and sorting
     const filteredAndSortedJobs = useMemo(() => {
-        let filtered = historyJobs.filter(job => {
+        const filtered = historyJobs.filter(job => {
             // Search term filter (search in vehicle number, username, or remarks)
-            const searchMatch = searchTerm === '' || 
+            const searchMatch = searchTerm === '' ||
                 job.vehicle_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 job.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (job.remarks?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
-            
+
             // Vehicle filter
             const vehicleMatch = filterVehicle === '' || job.vehicle_id.toString() === filterVehicle;
-            
+
             // Status filter
             const statusMatch = filterStatus === '' || job.status === filterStatus;
-            
+
             // Golf Course filter
             const golfCourseMatch = filterGolfCourse === '' || filterGolfCourse === null || filterGolfCourse === undefined || job.golf_course_id === filterGolfCourse;
-            
+
             // User filter
             const userMatch = filterUser === '' || job.user_id === filterUser;
-            
+
             // Date range filter
             const jobDate = new Date((job as any).createdAt || job.created_at);
             const fromDate = filterDateFrom ? new Date(filterDateFrom) : null;
             const toDate = filterDateTo ? new Date(filterDateTo) : null;
-            
-            const dateMatch = 
-                (!fromDate || jobDate >= fromDate) && 
+
+            const dateMatch =
+                (!fromDate || jobDate >= fromDate) &&
                 (!toDate || jobDate <= toDate);
-            
+
             return searchMatch && vehicleMatch && statusMatch && golfCourseMatch && userMatch && dateMatch;
         });
 
         // Sort the filtered results
         filtered.sort((a, b) => {
             let aValue: any, bValue: any;
-            
+
             switch (sortField) {
                 case 'created_at':
                     aValue = new Date((a as any).createdAt || a.created_at).getTime();
@@ -181,7 +181,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                     aValue = (a as any).createdAt || a.created_at;
                     bValue = (b as any).createdAt || b.created_at;
             }
-            
+
             if (sortDirection === 'asc') {
                 return aValue > bValue ? 1 : -1;
             } else {
@@ -195,16 +195,16 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
     const getPartName = (part: { part_id: string; part_name?: string }) => {
         console.log('🔍 getPartName called with:', part);
-        
+
         // ใช้ part_name ที่บันทึกไว้เป็นหลัก
         if (part.part_name) {
             console.log('✅ Found part_name:', part.part_name);
             return part.part_name;
         }
-        
+
         console.log('⚠️ No part_name, searching in PARTS_BY_SYSTEM_DISPLAY for part_id:', part.part_id);
         console.log('📊 PARTS_BY_SYSTEM_DISPLAY:', PARTS_BY_SYSTEM_DISPLAY);
-        
+
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
         for (const [systemName, system] of Object.entries(PARTS_BY_SYSTEM_DISPLAY)) {
             console.log(`🔍 Searching in system ${systemName}:`, system);
@@ -214,7 +214,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                 return partInfo.name;
             }
         }
-        
+
         console.log('❌ Part not found, returning default');
         return 'ไม่ระบุ';
     };
@@ -225,17 +225,17 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             if (!dateString || dateString === 'null' || dateString === 'undefined') {
                 return 'ไม่ระบุวันที่';
             }
-            
+
             const date = new Date(dateString);
-            
+
             // ตรวจสอบว่าเป็น valid date หรือไม่
             if (isNaN(date.getTime())) {
                 return 'วันที่ไม่ถูกต้อง';
             }
-            
-            return date.toLocaleDateString('th-TH', { 
-                year: 'numeric', 
-                month: 'short', 
+
+            return date.toLocaleDateString('th-TH', {
+                year: 'numeric',
+                month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -252,16 +252,16 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             if (!dateString || dateString === 'null' || dateString === 'undefined') {
                 return 'ไม่ระบุวันที่';
             }
-            
+
             const date = new Date(dateString);
-            
+
             if (isNaN(date.getTime())) {
                 return 'วันที่ไม่ถูกต้อง';
             }
-            
-            return date.toLocaleDateString('th-TH', { 
-                year: 'numeric', 
-                month: '2-digit', 
+
+            return date.toLocaleDateString('th-TH', {
+                year: 'numeric',
+                month: '2-digit',
                 day: '2-digit',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -277,7 +277,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     const getSystemDisplayName = (system: string) => {
         const systemNames: Record<string, string> = {
             'brake': 'ระบบเบรก/เพื่อห้าม',
-            'steering': 'ระบบพวงมาลัย', 
+            'steering': 'ระบบพวงมาลัย',
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
             'general': 'ทั่วไป',
@@ -300,10 +300,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
         return course ? course.name : 'ไม่ระบุ';
     };
 
-    const getUserName = (id: string) => {
-        const user = users.find(u => u.id.toString() === id);
-        return user ? user.name : 'ไม่ระบุ';
-    };
+
 
     const getVehicleSerial = (vehicleId: string) => {
         const vehicle = vehicles.find(v => v.id === vehicleId);
@@ -363,22 +360,33 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                 const jobParts = partsMap.get(job.id) || [];
                 console.log(`🔧 Job ${job.vehicle_number} (${job.id}) parts from logs:`, jobParts);
 
+                // Helper to find part info
+                const getPartInfo = (partId: string) => {
+                    return parts.find(p => p.id === partId);
+                };
+
                 // สร้างข้อความอะไหล่ที่ใช้
                 let partsText = '-';
                 if (jobParts.length > 0) {
                     partsText = jobParts.map((partLog: any) => {
+                        const partInfo = getPartInfo(partLog.partId);
+                        const partCode = partInfo?.part_number ? `${partInfo.part_number} - ` : '';
                         const partName = partLog.partName || getPartName({ part_id: partLog.partId });
-                        return `${partName} (จำนวน ${partLog.quantityUsed || 1})`;
+                        const unit = partInfo?.unit || 'ชิ้น';
+                        return `${partCode}${partName} ${partLog.quantityUsed || 1} ${unit}`;
                     }).join(', ');
                 } else if (job.parts && job.parts.length > 0) {
                     // fallback ใช้ข้อมูลจาก job.parts ถ้ามี
                     partsText = job.parts.map(p => {
+                        const partInfo = getPartInfo(p.part_id);
+                        const partCode = partInfo?.part_number ? `${partInfo.part_number} - ` : '';
                         const partName = getPartName(p);
-                        return `${partName} (จำนวน ${p.quantity_used})`;
+                        const unit = partInfo?.unit || 'ชิ้น';
+                        return `${partCode}${partName} ${p.quantity_used} ${unit}`;
                     }).join(', ');
                 } else if ((job as any).parts_used && Array.isArray((job as any).parts_used) && (job as any).parts_used.length > 0) {
-                     // fallback ใช้ข้อมูลจาก job.parts_used ถ้ามี
-                     partsText = (job as any).parts_used.join(', ');
+                    // fallback ใช้ข้อมูลจาก job.parts_used ถ้ามี
+                    partsText = (job as any).parts_used.join(', ');
                 }
 
                 return {
@@ -394,7 +402,6 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                     'ผู้ดำเนินการ': job.userName,
                     'สถานะ': getStatusText(job.status),
                     'หมายเหตุ': job.remarks || '-',
-                    'มอบหมายโดย': job.assigned_by_name || '-',
                     'วันที่อัปเดต': ((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) ? formatDateForExcel((job as any).updatedAt || job.updated_at) : '-'
                 };
             });
@@ -402,7 +409,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'ประวัติการซ่อมบำรุง');
-            
+
             // Set column widths
             const colWidths = [
                 { wch: 15 }, // วันที่
@@ -417,7 +424,6 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                 { wch: 20 }, // ผู้ดำเนินการ
                 { wch: 12 }, // สถานะ
                 { wch: 25 }, // หมายเหตุ
-                { wch: 20 }, // มอบหมายโดย
                 { wch: 15 }  // วันที่อัปเดต
             ];
             ws['!cols'] = colWidths;
@@ -451,8 +457,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
     };
 
     // Parts Modal Component
-    const PartsModal = ({ isOpen, onClose, parts, jobId }: PartsModalProps) => {
+    const PartsModal = ({ isOpen, onClose, parts, allParts }: PartsModalProps) => {
         if (!isOpen) return null;
+
+        // Helper function to find part code
+        const getPartCode = (partId: string) => {
+            const part = allParts.find(p => p.id === partId);
+            return part ? part.part_number : '-';
+        };
 
         return (
             <div className="modal-overlay" onClick={onClose}>
@@ -467,6 +479,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                 <table>
                                     <thead>
                                         <tr>
+                                            <th>รหัสอะไหล่</th>
                                             <th>ชื่ออะไหล่</th>
                                             <th>จำนวน</th>
                                             <th>ใช้โดย</th>
@@ -476,6 +489,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                     <tbody>
                                         {parts.map((part) => (
                                             <tr key={part.id}>
+                                                <td>{getPartCode(part.partId)}</td>
                                                 <td className="part-name">{part.partName}</td>
                                                 <td className="quantity">{part.quantityUsed}</td>
                                                 <td>{part.usedBy}</td>
@@ -502,8 +516,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             <div className="page-header">
                 <h2>ประวัติการซ่อมบำรุง</h2>
                 <div className="header-actions">
-                    <button 
-                        className="btn-primary" 
+                    <button
+                        className="btn-primary"
                         onClick={exportToExcel}
                         disabled={filteredAndSortedJobs.length === 0}
                     >
@@ -515,14 +529,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             {/* Filter Section */}
             <div className="filter-section">
                 <div className="search-box">
-                    <input 
-                        type="text" 
-                        placeholder="ค้นหาตามเบอร์รถ, ชื่อพนักงาน, หมายเหตุ" 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
+                    <input
+                        type="text"
+                        placeholder="ค้นหาตามเบอร์รถ, ชื่อพนักงาน, หมายเหตุ"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                
+
                 <div className="filter-controls">
                     <div className="filter-group">
                         <label>สนาม:</label>
@@ -547,7 +561,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                             ))}
                         </select>
                     </div>
-                    
+
                     <div className="filter-group">
                         <label>รถ:</label>
                         <select value={filterVehicle} onChange={(e) => setFilterVehicle(e.target.value)}>
@@ -559,7 +573,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                             ))}
                         </select>
                     </div>
-                    
+
                     <div className="filter-group">
                         <label>สถานะ:</label>
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -569,22 +583,22 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                             <option value="rejected">ไม่อนุมัติ</option>
                         </select>
                     </div>
-                    
+
                     <div className="filter-group">
                         <label>ตั้งแต่วันที่:</label>
-                        <input 
-                            type="date" 
-                            value={filterDateFrom} 
-                            onChange={(e) => setFilterDateFrom(e.target.value)} 
+                        <input
+                            type="date"
+                            value={filterDateFrom}
+                            onChange={(e) => setFilterDateFrom(e.target.value)}
                         />
                     </div>
-                    
+
                     <div className="filter-group">
                         <label>ถึงวันที่:</label>
-                        <input 
-                            type="date" 
-                            value={filterDateTo} 
-                            onChange={(e) => setFilterDateTo(e.target.value)} 
+                        <input
+                            type="date"
+                            value={filterDateTo}
+                            onChange={(e) => setFilterDateTo(e.target.value)}
                         />
                     </div>
                 </div>
@@ -609,22 +623,22 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                         <thead>
                             <tr>
                                 <th></th>
-                                <th 
-                                    className="sortable" 
+                                <th
+                                    className="sortable"
                                     onClick={() => handleSort('created_at')}
                                 >
                                     วันที่ {getSortIcon('created_at')}
                                 </th>
-                                <th 
-                                    className="sortable" 
+                                <th
+                                    className="sortable"
                                     onClick={() => handleSort('vehicle_number')}
                                 >
                                     เบอร์รถ {getSortIcon('vehicle_number')}
                                 </th>
                                 <th>Serial รถ</th>
                                 <th>สนาม</th>
-                                <th 
-                                    className="sortable" 
+                                <th
+                                    className="sortable"
                                     onClick={() => handleSort('type')}
                                 >
                                     ประเภท {getSortIcon('type')}
@@ -632,8 +646,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                 <th>ระบบ</th>
                                 <th>อะไหล่ที่ใช้</th>
                                 <th>ผู้ดำเนินการ</th>
-                                <th 
-                                    className="sortable" 
+                                <th
+                                    className="sortable"
                                     onClick={() => handleSort('status')}
                                 >
                                     สถานะ {getSortIcon('status')}
@@ -646,7 +660,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                 <React.Fragment key={job.id}>
                                     <tr className="main-row">
                                         <td>
-                                            <button 
+                                            <button
                                                 className="expand-btn"
                                                 onClick={() => toggleRowExpansion(job.id)}
                                             >
@@ -668,7 +682,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                                 const jobParts = partsData.get(job.id) || [];
                                                 if (jobParts.length > 0) {
                                                     return (
-                                                        <button 
+                                                        <button
                                                             className="parts-button"
                                                             onClick={() => openPartsModal(job.id)}
                                                         >
@@ -692,7 +706,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                             </div>
                                         </td>
                                     </tr>
-                                    
+
                                     {expandedRows.has(job.id) && (
                                         <tr className="expanded-row">
                                             <td colSpan={11}>
@@ -719,10 +733,10 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                                                 </div>
                                                             )}
                                                             {((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) && (
-                                                <div className="detail-item">
-                                                    <strong>อัปเดตล่าสุด:</strong> {formatDate((job as any).updatedAt || job.updated_at)}
-                                                </div>
-                                            )}
+                                                                <div className="detail-item">
+                                                                    <strong>อัปเดตล่าสุด:</strong> {formatDate((job as any).updatedAt || job.updated_at)}
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {(() => {
@@ -755,8 +769,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
                                                                 <div className="image-gallery">
                                                                     {job.images.map((image, index) => (
                                                                         <div key={`image-${job.id}-${index}-${image.slice(-10)}`} className="image-item">
-                                                                            <Image 
-                                                                                src={image} 
+                                                                            <Image
+                                                                                src={image}
                                                                                 alt={`รูปภาพงาน ${index + 1}`}
                                                                                 className="job-image"
                                                                                 width={150}
@@ -781,11 +795,11 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, serialHistory }: Hi
             </div>
 
             {/* Parts Modal */}
-            <PartsModal 
+            <PartsModal
                 isOpen={partsModalOpen}
                 onClose={closePartsModal}
                 parts={selectedJobParts}
-                jobId={selectedJobId}
+                allParts={parts}
             />
 
             <style jsx>{`

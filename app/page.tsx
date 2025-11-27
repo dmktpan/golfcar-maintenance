@@ -589,10 +589,8 @@ export default function HomePage() {
       const golfCourse = golfCourses.find(gc => gc.id === job.golf_course_id);
 
       if (job.parts && job.parts.length > 0) {
-        // Get current Thailand time
-        const now = new Date();
-        const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
-        const usedDate = thailandTime.toISOString();
+        // Get current time (UTC)
+        const usedDate = new Date().toISOString();
 
         for (const part of job.parts) {
           const logData = {
@@ -1257,7 +1255,8 @@ export default function HomePage() {
             jobs={jobs}
             users={users}
             golfCourses={golfCourses}
-            serialHistory={serialHistory}
+
+            parts={parts}
           />
         )}
         {view === 'multi_assign' && (
