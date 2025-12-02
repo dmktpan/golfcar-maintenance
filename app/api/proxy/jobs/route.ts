@@ -6,14 +6,14 @@ const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.g
 export async function GET(request: NextRequest) {
   try {
     console.log('🔄 GET /api/proxy/jobs - External API Only');
-    
+
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
-    
+
     // เพิ่ม timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     // ลองใช้ parameter ที่แตกต่างกันสำหรับการขอข้อมูล parts
     const url = new URL(`${EXTERNAL_API_BASE}/jobs`);
     // ลองหลาย parameter ที่อาจใช้ได้
@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
     url.searchParams.append('with_parts', 'true');
     url.searchParams.append('expand', 'parts');
     url.searchParams.append('parts', 'true');
-    
+
     console.log('🔗 Final URL being called:', url.toString());
-    
+
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           allFields: Object.keys(data.data[0])
         } : null
       });
-      
+
       // Debug: ตรวจสอบข้อมูล parts ที่ได้รับ
       if (data && data.data && Array.isArray(data.data)) {
         const jobsWithParts = data.data.filter((job: any) => job.parts && job.parts.length > 0);
@@ -59,19 +59,19 @@ export async function GET(request: NextRequest) {
           sampleJobWithParts: jobsWithParts[0] || null
         });
       }
-      
+
       return NextResponse.json(data);
     } else {
       console.log('❌ External API failed with status:', response.status);
       const errorText = await response.text();
       console.log('❌ Error response:', errorText);
-      
+
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: `External API failed with status ${response.status}`,
           details: errorText,
-          data: [] 
+          data: []
         },
         { status: response.status }
       );
@@ -79,11 +79,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error fetching jobs:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: 'Failed to fetch jobs from external API',
         details: error instanceof Error ? error.message : 'Unknown error',
-        data: [] 
+        data: []
       },
       { status: 500 }
     );
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('🔄 POST /api/proxy/jobs - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
-    
+
     // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
     const jobData = {
       ...body,
@@ -104,15 +104,15 @@ export async function POST(request: NextRequest) {
       parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
       system: body.system || 'job'
     };
-    
+
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
     console.log('📝 Job data with parts:', JSON.stringify(jobData, null, 2));
-    
+
     // เพิ่ม timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     const response = await fetch(`${EXTERNAL_API_BASE}/jobs`, {
       method: 'POST',
       headers: {
@@ -133,13 +133,13 @@ export async function POST(request: NextRequest) {
       console.log('❌ External API failed with status:', response.status);
       const errorText = await response.text();
       console.log('❌ Error response:', errorText);
-      
+
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: `External API failed with status ${response.status}`,
           details: errorText,
-          data: null 
+          data: null
         },
         { status: response.status }
       );
@@ -147,11 +147,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error creating job:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: 'Failed to create job with external API',
         details: error instanceof Error ? error.message : 'Unknown error',
-        data: null 
+        data: null
       },
       { status: 500 }
     );
@@ -163,7 +163,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     console.log('🔄 PUT /api/proxy/jobs - External API Only');
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
-    
+
     // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
     const jobData = {
       ...body,
@@ -172,15 +172,15 @@ export async function PUT(request: NextRequest) {
       parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
       system: body.system || 'job'
     };
-    
+
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');
     console.log('📝 Job data with parts:', JSON.stringify(jobData, null, 2));
-    
+
     // เพิ่ม timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     const response = await fetch(`${EXTERNAL_API_BASE}/jobs`, {
       method: 'PUT',
       headers: {
@@ -196,7 +196,7 @@ export async function PUT(request: NextRequest) {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ External API success');
-      
+
       // ตรวจสอบว่า response มี success field หรือไม่
       if (data && typeof data === 'object') {
         // ถ้า External API ไม่ส่ง success field ให้เพิ่มเข้าไป
@@ -216,7 +216,7 @@ export async function PUT(request: NextRequest) {
       console.log('❌ External API failed with status:', response.status);
       const errorText = await response.text();
       console.log('❌ Error response:', errorText);
-      
+
       // พยายาม parse error response เป็น JSON
       let errorData;
       try {
@@ -224,24 +224,24 @@ export async function PUT(request: NextRequest) {
       } catch {
         errorData = { message: errorText };
       }
-      
+
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: errorData.message || `External API failed with status ${response.status}`,
           details: errorText,
-          data: null 
+          data: null
         },
         { status: response.status }
       );
     }
   } catch (error) {
     console.error('❌ Error updating job:', error);
-    
+
     // จัดการ error ต่างๆ
     let errorMessage = 'Failed to update job with external API';
     let statusCode = 500;
-    
+
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         errorMessage = 'Request timeout - External API took too long to respond';
@@ -253,13 +253,13 @@ export async function PUT(request: NextRequest) {
         errorMessage = error.message;
       }
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         message: errorMessage,
         details: error instanceof Error ? error.message : 'Unknown error',
-        data: null 
+        data: null
       },
       { status: statusCode }
     );

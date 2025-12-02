@@ -26,8 +26,18 @@ fi
 # Copy public files
 if [ -d "public" ]; then
     echo "📁 Copying public directory to standalone..."
+    
+    # 1. Copy ทุกอย่างใน public ไปก่อน (แต่ยกเว้น uploads/maintenance ถ้าทำได้ แต่ cp -r มันแยกยาก)
     cp -r public .next/standalone/
-    echo "✅ Public files copied successfully"
+    
+    # 2. ลบโฟลเดอร์ maintenance ที่เพิ่ง copy ไป (เพราะเราไม่อยากได้สำเนา)
+    rm -rf .next/standalone/public/uploads/maintenance
+    
+    # 3. สร้าง Symlink ชี้กลับมาที่โฟลเดอร์จริง (ที่เรา Mount ไว้)
+    # หมายเหตุ: ใช้ path เต็ม (/home/...) หรือ path สัมพัทธ์ก็ได้ แต่ path เต็มชัวร์สุด
+    ln -s /home/administrator/golfcar-maintenance/public/uploads/maintenance .next/standalone/public/uploads/maintenance
+    
+    echo "✅ Public files copied and Symlink created successfully"
 else
     echo "⚠️  Warning: public directory not found"
 fi

@@ -767,18 +767,31 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                             <div className="detail-section">
                                                                 <h4>รูปภาพ</h4>
                                                                 <div className="image-gallery">
-                                                                    {job.images.map((image, index) => (
-                                                                        <div key={`image-${job.id}-${index}-${image.slice(-10)}`} className="image-item">
-                                                                            <Image
-                                                                                src={image}
-                                                                                alt={`รูปภาพงาน ${index + 1}`}
-                                                                                className="job-image"
-                                                                                width={150}
-                                                                                height={100}
-                                                                                onClick={() => window.open(image, '_blank')}
-                                                                            />
-                                                                        </div>
-                                                                    ))}
+                                                                    {job.images.map((image, index) => {
+                                                                        // Helper to fix localhost URLs for external access
+                                                                        const getValidImageUrl = (url: string) => {
+                                                                            if (!url) return '';
+                                                                            // Replace localhost/127.0.0.1 with public domain
+                                                                            return url
+                                                                                .replace('http://localhost:8080', 'http://golfcar.go2kt.com:8080')
+                                                                                .replace('http://127.0.0.1:8080', 'http://golfcar.go2kt.com:8080');
+                                                                        };
+
+                                                                        const validImageUrl = getValidImageUrl(image);
+
+                                                                        return (
+                                                                            <div key={`image-${job.id}-${index}-${image.slice(-10)}`} className="image-item">
+                                                                                <Image
+                                                                                    src={validImageUrl}
+                                                                                    alt={`รูปภาพงาน ${index + 1}`}
+                                                                                    className="job-image"
+                                                                                    width={150}
+                                                                                    height={100}
+                                                                                    onClick={() => window.open(validImageUrl, '_blank')}
+                                                                                />
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             </div>
                                                         )}
