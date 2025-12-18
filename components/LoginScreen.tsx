@@ -1,15 +1,17 @@
-
 'use client';
 
 import React, { useState } from 'react';
-import { GolfCartIcon } from './icons';
+import Image from 'next/image';
+import { GolfCartIcon, ProfileIcon, UserShieldIcon } from './icons';
+import styles from './LoginScreen.module.css';
 
 interface LoginScreenProps {
   onLogin: (staffCode: string, password?: string, loginType?: 'staff' | 'admin') => void;
   error: string;
+  isLoading?: boolean;
 }
 
-const LoginScreen = ({ onLogin, error }: LoginScreenProps) => {
+const LoginScreen = ({ onLogin, error, isLoading = false }: LoginScreenProps) => {
   const [loginType, setLoginType] = useState<'staff' | 'admin'>('staff');
   const [staffCode, setStaffCode] = useState('');
   const [username, setUsername] = useState('');
@@ -17,6 +19,8 @@ const LoginScreen = ({ onLogin, error }: LoginScreenProps) => {
 
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLoading) return; // Prevent multiple submissions
+
     if (loginType === 'staff') {
       onLogin(staffCode, undefined, 'staff');
     } else {
@@ -25,86 +29,112 @@ const LoginScreen = ({ onLogin, error }: LoginScreenProps) => {
   };
 
   return (
-    <div className="login-container">
-      <div className="card login-card">
-        <div className="header-title" style={{ justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--primary-color)' }}>
-          <GolfCartIcon />
-          <h1>GolfCart Maintenance</h1>
-        </div>
-        <p style={{marginBottom: '1.5rem', color: 'var(--text-color)'}}>ระบบบันทึกและตรวจสอบงานซ่อม</p>
-        
-        {/* Login Type Selector */}
-        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="loginType"
-                value="staff"
-                checked={loginType === 'staff'}
-                onChange={(e) => setLoginType(e.target.value as 'staff' | 'admin')}
-                style={{ marginRight: '0.5rem' }}
-              />
-              พนักงาน
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="loginType"
-                value="admin"
-                checked={loginType === 'admin'}
-                onChange={(e) => setLoginType(e.target.value as 'staff' | 'admin')}
-                style={{ marginRight: '0.5rem' }}
-              />
-              ผู้ดูแลระบบ/หัวหน้างาน
-            </label>
+    <div className={styles.container}>
+      {/* Optimized Background Image */}
+      <Image
+        src="/background/login-bg.jpg"
+        alt="Background"
+        fill
+        priority
+        quality={85}
+        style={{ objectFit: 'cover', zIndex: 0 }}
+      />
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingContent}>
+            <div className={styles.loadingSpinner}>
+              <div></div><div></div><div></div><div></div><div></div>
+            </div>
+            <div className={styles.loadingText}>loading...</div>
           </div>
+        </div>
+      )}
+
+      <div className={styles.glassCard}>
+        <div className={styles.header}>
+          <div className={styles.iconWrapper}>
+            <GolfCartIcon />
+          </div>
+          <h1>GolfCart Maintenance</h1>
+          <p>ระบบบันทึกและตรวจสอบงานซ่อม</p>
+        </div>
+
+        {/* Login Type Selector */}
+        <div className={styles.loginTypeSelector}>
+          <label className={`${styles.typeCard} ${loginType === 'staff' ? styles.active : ''}`}>
+            <input
+              type="radio"
+              name="loginType"
+              value="staff"
+              checked={loginType === 'staff'}
+              onChange={(e) => setLoginType(e.target.value as 'staff' | 'admin')}
+            />
+            <ProfileIcon />
+            <span>พนักงาน</span>
+          </label>
+          <label className={`${styles.typeCard} ${loginType === 'admin' ? styles.active : ''}`}>
+            <input
+              type="radio"
+              name="loginType"
+              value="admin"
+              checked={loginType === 'admin'}
+              onChange={(e) => setLoginType(e.target.value as 'staff' | 'admin')}
+            />
+            <UserShieldIcon />
+            <span>ผู้ดูแลระบบ</span>
+          </label>
         </div>
 
         <form onSubmit={handleLogin}>
           {loginType === 'staff' ? (
             // Staff Login - รหัสพนักงานเท่านั้น
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label htmlFor="staffCode">รหัสพนักงาน</label>
               <input
                 type="text"
                 id="staffCode"
                 value={staffCode}
                 onChange={(e) => setStaffCode(e.target.value)}
-                placeholder="รหัสพนักงาน"
+                placeholder="กรอกรหัสพนักงาน"
+                className={styles.input}
                 required
               />
             </div>
           ) : (
             // Admin/Supervisor Login - username และ password
             <>
-              <div className="form-group">
+              <div className={styles.formGroup}>
                 <label htmlFor="username">ชื่อผู้ใช้</label>
                 <input
                   type="text"
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="ชื่อผู้ใช้"
+                  placeholder="กรอกชื่อผู้ใช้"
+                  className={styles.input}
                   required
                 />
               </div>
-              <div className="form-group">
+              <div className={styles.formGroup}>
                 <label htmlFor="password">รหัสผ่าน</label>
                 <input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="รหัสผ่าน"
+                  placeholder="กรอกรหัสผ่าน"
+                  className={styles.input}
                   required
                 />
               </div>
             </>
           )}
-          
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+
+          {error && <div className={styles.errorMessage}>{error}</div>}
+
+          <button type="submit" className={styles.submitButton}>
             เข้าสู่ระบบ
           </button>
         </form>

@@ -35,6 +35,7 @@ model User {
   managed_golf_courses String[] @db.ObjectId
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  lastActive           DateTime? @default(now())
 
   // Relations
   golf_course_id   String     @db.ObjectId

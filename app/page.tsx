@@ -48,6 +48,7 @@ export default function HomePage() {
   const [loadingError, setLoadingError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // โหลดข้อมูลเริ่มต้นจาก API
   useEffect(() => {
@@ -408,6 +409,7 @@ export default function HomePage() {
 
   const handleLogin = async (identifier: string, password?: string, loginType?: 'staff' | 'admin') => {
     try {
+      setIsLoggingIn(true);
       const response = await fetch('/api/proxy/auth/login', {
         method: 'POST',
         headers: {
@@ -436,6 +438,8 @@ export default function HomePage() {
     } catch (error) {
       console.error('Login error:', error);
       setLoginError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 

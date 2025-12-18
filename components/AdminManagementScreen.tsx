@@ -37,30 +37,46 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
     const [editMode, setEditMode] = useState(false);
+    const [showOnlineUsersModal, setShowOnlineUsersModal] = useState(false);
+    const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+
+    const fetchOnlineUsers = async () => {
+        try {
+            const res = await fetch('/api/users/online');
+            const data = await res.json();
+            if (data.users) {
+                setOnlineUsers(data.users);
+                setShowOnlineUsersModal(true);
+            }
+        } catch (error) {
+            console.error('Failed to fetch online users:', error);
+            alert('ไม่สามารถดึงข้อมูลผู้ใช้งานออนไลน์ได้');
+        }
+    };
 
     // กรองผู้ใช้ที่มีสิทธิ์ระดับ supervisor หรือ admin เท่านั้น
     useEffect(() => {
         if (user.role !== 'admin') return; // ถ้าไม่ใช่ admin ไม่ต้องทำอะไร
-        
-        const admins = users.filter(user => 
+
+        const admins = users.filter(user =>
             user.role === 'admin' || user.role === 'supervisor'
         );
-        
+
         let filtered = admins;
-        
+
         // กรองตามคำค้นหา
         if (searchTerm) {
-            filtered = filtered.filter(user => 
-                user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            filtered = filtered.filter(user =>
+                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 user.code.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-        
+
         // กรองตามบทบาท
         if (selectedRole !== 'all') {
             filtered = filtered.filter(user => user.role === selectedRole);
         }
-        
+
         setFilteredUsers(filtered);
     }, [users, searchTerm, selectedRole, user.role]);
 
@@ -83,7 +99,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         setSelectedUser(user);
         // ดึงสิทธิ์ของผู้ใช้จาก props
         const permissions = getUserPermissions(user.id);
-        
+
         // ถ้าไม่มีสิทธิ์ที่บันทึกไว้ ให้กำหนดสิทธิ์เริ่มต้นตามบทบาท
         if (permissions.length === 0) {
             const defaultPermissions = MOCK_PERMISSIONS
@@ -93,17 +109,17 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         } else {
             setCurrentUserPermissions(permissions);
         }
-        
+
         setEditMode(true);
     };
 
     const handleRoleChange = (userId: number, newRole: UserRole) => {
         // อัพเดทบทบาทของผู้ใช้
-        const updatedUsers = users.map(user => 
+        const updatedUsers = users.map(user =>
             user.id === userId ? { ...user, role: newRole } : user
         );
         setUsers(updatedUsers);
-        
+
         // อัพเดทผู้ใช้ที่เลือกอยู่ถ้ามีการเปลี่ยนแปลง
         if (selectedUser && selectedUser.id === userId) {
             setSelectedUser({ ...selectedUser, role: newRole });
@@ -125,10 +141,10 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
 
     const handleSavePermissions = () => {
         if (!selectedUser) return;
-        
+
         // บันทึกสิทธิ์ของผู้ใช้
         updateUserPermissions(selectedUser.id, currentUserPermissions);
-        
+
         alert(`บันทึกสิทธิ์สำหรับ ${selectedUser.name} เรียบร้อยแล้ว`);
         setEditMode(false);
         setSelectedUser(null);
@@ -144,14 +160,17 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         <div className="card">
             <div className="page-header">
                 <h2>จัดการผู้ดูแลและระบบสิทธิ์</h2>
-                <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="btn-secondary" onClick={fetchOnlineUsers}>ตรวจสอบผู้ใช้งานออนไลน์</button>
+                    <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
+                </div>
             </div>
 
             <div className="filter-section">
                 <div className="search-box">
-                    <input 
-                        type="text" 
-                        placeholder="ค้นหาตามชื่อหรือรหัสพนักงาน" 
+                    <input
+                        type="text"
+                        placeholder="ค้นหาตามชื่อหรือรหัสพนักงาน"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -159,8 +178,8 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 <div className="filter-controls">
                     <div className="filter-group">
                         <label>กรองตามบทบาท:</label>
-                        <select 
-                            value={selectedRole} 
+                        <select
+                            value={selectedRole}
                             onChange={(e) => setSelectedRole(e.target.value as UserRole | 'all')}
                         >
                             <option value="all">ทั้งหมด</option>
@@ -171,7 +190,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 </div>
             </div>
 
-            <div style={{overflowX: 'auto'}}>
+            <div style={{ overflowX: 'auto' }}>
                 <table className="parts-table">
                     <thead>
                         <tr>
@@ -189,8 +208,8 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                     <td>{user.code}</td>
                                     <td>{user.name}</td>
                                     <td>
-                                        <select 
-                                            value={user.role} 
+                                        <select
+                                            value={user.role}
                                             onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
                                         >
                                             <option value="supervisor">หัวหน้างาน</option>
@@ -199,8 +218,8 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                     </td>
                                     <td>{getGolfCourseName(user.golf_course_id)}</td>
                                     <td>
-                                        <button 
-                                            className="btn-primary btn-sm" 
+                                        <button
+                                            className="btn-primary btn-sm"
                                             onClick={() => handleSelectUser(user)}
                                         >
                                             จัดการสิทธิ์
@@ -221,15 +240,15 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 <div className="card" style={{ marginTop: '2rem' }}>
                     <h3>จัดการสิทธิ์สำหรับ: {selectedUser.name}</h3>
                     <p>ตำแหน่ง: {selectedUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'หัวหน้างาน'}</p>
-                    
+
                     <div style={{ marginTop: '1rem' }}>
                         <h4>สิทธิ์การใช้งาน:</h4>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                             {MOCK_PERMISSIONS.map(permission => (
                                 <div key={permission.id} className="checkbox-group">
-                                    <input 
-                                        type="checkbox" 
-                                        id={`permission-${permission.id}`} 
+                                    <input
+                                        type="checkbox"
+                                        id={`permission-${permission.id}`}
                                         checked={currentUserPermissions.includes(permission.id)}
                                         onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
                                         disabled={!permission.roles.includes(selectedUser.role)}
@@ -242,11 +261,11 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                             ))}
                         </div>
                     </div>
-                    
+
                     <div className="form-actions">
                         <button className="btn-primary" onClick={handleSavePermissions}>บันทึกสิทธิ์</button>
-                        <button 
-                            className="btn-secondary" 
+                        <button
+                            className="btn-secondary"
                             onClick={() => {
                                 setEditMode(false);
                                 setSelectedUser(null);
@@ -255,6 +274,40 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                         >
                             ยกเลิก
                         </button>
+                    </div>
+                </div>
+            )}
+            {showOnlineUsersModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '600px' }}>
+                        <h3>ผู้ใช้งานที่กำลังออนไลน์ (Active 5 นาทีล่าสุด)</h3>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto', margin: '1rem 0' }}>
+                            <table className="parts-table">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อ</th>
+                                        <th>ตำแหน่ง</th>
+                                        <th>ใช้งานล่าสุด</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {onlineUsers.length > 0 ? (
+                                        onlineUsers.map(u => (
+                                            <tr key={u.id}>
+                                                <td>{u.name} ({u.username || u.code})</td>
+                                                <td>{u.role}</td>
+                                                <td>{new Date(u.lastActive).toLocaleTimeString('th-TH')}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={3} className="no-data">ไม่พบผู้ใช้งานออนไลน์</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="form-actions">
+                            <button className="btn-secondary" onClick={() => setShowOnlineUsersModal(false)}>ปิด</button>
+                        </div>
                     </div>
                 </div>
             )}

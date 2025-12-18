@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Sarabun } from "next/font/google";
 import "./globals.css";
+import UserActivityTracker from "@/components/UserActivityTracker";
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
@@ -28,7 +29,10 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body className={sarabun.className}>
-        <div id="root">{children}</div>
+        <div id="root">
+          <UserActivityTracker />
+          {children}
+        </div>
       </body>
     </html>
   );
