@@ -278,36 +278,158 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 </div>
             )}
             {showOnlineUsersModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '600px' }}>
-                        <h3>ผู้ใช้งานที่กำลังออนไลน์ (Active 5 นาทีล่าสุด)</h3>
-                        <div style={{ maxHeight: '400px', overflowY: 'auto', margin: '1rem 0' }}>
-                            <table className="parts-table">
-                                <thead>
-                                    <tr>
-                                        <th>ชื่อ</th>
-                                        <th>ตำแหน่ง</th>
-                                        <th>ใช้งานล่าสุด</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {onlineUsers.length > 0 ? (
-                                        onlineUsers.map(u => (
-                                            <tr key={u.id}>
-                                                <td>{u.name} ({u.username || u.code})</td>
-                                                <td>{u.role}</td>
-                                                <td>{new Date(u.lastActive).toLocaleTimeString('th-TH')}</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr><td colSpan={3} className="no-data">ไม่พบผู้ใช้งานออนไลน์</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                <div
+                    className="modal-overlay animate-fadeIn"
+                    style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.6)', cursor: 'pointer' }}
+                    onClick={() => setShowOnlineUsersModal(false)}
+                >
+                    <div
+                        className="modal-content animate-slideIn"
+                        style={{
+                            maxWidth: '700px',
+                            borderRadius: '24px',
+                            padding: '2rem',
+                            background: '#ffffff',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                            border: '1px solid rgba(0, 0, 0, 0.05)',
+                            cursor: 'default'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700, background: 'linear-gradient(135deg, #1A2533 0%, #2C3E50 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                    สถานะผู้ใช้งาน
+                                </h2>
+                                <p style={{ margin: '0.25rem 0 0 0', opacity: 0.6, fontSize: '0.9rem' }}>
+                                    กิจกรรมล่าสุดภายใน 24 ชั่วโมง
+                                </p>
+                            </div>
+
                         </div>
-                        <div className="form-actions">
-                            <button className="btn-secondary" onClick={() => setShowOnlineUsersModal(false)}>ปิด</button>
+
+                        <div style={{ maxHeight: '450px', overflowY: 'auto', paddingRight: '0.5rem', margin: '0 -1rem' }}>
+                            <div style={{ padding: '0 1rem' }}>
+                                {onlineUsers.length > 0 ? (
+                                    <div style={{ display: 'grid', gap: '1rem' }}>
+                                        {onlineUsers.map(u => {
+                                            const lastActiveDate = new Date(u.lastActive);
+                                            const diffMs = Date.now() - lastActiveDate.getTime();
+                                            const diffMins = Math.floor(diffMs / (1000 * 60));
+
+                                            let status = 'offline';
+                                            let statusColor = '#94a3b8';
+                                            let statusText = 'ออฟไลน์';
+
+                                            if (u.isOnline && diffMins < 15) {
+                                                status = 'online';
+                                                statusColor = '#22c55e';
+                                                statusText = 'กำลังออนไลน์';
+                                            } else if (u.isOnline && diffMins < 60) {
+                                                status = 'away';
+                                                statusColor = '#f59e0b';
+                                                statusText = 'ไม่อยู่';
+                                            }
+
+                                            const getTimeAgo = (mins: number) => {
+                                                if (mins < 1) return 'เมื่อสักครู่';
+                                                if (mins < 60) return `${mins} นาทีที่แล้ว`;
+                                                const hours = Math.floor(mins / 60);
+                                                if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`;
+                                                return lastActiveDate.toLocaleDateString('th-TH');
+                                            };
+
+                                            return (
+                                                <div key={u.id} style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    padding: '1.25rem',
+                                                    background: '#fff',
+                                                    borderRadius: '16px',
+                                                    border: '1px solid #f1f5f9',
+                                                    transition: 'all 0.2s ease',
+                                                    cursor: 'default',
+                                                    opacity: u.isOnline ? 1 : 0.7 // Slightly fade offline users
+                                                }}
+                                                    onMouseOver={(e) => {
+                                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                                        e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.05)';
+                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                    }}
+                                                    onMouseOut={(e) => {
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                        e.currentTarget.style.boxShadow = 'none';
+                                                        e.currentTarget.style.borderColor = '#f1f5f9';
+                                                    }}>
+                                                    <div style={{ position: 'relative', marginRight: '1.25rem' }}>
+                                                        <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: 700, color: '#475569' }}>
+                                                            {u.name.charAt(0)}
+                                                        </div>
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            bottom: '-2px',
+                                                            right: '-2px',
+                                                            width: '14px',
+                                                            height: '14px',
+                                                            borderRadius: '50%',
+                                                            background: status === 'online' ? '#22c55e' : status === 'away' ? '#f59e0b' : '#94a3b8',
+                                                            border: '3px solid #fff',
+                                                            boxShadow: status === 'online' ? `0 0 0 2px ${statusColor}40` : 'none',
+                                                            animation: status === 'online' ? 'pulse 2s infinite' : 'none'
+                                                        }}></div>
+                                                    </div>
+
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '1rem' }}>{u.name}</span>
+                                                            <span style={{ fontSize: '0.8rem', color: '#64748b', background: '#f8fafc', padding: '2px 8px', borderRadius: '6px' }}>@{u.username || u.code}</span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                                            {u.role === 'admin' ? 'ผู้ดูแลระบบ' : u.role === 'supervisor' ? 'หัวหน้างาน' : 'เจ้าหน้าที่'}
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: statusColor }}>
+                                                            {statusText}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                                                            {status === 'online' ? 'ขณะนี้' : getTimeAgo(diffMins)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8' }}>
+                                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '1rem', opacity: 0.5 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                        <div style={{ fontWeight: 500 }}>ไม่พบผู้ใช้งานที่มีกิจกรรม</div>
+                                        <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>ในรอบ 24 ชั่วโมงที่ผ่านมา</div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
+                        <div style={{ marginTop: '2rem' }}>
+                            <button
+                                onClick={() => setShowOnlineUsersModal(false)}
+                                style={{ width: '100%', padding: '1rem', borderRadius: '16px', background: '#1e293b', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s shadow' }}
+                                onMouseOver={(e) => (e.currentTarget.style.background = '#334155')}
+                                onMouseOut={(e) => (e.currentTarget.style.background = '#1e293b')}
+                            >
+                                ปิดหน้าต่าง
+                            </button>
+                        </div>
+
+                        <style dangerouslySetInnerHTML={{
+                            __html: `
+                            @keyframes pulse {
+                                0% { transform: scale(1); opacity: 1; }
+                                50% { transform: scale(1.2); opacity: 0.7; }
+                                100% { transform: scale(1); opacity: 1; }
+                            }
+                        `}} />
                     </div>
                 </div>
             )}

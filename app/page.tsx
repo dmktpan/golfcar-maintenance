@@ -443,7 +443,18 @@ export default function HomePage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (user) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
     setUser(null);
     setShowWelcome(false);
     localStorage.removeItem('currentUser');

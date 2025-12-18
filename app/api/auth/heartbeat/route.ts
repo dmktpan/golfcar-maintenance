@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db/prisma";
 
 export async function POST(request: NextRequest) {
     try {
@@ -14,9 +12,12 @@ export async function POST(request: NextRequest) {
 
         // 1. Try to update by ID first
         try {
-            await prisma.user.update({
+            await (prisma.user.update as any)({
                 where: { id: userId },
-                data: { lastActive: new Date() },
+                data: {
+                    lastActive: new Date(),
+                    isOnline: true
+                },
             });
             return NextResponse.json({ success: true });
         } catch {
@@ -28,9 +29,12 @@ export async function POST(request: NextRequest) {
                     });
 
                     if (userByCode) {
-                        await prisma.user.update({
+                        await (prisma.user.update as any)({
                             where: { id: userByCode.id },
-                            data: { lastActive: new Date() },
+                            data: {
+                                lastActive: new Date(),
+                                isOnline: true
+                            },
                         });
                         return NextResponse.json({ success: true, method: 'code' });
                     }
@@ -47,9 +51,12 @@ export async function POST(request: NextRequest) {
                     });
 
                     if (userByUsername) {
-                        await prisma.user.update({
+                        await (prisma.user.update as any)({
                             where: { id: userByUsername.id },
-                            data: { lastActive: new Date() },
+                            data: {
+                                lastActive: new Date(),
+                                isOnline: true
+                            },
                         });
                         return NextResponse.json({ success: true, method: 'username' });
                     }
