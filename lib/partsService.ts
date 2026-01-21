@@ -27,7 +27,7 @@ export async function fetchAllParts(): Promise<Part[]> {
   try {
     const response = await fetch('/api/parts');
     const result = await response.json();
-    
+
     if (result.success) {
       return result.data || [];
     } else {
@@ -70,8 +70,8 @@ export function categorizePartsBySystem(parts: Part[]): PartsBySystem {
         break;
       case 'steering':
       case 'พวงมาลัย':
-      case 'ระบบพวงมาลัย':
-      case 'ระบบพวงมาลัย/ช่วงล่าง':
+      case 'ระบบบังคับเลี้ยว':
+      case 'ระบบบังคับเลี้ยว/ช่วงล่าง':
       case 'ช่วงล่าง':
       case 'suspension':
         categorizedParts.steering.push(categorizedPart);
@@ -120,9 +120,9 @@ export async function getPartsByCategory(category: PartCategory): Promise<Catego
 export async function searchParts(searchTerm: string): Promise<CategorizedPart[]> {
   const parts = await fetchAllParts();
   const searchLower = searchTerm.toLowerCase();
-  
+
   return parts
-    .filter(part => 
+    .filter(part =>
       part.name.toLowerCase().includes(searchLower) ||
       (part.part_number && part.part_number.toLowerCase().includes(searchLower)) ||
       (part.category && part.category.toLowerCase().includes(searchLower))
@@ -141,7 +141,7 @@ export async function searchParts(searchTerm: string): Promise<CategorizedPart[]
 export function getCategoryDisplayName(category: PartCategory): string {
   const categoryNames: Record<PartCategory, string> = {
     brake: 'ระบบเบรก',
-    steering: 'ระบบพวงมาลัย/ช่วงล่าง',
+    steering: 'ระบบบังคับเลี้ยว/ช่วงล่าง',
     motor: 'ระบบมอเตอร์',
     electric: 'ระบบไฟฟ้า',
     other: 'อื่นๆ'
@@ -153,7 +153,7 @@ export function getCategoryDisplayName(category: PartCategory): string {
 export function getCategoryKey(displayName: string): PartCategory {
   const categoryMap: Record<string, PartCategory> = {
     'ระบบเบรก': 'brake',
-    'ระบบพวงมาลัย/ช่วงล่าง': 'steering',
+    'ระบบบังคับเลี้ยว/ช่วงล่าง': 'steering',
     'ระบบมอเตอร์': 'motor',
     'ระบบไฟฟ้า': 'electric',
     'อื่นๆ': 'other'

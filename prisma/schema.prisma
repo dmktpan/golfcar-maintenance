@@ -84,6 +84,7 @@ model Job {
   bmCause            BMCause?
   battery_serial     String?
   partsNotes         String?
+  prrNumber          String?   @unique
   parts              JobPart[]
   images             String[]
   createdAt          DateTime  @default(now())

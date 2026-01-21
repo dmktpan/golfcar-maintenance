@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Job, Vehicle, Part, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse } from '@/lib/data';
+import RequisitionModal from './RequisitionModal';
 import StatusBadge from './StatusBadge';
 import * as XLSX from 'xlsx';
 
@@ -25,13 +26,6 @@ interface PartsUsageLog {
     usedDate: string;
 }
 
-interface PartsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    parts: PartsUsageLog[];
-    allParts: Part[]; // เพิ่ม props allParts
-}
-
 const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterVehicle, setFilterVehicle] = useState('');
@@ -46,7 +40,9 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const [partsData, setPartsData] = useState<Map<string, PartsUsageLog[]>>(new Map());
     const [partsModalOpen, setPartsModalOpen] = useState(false);
     const [selectedJobParts, setSelectedJobParts] = useState<PartsUsageLog[]>([]);
-    const [selectedJobId, setSelectedJobId] = useState<string>('');
+    const [isRequisitionOpen, setIsRequisitionOpen] = useState(false);
+    const [selectedJobForRequisition, setSelectedJobForRequisition] = useState<Job | null>(null);
+    const [isGeneratingRequisition, setIsGeneratingRequisition] = useState(false);
 
     // ใช้ข้อมูลงานจากระบบแทนข้อมูล mock
     // กรองเฉพาะงานที่เสร็จสิ้นแล้วหรืออนุมัติแล้วเพื่อแสดงในประวัติ
@@ -62,7 +58,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
             console.log('🔍 Fetching parts usage logs...');
             const response = await fetch('/api/proxy/parts-usage-logs');
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status} `);
             }
             const result = await response.json();
             console.log('📦 Parts usage logs response:', result);
@@ -112,6 +108,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         return users.filter(user => user.golf_course_id === filterGolfCourse);
     }, [users, filterGolfCourse]);
 
+    // กรองรถตามสนามที่เลือก
+    const filteredVehicles = useMemo(() => {
+        if (!filterGolfCourse || filterGolfCourse === '') {
+            return vehicles; // แสดงรถทั้งหมดถ้าไม่ได้เลือกสนาม
+        }
+        return vehicles.filter(vehicle => vehicle.golf_course_id === filterGolfCourse);
+    }, [vehicles, filterGolfCourse]);
+
     // Reset filter พนักงานเมื่อเปลี่ยนสนาม
     useEffect(() => {
         if (filterGolfCourse && filterUser) {
@@ -122,6 +126,17 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
             }
         }
     }, [filterGolfCourse, filteredUsers, filterUser]);
+
+    // Reset filter รถเมื่อเปลี่ยนสนาม
+    useEffect(() => {
+        if (filterGolfCourse && filterVehicle) {
+            // ตรวจสอบว่ารถที่เลือกอยู่ในสนามใหม่หรือไม่
+            const vehicleInSelectedCourse = filteredVehicles.find(vehicle => vehicle.id.toString() === filterVehicle);
+            if (!vehicleInSelectedCourse) {
+                setFilterVehicle(''); // reset ถ้ารถไม่อยู่ในสนามที่เลือก
+            }
+        }
+    }, [filterGolfCourse, filteredVehicles, filterVehicle]);
 
     // Apply filters and sorting
     const filteredAndSortedJobs = useMemo(() => {
@@ -207,7 +222,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
 
         // หากไม่มี part_name ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
         for (const [systemName, system] of Object.entries(PARTS_BY_SYSTEM_DISPLAY)) {
-            console.log(`🔍 Searching in system ${systemName}:`, system);
+            console.log(`🔍 Searching in system ${systemName}: `, system);
             const partInfo = system.find((p: any) => p.id.toString() === part.part_id.toString());
             if (partInfo) {
                 console.log('✅ Found in PARTS_BY_SYSTEM_DISPLAY:', partInfo.name);
@@ -277,7 +292,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const getSystemDisplayName = (system: string) => {
         const systemNames: Record<string, string> = {
             'brake': 'ระบบเบรก/เพื่อห้าม',
-            'steering': 'ระบบพวงมาลัย',
+            'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
             'general': 'ทั่วไป',
@@ -358,7 +373,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
             const exportData = filteredAndSortedJobs.map(job => {
                 // ดึงข้อมูล parts จาก parts usage logs
                 const jobParts = partsMap.get(job.id) || [];
-                console.log(`🔧 Job ${job.vehicle_number} (${job.id}) parts from logs:`, jobParts);
+                console.log(`🔧 Job ${job.vehicle_number} (${job.id}) parts from logs: `, jobParts);
 
                 // Helper to find part info
                 const getPartInfo = (partId: string) => {
@@ -373,7 +388,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                         const partCode = partInfo?.part_number ? `${partInfo.part_number} - ` : '';
                         const partName = partLog.partName || getPartName({ part_id: partLog.partId });
                         const unit = partInfo?.unit || 'ชิ้น';
-                        return `${partCode}${partName} ${partLog.quantityUsed || 1} ${unit}`;
+                        return `${partCode}${partName} ${partLog.quantityUsed || 1} ${unit} `;
                     }).join(', ');
                 } else if (job.parts && job.parts.length > 0) {
                     // fallback ใช้ข้อมูลจาก job.parts ถ้ามี
@@ -382,7 +397,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                         const partCode = partInfo?.part_number ? `${partInfo.part_number} - ` : '';
                         const partName = getPartName(p);
                         const unit = partInfo?.unit || 'ชิ้น';
-                        return `${partCode}${partName} ${p.quantity_used} ${unit}`;
+                        return `${partCode}${partName} ${p.quantity_used} ${unit} `;
                     }).join(', ');
                 } else if ((job as any).parts_used && Array.isArray((job as any).parts_used) && (job as any).parts_used.length > 0) {
                     // fallback ใช้ข้อมูลจาก job.parts_used ถ้ามี
@@ -445,19 +460,54 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const openPartsModal = (jobId: string) => {
         const jobParts = partsData.get(jobId) || [];
         setSelectedJobParts(jobParts);
-        setSelectedJobId(jobId);
         setPartsModalOpen(true);
+    };
+
+    const handleGenerateReport = async (job: Job) => {
+        if (job.status !== 'approved') return;
+
+        setSelectedJobForRequisition(job);
+        setIsRequisitionOpen(true);
+
+        if (!job.prrNumber) {
+            setIsGeneratingRequisition(true);
+            try {
+                const response = await fetch('/api/jobs/requisition', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId: job.id })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    // Update the local job object with the new prrNumber
+                    job.prrNumber = data.prrNumber;
+                }
+            } catch (error) {
+                console.error("Failed to generate PRR:", error);
+            } finally {
+                setIsGeneratingRequisition(false);
+            }
+        }
     };
 
     // ฟังก์ชันปิด parts modal
     const closePartsModal = () => {
         setPartsModalOpen(false);
         setSelectedJobParts([]);
-        setSelectedJobId('');
+    };
+
+    const closeRequisitionModal = () => {
+        setIsRequisitionOpen(false);
+        setSelectedJobForRequisition(null);
     };
 
     // Parts Modal Component
-    const PartsModal = ({ isOpen, onClose, parts, allParts }: PartsModalProps) => {
+    const PartsModal = ({ isOpen, onClose, parts, allParts }: {
+        isOpen: boolean,
+        onClose: () => void,
+        parts: PartsUsageLog[],
+        allParts: any[]
+    }) => {
         if (!isOpen) return null;
 
         // Helper function to find part code
@@ -566,7 +616,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                         <label>รถ:</label>
                         <select value={filterVehicle} onChange={(e) => setFilterVehicle(e.target.value)}>
                             <option value="">ทั้งหมด</option>
-                            {vehicles.map(vehicle => (
+                            {filteredVehicles.map(vehicle => (
                                 <option key={vehicle.id} value={vehicle.id}>
                                     {vehicle.vehicle_number} ({vehicle.serial_number})
                                 </option>
@@ -700,9 +750,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                         </td>
                                         <td>
                                             <div className="action-buttons">
-                                                <button className="btn-sm btn-outline">
-                                                    📄 รายงาน
-                                                </button>
+                                                {job.status === 'approved' && (
+                                                    <button
+                                                        className="btn-sm btn-outline"
+                                                        onClick={() => handleGenerateReport(job)}
+                                                    >
+                                                        📄 รายงาน
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -815,7 +870,29 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 allParts={parts}
             />
 
+            {/* Requisition Modal */}
+            <RequisitionModal
+                isOpen={isRequisitionOpen}
+                onClose={closeRequisitionModal}
+                job={selectedJobForRequisition}
+                isGenerating={isGeneratingRequisition}
+                parts={parts}
+                vehicles={vehicles}
+                golfCourses={golfCourses}
+                jobParts={selectedJobForRequisition ? partsData.get(selectedJobForRequisition.id) || [] : []}
+            />
+
             <style jsx>{`
+                /* Print Styles */
+                @media print {
+                    .no-print {
+                        display: none !important;
+                    }
+                    body * {
+                        visibility: hidden;
+                    }
+                }
+
                 .header-actions {
                     display: flex;
                     gap: 10px;
@@ -865,7 +942,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 .table-container {
                     overflow-x: auto;
                     border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
 
                 .history-table {
@@ -996,7 +1073,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 .parts-button:hover {
                     background: #bbdefb;
                     transform: translateY(-1px);
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
 
                 .modal-overlay {
@@ -1020,7 +1097,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     width: 100%;
                     max-height: 80vh;
                     overflow: hidden;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
                     animation: modalSlideIn 0.3s ease-out;
                 }
 

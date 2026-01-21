@@ -80,16 +80,16 @@
 .input {
     width: 100%;
     padding: 0.8rem 1rem;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
-    color: white;
+    color: #333;
     font-size: 1rem;
     transition: all 0.3s ease;
 }
 
 .input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(100, 100, 100, 0.6);
 }
 
 .input:focus {

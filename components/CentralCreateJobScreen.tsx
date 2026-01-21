@@ -375,7 +375,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                         <select id="system" value={system} onChange={e => setSystem(e.target.value)} required>
                             <option value="">-- กรุณาเลือกระบบ --</option>
                             <option value="brake">ระบบเบรก/เพื่อห้าม (brake)</option>
-                            <option value="steering">ระบบพวงมาลัย (steering)</option>
+                            <option value="steering">ระบบบังคับเลี้ยว (steering)</option>
                             <option value="motor">ระบบมอเตอร์/เพื่อขับ (motor)</option>
                             <option value="electric">ระบบไฟฟ้า (electric)</option>
                         </select>

@@ -100,7 +100,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const getTabDisplayName = (tab: string) => {
         const tabNames: Record<string, string> = {
             'brake': 'ระบบเบรก',
-            'steering': 'ระบบพวงมาลัย',
+            'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์',
             'electric': 'ระบบไฟฟ้า',
             'other': 'อื่นๆ'
@@ -273,7 +273,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
                 <p><strong>มอบหมายโดย:</strong> {jobInfo.assignedBy}</p>
                 <p><strong>ประเภทงาน:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}</p>
-                {system && <p><strong>ระบบที่ต้องซ่อม:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}</p>}
+                {system && <p><strong>ระบบที่ต้องซ่อม:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบบังคับเลี้ยว' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}</p>}
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -346,7 +346,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         <select id="system" value={system} onChange={e => setSystem(e.target.value)} disabled>
                             <option value="" disabled>-- กรุณาเลือกระบบ --</option>
                             <option value="brake">ระบบเบรก/เพื่อห้าม (brake)</option>
-                            <option value="steering">ระบบพวงมาลัย (steering)</option>
+                            <option value="steering">ระบบบังคับเลี้ยว (steering)</option>
                             <option value="motor">ระบบมอเตอร์/เพื่อขับ (motor)</option>
                             <option value="electric">ระบบไฟฟ้า (electric)</option>
                         </select>
@@ -519,7 +519,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         )}
                         {jobType === 'PM' && system && (
                             <div className="summary-item">
-                                <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
+                                <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบบังคับเลี้ยว' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
                             </div>
                         )}
                         {jobType === 'PM' && [...subTasks, ...additionalSubTasks].length > 0 && (

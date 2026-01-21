@@ -343,7 +343,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         <select id="system" value={system} onChange={e => setSystem(e.target.value)} required>
                             <option value="" disabled>-- กรุณาเลือกระบบ --</option>
                             <option value="brake">ระบบเบรก/เพื่อห้าม (brake)</option>
-                            <option value="steering">ระบบพวงมาลัย (steering)</option>
+                            <option value="steering">ระบบบังคับเลี้ยว (steering)</option>
                             <option value="motor">ระบบมอเตอร์/เพื่อขับ (motor)</option>
                             <option value="electric">ระบบไฟฟ้า (electric)</option>
                         </select>
@@ -550,7 +550,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         )}
                         {jobType === 'PM' && system && (
                             <div className="summary-item">
-                                <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบพวงมาลัย' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
+                                <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบบังคับเลี้ยว' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
                             </div>
                         )}
                         {jobType === 'PM' && subTasks.length > 0 && (
