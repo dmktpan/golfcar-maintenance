@@ -748,7 +748,7 @@ export default function HomePage() {
       const thailandTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // UTC+7
       const updatedAt = thailandTime.toISOString();
 
-      const updateData = {
+      const updateData: any = {
         id: currentJob.id, // เพิ่ม id เพื่อให้ External API รู้ว่าต้องอัปเดตงานไหน
         status,
         type: currentJob.type,
@@ -769,6 +769,18 @@ export default function HomePage() {
         created_at: currentJob.created_at,
         updated_at: updatedAt // อัปเดต timestamp ด้วยเวลาไทย
       };
+
+      // เพิ่มข้อมูลผู้อนุมัติเมื่อ status เป็น approved หรือ rejected
+      if (status === 'approved' || status === 'rejected') {
+        updateData.approved_by_id = user?.id || null;
+        updateData.approved_by_name = user?.name || null;
+
+        // ถ้าเป็นการ reject ให้ถามเหตุผล
+        if (status === 'rejected') {
+          const reason = prompt('กรุณาระบุเหตุผลที่ไม่อนุมัติ:', '');
+          updateData.rejection_reason = reason || 'ไม่ระบุเหตุผล';
+        }
+      }
 
       console.log('📤 Sending API request to update job status...', {
         url: `/api/proxy/jobs/${currentJob.id}`, // ใช้ currentJob.id แทน jobId
@@ -1040,21 +1052,57 @@ export default function HomePage() {
 
   // ฟังก์ชันสำหรับจัดการสิทธิ์ผู้ใช้
   const getUserPermissions = (userId: number): string[] => {
+    // ดึงจาก users state ที่มี permissions field
+    const user = users.find(u => u.id === userId);
+    if (user?.permissions && user.permissions.length > 0) {
+      return user.permissions;
+    }
+    // Fallback ไป userPermissions state (สำหรับ backward compatibility)
     const userPermission = userPermissions.find(up => up.userId === userId);
     return userPermission ? userPermission.permissions : [];
   };
 
-  const updateUserPermissions = (userId: number, permissions: string[]) => {
-    setUserPermissions(prev => {
-      const existingIndex = prev.findIndex(up => up.userId === userId);
-      if (existingIndex >= 0) {
-        const updated = [...prev];
-        updated[existingIndex] = { userId, permissions };
-        return updated;
+  const updateUserPermissions = async (userId: number, permissions: string[]): Promise<boolean> => {
+    try {
+      console.log('🔐 Saving permissions to database...', { userId, permissions });
+
+      const response = await fetch('/api/users/permissions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, permissions }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ Permissions saved successfully');
+
+        // อัปเดต userPermissions state
+        setUserPermissions(prev => {
+          const existingIndex = prev.findIndex(up => up.userId === userId);
+          if (existingIndex >= 0) {
+            const updated = [...prev];
+            updated[existingIndex] = { userId, permissions };
+            return updated;
+          } else {
+            return [...prev, { userId, permissions }];
+          }
+        });
+
+        // อัปเดต users state ด้วย permissions ใหม่
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, permissions } : u
+        ));
+
+        return true;
       } else {
-        return [...prev, { userId, permissions }];
+        console.error('❌ Failed to save permissions:', result);
+        return false;
       }
-    });
+    } catch (error) {
+      console.error('❌ Error saving permissions:', error);
+      return false;
+    }
   };
 
   // แสดง loading screen ขณะโหลดข้อมูล

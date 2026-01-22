@@ -1,0 +1,22 @@
+/* Custom button style for Central Create Job */
+.createJobBtn {
+    background: linear-gradient(135deg, #7dbeff 0%, #c7e3ff 100%) !important;
+    box-shadow: 0 4px 15px rgba(0, 31, 63, 0.4) !important;
+    color: rgb(101, 99, 145) !important;
+    transition: all 0.3s ease !important;
+}
+
+.createJobBtn:hover {
+    background: linear-gradient(135deg, #003366 0%, #001f3f 100%) !important;
+    color: rgb(0, 146, 224) !important;
+    box-shadow: 0 8px 25px rgba(0, 31, 63, 0.6) !important;
+    transform: translateY(-2px);
+}
+
+.createJobBtn:active {
+    background: linear-gradient(135deg, #000c1a 0%, #0080ff 100%) !important;
+    /* Darker on press */
+    color: rgb(255, 255, 255) !important;
+    box-shadow: 0 2px 10px rgba(0, 31, 63, 0.4) !important;
+    transform: translateY(0);
+}

@@ -13,9 +13,9 @@ interface AdminDashboardCardProps {
     onClick: () => void;
 }
 
-const AdminDashboardCard = ({ icon, title, description, buttonText, onClick }: AdminDashboardCardProps) => {
+const AdminDashboardCard = ({ icon, title, description, buttonText, onClick, className }: AdminDashboardCardProps & { className?: string }) => {
     return (
-        <div className={styles.adminDashboardCard}>
+        <div className={`${styles.adminDashboardCard} ${className || ''}`}>
             <div className={styles.cardIcon}>{icon}</div>
             <div className={styles.cardContent}>
                 <h3 className={styles.cardTitle}>{title}</h3>
@@ -44,7 +44,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
             <h2 className={styles.adminDashboardTitle}>ระบบจัดการสำหรับผู้ดูแล</h2>
             <div className={styles.adminDashboardGrid}>
                 {/* 1. งานที่รอตรวจสอบ - ใช้งานบ่อยที่สุด */}
-                <AdminDashboardCard 
+                <AdminDashboardCard
                     icon={
                         <div style={{ position: 'relative', display: 'inline-block' }}>
                             <ChecklistIcon />
@@ -69,76 +69,77 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                                 </span>
                             )}
                         </div>
-                    } 
+                    }
                     title={`งานที่รอตรวจสอบ${pendingJobsCount > 0 ? ` (${pendingJobsCount})` : ''}`}
                     description="ตรวจสอบและอนุมัติงานซ่อมบำรุง"
                     buttonText="ดูงานที่รอ"
                     onClick={() => setView('supervisor_pending_jobs')}
                 />
-                
+
                 {/* 2. สร้างงานซ่อม - ส่วนกลาง */}
                 {(isAdmin || isSupervisor) && (
-                    <AdminDashboardCard 
-                        icon={<ToolsIcon />} 
+                    <AdminDashboardCard
+                        icon={<ToolsIcon />}
                         title="สร้างงานซ่อม - ส่วนกลาง"
                         description="สร้างงานซ่อมบำรุงสำหรับรถในสนามต่างๆ"
                         buttonText="สร้างงาน"
                         onClick={() => setView('central_create_job')}
+                        className={styles.greenGradientCard}
                     />
                 )}
-                
+
                 {/* 3. มอบหมายงานหลายคน */}
-                <AdminDashboardCard 
-                    icon={<ClipboardIcon />} 
+                <AdminDashboardCard
+                    icon={<ClipboardIcon />}
                     title="มอบหมายงานหลายคน"
                     description="มอบหมายงานให้พนักงานหลายคนพร้อมกัน"
                     buttonText="มอบหมายงาน"
                     onClick={() => setView('multi_assign')}
                 />
-                
+
                 {/* 4. ประวัติซ่อมบำรุง - ย้ายมาจาก Header */}
-                <AdminDashboardCard 
-                    icon={<HistoryIcon />} 
+                <AdminDashboardCard
+                    icon={<HistoryIcon />}
                     title="ประวัติซ่อมบำรุง"
                     description="ดูประวัติการซ่อมบำรุงทั้งหมดของระบบ"
                     buttonText="ดูประวัติ"
                     onClick={() => setView('history')}
                 />
-                
+
                 {/* 5. จัดการสนามและซีเรียล */}
-                <AdminDashboardCard 
-                    icon={<GearsIcon />} 
+                <AdminDashboardCard
+                    icon={<GearsIcon />}
                     title="จัดการสนามและซีเรียล"
                     description="จัดการข้อมูลสนามและซีเรียลรถกอล์ฟ"
                     buttonText="จัดการข้อมูล"
                     onClick={() => setView('golf_course_management')}
                 />
-                
+
                 {/* 6. จัดการผู้ใช้งาน */}
                 {(isAdmin || isSupervisor) && (
-                    <AdminDashboardCard 
-                        icon={<UserPlusIcon />} 
+                    <AdminDashboardCard
+                        icon={<UserPlusIcon />}
                         title="จัดการผู้ใช้งาน"
                         description="เพิ่ม แก้ไข และจัดการสิทธิ์ผู้ใช้งาน"
                         buttonText="จัดการผู้ใช้"
                         onClick={() => setView('manage_users')}
                     />
                 )}
-                
+
                 {/* 7. จัดการระบบ */}
                 {isAdmin && (
-                    <AdminDashboardCard 
-                        icon={<UserShieldIcon />} 
+                    <AdminDashboardCard
+                        icon={<UserShieldIcon />}
                         title="จัดการระบบ"
                         description="ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง"
                         buttonText="จัดการระบบ"
                         onClick={() => setView('admin_management')}
                     />
                 )}
-                
+
                 {/* 8. ประวัติซีเรียล */}
-                <AdminDashboardCard 
-                    icon={<SerialHistoryIcon />} 
+                <AdminDashboardCard
+                    icon={<SerialHistoryIcon />}
                     title="ประวัติซีเรียล"
                     description="ดูประวัติการใช้งานและซ่อมบำรุงของรถแต่ละคัน"
                     buttonText="ดูประวัติ"

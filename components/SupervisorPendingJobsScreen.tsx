@@ -31,6 +31,18 @@ function SupervisorPendingJobsScreen({
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [selectedJobType, setSelectedJobType] = useState<string>('');
 
+    // ตรวจสอบสิทธิ์อนุมัติงาน
+    const hasApprovePermission = (): boolean => {
+        // admin มีสิทธิ์ทั้งหมด
+        if (user.role === 'admin') return true;
+        // ตรวจสอบจาก permissions array
+        if (user.permissions && Array.isArray(user.permissions)) {
+            return user.permissions.includes('approve_jobs');
+        }
+        // ถ้าไม่มี permissions array ให้อนุญาตตาม role เดิม (supervisor มีสิทธิ์)
+        return user.role === 'supervisor';
+    };
+
     // Calculate assigned jobs count (assigned + in_progress status)
     const getAssignedJobsCount = () => {
         let assignedJobs = jobs.filter(job =>
@@ -471,20 +483,24 @@ function SupervisorPendingJobsScreen({
                                 </div>
 
                                 <div className={styles.actionButtons}>
-                                    <button
-                                        className={`${styles.actionButton} ${styles.approveButton}`}
-                                        onClick={() => handleApprove(job.id)}
-                                    >
-                                        <span className={styles.buttonIcon}>✓</span>
-                                        อนุมัติ
-                                    </button>
-                                    <button
-                                        className={`${styles.actionButton} ${styles.rejectButton}`}
-                                        onClick={() => handleReject(job.id)}
-                                    >
-                                        <span className={styles.buttonIcon}>✕</span>
-                                        ไม่อนุมัติ
-                                    </button>
+                                    {hasApprovePermission() && (
+                                        <>
+                                            <button
+                                                className={`${styles.actionButton} ${styles.approveButton}`}
+                                                onClick={() => handleApprove(job.id)}
+                                            >
+                                                <span className={styles.buttonIcon}>✓</span>
+                                                อนุมัติ
+                                            </button>
+                                            <button
+                                                className={`${styles.actionButton} ${styles.rejectButton}`}
+                                                onClick={() => handleReject(job.id)}
+                                            >
+                                                <span className={styles.buttonIcon}>✕</span>
+                                                ไม่อนุมัติ
+                                            </button>
+                                        </>
+                                    )}
                                     <button
                                         className={`${styles.actionButton} ${styles.detailsButton}`}
                                         onClick={() => handleViewDetails(job)}
@@ -701,26 +717,30 @@ function SupervisorPendingJobsScreen({
                         </div>
 
                         <div className={styles.modalFooter}>
-                            <button
-                                className={`${styles.actionButton} ${styles.approveButton}`}
-                                onClick={() => {
-                                    handleApprove(selectedJobForDetails.id);
-                                    closeDetailsModal();
-                                }}
-                            >
-                                <span className={styles.buttonIcon}>✓</span>
-                                อนุมัติ
-                            </button>
-                            <button
-                                className={`${styles.actionButton} ${styles.rejectButton}`}
-                                onClick={() => {
-                                    handleReject(selectedJobForDetails.id);
-                                    closeDetailsModal();
-                                }}
-                            >
-                                <span className={styles.buttonIcon}>✕</span>
-                                ไม่อนุมัติ
-                            </button>
+                            {hasApprovePermission() && (
+                                <>
+                                    <button
+                                        className={`${styles.actionButton} ${styles.approveButton}`}
+                                        onClick={() => {
+                                            handleApprove(selectedJobForDetails.id);
+                                            closeDetailsModal();
+                                        }}
+                                    >
+                                        <span className={styles.buttonIcon}>✓</span>
+                                        อนุมัติ
+                                    </button>
+                                    <button
+                                        className={`${styles.actionButton} ${styles.rejectButton}`}
+                                        onClick={() => {
+                                            handleReject(selectedJobForDetails.id);
+                                            closeDetailsModal();
+                                        }}
+                                    >
+                                        <span className={styles.buttonIcon}>✕</span>
+                                        ไม่อนุมัติ
+                                    </button>
+                                </>
+                            )}
                             <button
                                 className={`${styles.actionButton} ${styles.cancelButton}`}
                                 onClick={closeDetailsModal}

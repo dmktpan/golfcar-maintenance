@@ -35,6 +35,7 @@ export interface User {
   created_at: string;
   managed_golf_courses?: string[];
   password?: string;
+  permissions?: string[]; // สิทธิ์การใช้งานเพิ่มเติม
 }
 
 export interface GolfCourse {
@@ -100,6 +101,11 @@ export interface Job {
   bmCause?: BMCause;
   images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
   prrNumber?: string; // เลขที่ใบเบิกอะไหล่
+  // ข้อมูลการอนุมัติ
+  approved_by_id?: string;
+  approved_by_name?: string;
+  approved_at?: string;
+  rejection_reason?: string;
 }
 
 export interface SelectedPart {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
 import { getPartsBySystem, PartsBySystem, CategorizedPart } from '@/lib/partsService';
 import ImageUpload from './ImageUpload';
+import styles from './CentralCreateJobScreen.module.css';
 
 // Local interface for selected parts in this component
 interface LocalSelectedPart {
@@ -509,7 +510,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 />
 
                 <div className="form-actions">
-                    <button type="submit" className="btn-primary">
+                    <button type="submit" className={`btn-primary ${styles.createJobBtn}`}>
                         สร้างงานซ่อม
                     </button>
                     <button

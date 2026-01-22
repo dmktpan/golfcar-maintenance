@@ -33,6 +33,7 @@ model User {
   role                 UserRole
   password             String?  // เพิ่ม password field
   managed_golf_courses String[] @db.ObjectId
+  permissions          String[] // สิทธิ์การใช้งานเพิ่มเติม
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   lastActive           DateTime? @default(now())
@@ -45,6 +46,7 @@ model User {
 
   createdJobs  Job[]      @relation("CreatedBy")
   assignedJobs Job[]      @relation("AssignedTo")
+  approvedJobs Job[]      @relation("ApprovedBy")
   historyLogs  SerialHistoryEntry[] @relation("PerformedByUser")
 
   @@map("users") // Map to users collection instead of User
@@ -84,7 +86,7 @@ model Job {
   bmCause            BMCause?
   battery_serial     String?
   partsNotes         String?
-  prrNumber          String?   @unique
+  prrNumber          String?   // ลบ @unique เนื่องจากมี null values หลายตัว
   parts              JobPart[]
   images             String[]
   createdAt          DateTime  @default(now())
@@ -106,6 +108,13 @@ model Job {
 
   assignee           User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
   assigned_to        String?   @db.ObjectId
+
+  // ข้อมูลการอนุมัติ
+  approvedBy         User?     @relation("ApprovedBy", fields: [approved_by_id], references: [id])
+  approved_by_id     String?   @db.ObjectId
+  approved_by_name   String?   // Denormalized field สำหรับแสดงชื่อผู้อนุมัติ
+  approved_at        DateTime? // วันเวลาที่อนุมัติ/ไม่อนุมัติ
+  rejection_reason   String?   // เหตุผลถ้าไม่อนุมัติ
   
   historyLogs        SerialHistoryEntry[]
 }

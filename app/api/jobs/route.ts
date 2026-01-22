@@ -9,10 +9,10 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
   try {
     console.log('🔄 Sending Serial History to External API...');
     console.log('📝 Serial History data:', JSON.stringify(serialHistoryData, null, 2));
-    
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     const response = await fetch(`${EXTERNAL_API_BASE}/serial-history`, {
       method: 'POST',
       headers: {
@@ -26,7 +26,7 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
     });
 
     clearTimeout(timeoutId);
-    
+
     if (response.ok) {
       const result = await response.json();
       console.log('✅ Serial History sent to External API successfully');
@@ -80,19 +80,19 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      type, 
-      status, 
-      vehicle_id, 
-      vehicle_number, 
-      golf_course_id, 
-      user_id, 
-      userName, 
-      system, 
-      subTasks, 
-      remarks, 
-      bmCause, 
-      battery_serial, 
+    const {
+      type,
+      status,
+      vehicle_id,
+      vehicle_number,
+      golf_course_id,
+      user_id,
+      userName,
+      system,
+      subTasks,
+      remarks,
+      bmCause,
+      battery_serial,
       assigned_to,
       parts,
       partsNotes,
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
 
       if (vehicle) {
         // เตรียมข้อมูลอะไหล่สำหรับ Serial History
-        const partsUsed = parts && Array.isArray(parts) && parts.length > 0 
+        const partsUsed = parts && Array.isArray(parts) && parts.length > 0
           ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
           : [];
 
@@ -247,24 +247,28 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { 
+    const {
       id,
-      type, 
-      status, 
-      vehicle_id, 
-      vehicle_number, 
-      golf_course_id, 
-      user_id, 
-      userName, 
-      system, 
-      subTasks, 
-      remarks, 
-      bmCause, 
-      battery_serial, 
+      type,
+      status,
+      vehicle_id,
+      vehicle_number,
+      golf_course_id,
+      user_id,
+      userName,
+      system,
+      subTasks,
+      remarks,
+      bmCause,
+      battery_serial,
       assigned_to,
       parts,
       partsNotes,
-      images
+      images,
+      // ข้อมูลผู้อนุมัติ
+      approved_by_id,
+      approved_by_name,
+      rejection_reason
     } = body;
 
     // Validation
@@ -284,7 +288,7 @@ export async function PUT(request: Request) {
 
     // สร้างข้อมูลสำหรับอัพเดท
     const updateData: any = {};
-    
+
     if (type !== undefined) updateData.type = type;
     if (status !== undefined) updateData.status = status;
     if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id;
@@ -296,10 +300,20 @@ export async function PUT(request: Request) {
     if (subTasks !== undefined) updateData.subTasks = subTasks;
     if (remarks !== undefined) updateData.remarks = remarks?.trim();
     if (bmCause !== undefined) updateData.bmCause = bmCause;
-     if (battery_serial !== undefined) updateData.battery_serial = battery_serial?.trim();
-     if (assigned_to !== undefined) updateData.assigned_to = assigned_to || null;
-     if (partsNotes !== undefined) updateData.partsNotes = partsNotes?.trim();
-     if (images !== undefined) updateData.images = images;
+    if (battery_serial !== undefined) updateData.battery_serial = battery_serial?.trim();
+    if (assigned_to !== undefined) updateData.assigned_to = assigned_to || null;
+    if (partsNotes !== undefined) updateData.partsNotes = partsNotes?.trim();
+    if (images !== undefined) updateData.images = images;
+
+    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเป็น approved หรือ rejected
+    if (status === 'approved' || status === 'rejected') {
+      updateData.approved_by_id = approved_by_id || null;
+      updateData.approved_by_name = approved_by_name?.trim() || null;
+      updateData.approved_at = new Date();
+      if (status === 'rejected') {
+        updateData.rejection_reason = rejection_reason?.trim() || null;
+      }
+    }
 
     updateData.updatedAt = new Date();
 
@@ -330,14 +344,14 @@ export async function PUT(request: Request) {
 
         if (vehicle) {
           // เตรียมข้อมูลอะไหล่สำหรับ Serial History (เฉพาะเมื่อ approved)
-          const partsUsed = status === 'approved' && parts && Array.isArray(parts) && parts.length > 0 
+          const partsUsed = status === 'approved' && parts && Array.isArray(parts) && parts.length > 0
             ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
             : status === 'approved' && updatedJob.parts && updatedJob.parts.length > 0
-            ? updatedJob.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used})`)
-            : [];
+              ? updatedJob.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used})`)
+              : [];
 
           const actionDescription = status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
-          
+
           const serialHistoryEntry = await tx.serialHistoryEntry.create({
             data: {
               serial_number: vehicle.serial_number,

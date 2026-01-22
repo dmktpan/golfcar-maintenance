@@ -787,6 +787,21 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                                     <strong>มอบหมายโดย:</strong> {job.assigned_by_name}
                                                                 </div>
                                                             )}
+                                                            {job.approved_by_name && (
+                                                                <div className="detail-item">
+                                                                    <strong>อนุมัติโดย:</strong> {job.approved_by_name}
+                                                                </div>
+                                                            )}
+                                                            {job.approved_at && (
+                                                                <div className="detail-item">
+                                                                    <strong>วันที่อนุมัติ:</strong> {formatDate(job.approved_at)}
+                                                                </div>
+                                                            )}
+                                                            {job.rejection_reason && (
+                                                                <div className="detail-item">
+                                                                    <strong>เหตุผลที่ไม่อนุมัติ:</strong> <span style={{ color: '#dc3545' }}>{job.rejection_reason}</span>
+                                                                </div>
+                                                            )}
                                                             {((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) && (
                                                                 <div className="detail-item">
                                                                     <strong>อัปเดตล่าสุด:</strong> {formatDate((job as any).updatedAt || job.updated_at)}

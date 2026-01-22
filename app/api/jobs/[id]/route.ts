@@ -10,10 +10,10 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
   try {
     console.log('🔄 Sending Serial History to External API...');
     console.log('📝 Serial History data:', JSON.stringify(serialHistoryData, null, 2));
-    
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     const response = await fetch(`${EXTERNAL_API_BASE}/serial-history`, {
       method: 'POST',
       headers: {
@@ -27,7 +27,7 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
     });
 
     clearTimeout(timeoutId);
-    
+
     if (response.ok) {
       const result = await response.json();
       console.log('✅ Serial History sent to External API successfully');
@@ -48,7 +48,7 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
-    
+
     // ตรวจสอบ ObjectID
     if (!isValidObjectId(id)) {
       return NextResponse.json({
@@ -56,7 +56,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         message: 'Invalid job ID format'
       }, { status: 400 });
     }
-    
+
     const job = await prisma.job.findUnique({
       where: { id }
     });
@@ -104,7 +104,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const id = params.id;
     console.log('🏠 PUT /api/jobs/[id] - Job ID:', id);
-    
+
     // ตรวจสอบ ObjectID
     if (!isValidObjectId(id)) {
       return NextResponse.json({
@@ -112,27 +112,31 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         message: 'Invalid job ID format'
       }, { status: 400 });
     }
-    
+
     const body = await request.json();
     console.log('📝 Local API Request body:', JSON.stringify(body, null, 2));
 
-    const { 
-      type, 
-      status, 
-      vehicle_id, 
-      vehicle_number, 
-      golf_course_id, 
-      user_id, 
-      userName, 
-      system, 
-      subTasks, 
-      remarks, 
-      bmCause, 
-      battery_serial, 
+    const {
+      type,
+      status,
+      vehicle_id,
+      vehicle_number,
+      golf_course_id,
+      user_id,
+      userName,
+      system,
+      subTasks,
+      remarks,
+      bmCause,
+      battery_serial,
       assigned_to,
       parts,
       partsNotes,
-      images
+      images,
+      // ข้อมูลผู้อนุมัติ
+      approved_by_id,
+      approved_by_name,
+      rejection_reason
     } = body;
 
     console.log('🔍 Extracted fields:', {
@@ -188,6 +192,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       partsNotes: partsNotes?.trim(),
       images: images || []
     };
+
+    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเป็น approved หรือ rejected
+    if (status === 'approved' || status === 'rejected') {
+      updateData.approved_by_id = approved_by_id || null;
+      updateData.approved_by_name = approved_by_name?.trim() || null;
+      updateData.approved_at = new Date();
+      if (status === 'rejected') {
+        updateData.rejection_reason = rejection_reason?.trim() || null;
+      }
+    }
 
     // ใช้ transaction เพื่อจัดการ parts และ serial history
     const job = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -272,7 +286,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       // บันทึก Serial History เฉพาะการเปลี่ยนแปลงสถานะสำคัญ: assigned และ approved เท่านั้น
       const statusChanged = oldJob.status !== updatedJob.status;
       const isImportantStatusChange = statusChanged && (updatedJob.status === 'assigned' || updatedJob.status === 'approved');
-      
+
       if (isImportantStatusChange) {
         // ดึงข้อมูลรถเพื่อใช้ใน Serial History
         const vehicle = await tx.vehicle.findUnique({
@@ -281,7 +295,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         if (vehicle) {
           const actionDescription = updatedJob.status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
-          
+
           const serialHistoryEntry = await tx.serialHistoryEntry.create({
             data: {
               serial_number: vehicle.serial_number,
@@ -400,7 +414,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   } catch (error: unknown) {
     console.error('Error deleting job:', error);
-    
+
     // จัดการ Prisma errors เฉพาะ
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
@@ -410,12 +424,12 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
         }, { status: 404 });
       }
     }
-    
+
     let errorMessage = 'An unknown error occurred.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    
+
     return NextResponse.json({
       success: false,
       message: 'Failed to delete job',

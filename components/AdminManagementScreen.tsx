@@ -7,7 +7,7 @@ interface AdminManagementScreenProps {
     setView: (view: View) => void;
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-    updateUserPermissions: (userId: number, permissions: string[]) => void;
+    updateUserPermissions: (userId: number, permissions: string[]) => Promise<boolean>;
     getUserPermissions: (userId: number) => string[];
     golfCourses: GolfCourse[];
     user: User;
@@ -36,7 +36,8 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
     const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
-    const [editMode, setEditMode] = useState(false);
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [showOnlineUsersModal, setShowOnlineUsersModal] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
 
@@ -97,11 +98,11 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
 
     const handleSelectUser = (user: User) => {
         setSelectedUser(user);
-        // ดึงสิทธิ์ของผู้ใช้จาก props
-        const permissions = getUserPermissions(user.id);
+        // ดึงสิทธิ์ของผู้ใช้จาก user.permissions หรือ getUserPermissions
+        const permissions = user.permissions || getUserPermissions(user.id);
 
         // ถ้าไม่มีสิทธิ์ที่บันทึกไว้ ให้กำหนดสิทธิ์เริ่มต้นตามบทบาท
-        if (permissions.length === 0) {
+        if (!permissions || permissions.length === 0) {
             const defaultPermissions = MOCK_PERMISSIONS
                 .filter(permission => permission.roles.includes(user.role))
                 .map(permission => permission.id);
@@ -110,7 +111,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
             setCurrentUserPermissions(permissions);
         }
 
-        setEditMode(true);
+        setShowPermissionModal(true);
     };
 
     const handleRoleChange = (userId: number, newRole: UserRole) => {
@@ -139,16 +140,34 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         }
     };
 
-    const handleSavePermissions = () => {
+    const handleSavePermissions = async () => {
         if (!selectedUser) return;
 
-        // บันทึกสิทธิ์ของผู้ใช้
-        updateUserPermissions(selectedUser.id, currentUserPermissions);
+        setIsSaving(true);
+        try {
+            // บันทึกสิทธิ์ของผู้ใช้ลงฐานข้อมูล
+            const success = await updateUserPermissions(selectedUser.id, currentUserPermissions);
 
-        alert(`บันทึกสิทธิ์สำหรับ ${selectedUser.name} เรียบร้อยแล้ว`);
-        setEditMode(false);
-        setSelectedUser(null);
-        setCurrentUserPermissions([]);
+            if (success) {
+                // อัปเดต users state ด้วย permissions ใหม่
+                setUsers(prev => prev.map(u =>
+                    u.id === selectedUser.id
+                        ? { ...u, permissions: currentUserPermissions }
+                        : u
+                ));
+                alert(`บันทึกสิทธิ์สำหรับ ${selectedUser.name} เรียบร้อยแล้ว`);
+                setShowPermissionModal(false);
+                setSelectedUser(null);
+                setCurrentUserPermissions([]);
+            } else {
+                alert('เกิดข้อผิดพลาดในการบันทึกสิทธิ์ กรุณาลองใหม่อีกครั้ง');
+            }
+        } catch (error) {
+            console.error('Error saving permissions:', error);
+            alert('เกิดข้อผิดพลาดในการบันทึกสิทธิ์');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const getGolfCourseName = (id: string) => {
@@ -236,44 +255,162 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 </table>
             </div>
 
-            {editMode && selectedUser && (
-                <div className="card" style={{ marginTop: '2rem' }}>
-                    <h3>จัดการสิทธิ์สำหรับ: {selectedUser.name}</h3>
-                    <p>ตำแหน่ง: {selectedUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'หัวหน้างาน'}</p>
-
-                    <div style={{ marginTop: '1rem' }}>
-                        <h4>สิทธิ์การใช้งาน:</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                            {MOCK_PERMISSIONS.map(permission => (
-                                <div key={permission.id} className="checkbox-group">
-                                    <input
-                                        type="checkbox"
-                                        id={`permission-${permission.id}`}
-                                        checked={currentUserPermissions.includes(permission.id)}
-                                        onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
-                                        disabled={!permission.roles.includes(selectedUser.role)}
-                                    />
-                                    <label htmlFor={`permission-${permission.id}`}>
-                                        <strong>{permission.name}</strong>
-                                        <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{permission.description}</div>
-                                    </label>
-                                </div>
-                            ))}
+            {/* Permissions Modal */}
+            {showPermissionModal && selectedUser && (
+                <div
+                    className="modal-overlay animate-fadeIn"
+                    style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.6)', cursor: 'pointer' }}
+                    onClick={() => {
+                        if (!isSaving) {
+                            setShowPermissionModal(false);
+                            setSelectedUser(null);
+                            setCurrentUserPermissions([]);
+                        }
+                    }}
+                >
+                    <div
+                        className="modal-content animate-slideIn"
+                        style={{
+                            maxWidth: '700px',
+                            borderRadius: '24px',
+                            padding: '2rem',
+                            background: '#ffffff',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                            border: '1px solid rgba(0, 0, 0, 0.05)',
+                            cursor: 'default'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>
+                                    🔐 จัดการสิทธิ์สำหรับ: {selectedUser.name}
+                                </h2>
+                                <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
+                                    ตำแหน่ง: {selectedUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'หัวหน้างาน'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (!isSaving) {
+                                        setShowPermissionModal(false);
+                                        setSelectedUser(null);
+                                        setCurrentUserPermissions([]);
+                                    }
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: '1.5rem',
+                                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                                    color: '#64748b',
+                                    padding: '0.5rem',
+                                    opacity: isSaving ? 0.5 : 1
+                                }}
+                                disabled={isSaving}
+                            >
+                                ✕
+                            </button>
                         </div>
-                    </div>
 
-                    <div className="form-actions">
-                        <button className="btn-primary" onClick={handleSavePermissions}>บันทึกสิทธิ์</button>
-                        <button
-                            className="btn-secondary"
-                            onClick={() => {
-                                setEditMode(false);
-                                setSelectedUser(null);
-                                setCurrentUserPermissions([]);
-                            }}
-                        >
-                            ยกเลิก
-                        </button>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155', fontSize: '1rem' }}>สิทธิ์การใช้งาน:</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                {MOCK_PERMISSIONS.map(permission => {
+                                    const isDisabled = !permission.roles.includes(selectedUser.role);
+                                    const isChecked = currentUserPermissions.includes(permission.id);
+                                    return (
+                                        <div
+                                            key={permission.id}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                gap: '0.75rem',
+                                                padding: '1rem',
+                                                background: isDisabled ? '#f8fafc' : isChecked ? '#f0f9ff' : '#ffffff',
+                                                borderRadius: '12px',
+                                                border: `1px solid ${isDisabled ? '#e2e8f0' : isChecked ? '#0ea5e9' : '#e2e8f0'}`,
+                                                opacity: isDisabled ? 0.6 : 1,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                id={`permission-${permission.id}`}
+                                                checked={isChecked}
+                                                onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
+                                                disabled={isDisabled || isSaving}
+                                                style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    marginTop: '2px',
+                                                    cursor: isDisabled || isSaving ? 'not-allowed' : 'pointer'
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor={`permission-${permission.id}`}
+                                                style={{ cursor: isDisabled || isSaving ? 'not-allowed' : 'pointer', flex: 1 }}
+                                            >
+                                                <strong style={{ color: '#1e293b', fontSize: '0.95rem' }}>{permission.name}</strong>
+                                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                                    {permission.description}
+                                                </div>
+                                                {isDisabled && (
+                                                    <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                                                        ❌ ไม่อนุญาตสำหรับตำแหน่งนี้
+                                                    </div>
+                                                )}
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+                            <button
+                                className="btn-primary"
+                                onClick={handleSavePermissions}
+                                disabled={isSaving}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '12px',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    opacity: isSaving ? 0.7 : 1,
+                                    cursor: isSaving ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
+                                        กำลังบันทึก...
+                                    </>
+                                ) : (
+                                    <>💾 บันทึกสิทธิ์</>
+                                )}
+                            </button>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => {
+                                    setShowPermissionModal(false);
+                                    setSelectedUser(null);
+                                    setCurrentUserPermissions([]);
+                                }}
+                                disabled={isSaving}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '12px',
+                                    fontWeight: 600,
+                                    opacity: isSaving ? 0.5 : 1,
+                                    cursor: isSaving ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                ยกเลิก
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
