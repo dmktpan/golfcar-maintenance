@@ -165,13 +165,28 @@ export async function PUT(request: NextRequest) {
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
 
     // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
-    const jobData = {
+    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
+    const jobData: any = {
       ...body,
       // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี
       parts: body.parts || [],
       parts_used: body.parts_used || (body.parts ? body.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || part.quantity || 1})`) : []),
       system: body.system || 'job'
     };
+
+    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเป็น approved หรือ rejected
+    if (body.status === 'approved' || body.status === 'rejected') {
+      jobData.approved_by_id = body.approved_by_id || null;
+      jobData.approved_by_name = body.approved_by_name?.trim() || null;
+      // ถ้าไม่ได้ส่ง approved_at มา ให้สร้างใหม่
+      if (!jobData.approved_at) {
+        jobData.approved_at = new Date().toISOString();
+      }
+
+      if (body.status === 'rejected') {
+        jobData.rejection_reason = body.rejection_reason || 'ไม่ระบุเหตุผล';
+      }
+    }
 
     // ใช้ External API เท่านั้น
     console.log('🌐 Calling external API...');

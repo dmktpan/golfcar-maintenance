@@ -56,19 +56,6 @@ export async function GET() {
       }
     });
 
-    // Debug: Log approval data for approved jobs
-    const approvedJobs = jobs.filter(j => j.status === 'approved');
-    if (approvedJobs.length > 0) {
-      console.log('🔍 Debug GET /api/jobs - Approved Jobs Sample:', approvedJobs.slice(0, 3).map(j => ({
-        id: j.id,
-        vehicle: j.vehicle_number,
-        status: j.status,
-        approved_by_name: j.approved_by_name,
-        approved_at: j.approved_at,
-        approved_by_id: j.approved_by_id
-      })));
-    }
-
     return NextResponse.json({
       success: true,
       message: 'Jobs retrieved successfully',
