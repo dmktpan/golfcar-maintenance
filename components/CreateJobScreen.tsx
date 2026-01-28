@@ -38,6 +38,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
 
     // State for dynamic parts
     const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
@@ -132,11 +133,13 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         const allParts = Object.values(partsBySystem).flat();
         const searchTerm = partsSearchTerm.toLowerCase().trim();
         return allParts.filter(part =>
-            part.name.toLowerCase().includes(searchTerm)
+            part.name.toLowerCase().includes(searchTerm) ||
+            (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
     };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return; // ป้องกันการกดซ้ำ
 
         // เพิ่ม validation ที่ครอบคลุมมากขึ้น
         if (!selectedVehicle) {
@@ -175,6 +178,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         }
 
         try {
+            setIsSubmitting(true); // เริ่มส่งงาน
             // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
             const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
                 user_id: user.id.toString(),
@@ -201,6 +205,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             onJobCreate(newJob as Job);
 
         } catch (error) {
+            setIsSubmitting(false); // ยกเลิกสถานะ loading
             alert('เกิดข้อผิดพลาดในการสร้างงาน กรุณาลองใหม่อีกครั้ง');
             console.error('Error creating job:', error);
         }
@@ -285,7 +290,12 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     </div>
                     <div className="form-group">
                         <label htmlFor="vehicle-number">เบอร์รถ *</label>
-                        <input id="vehicle-number" type="text" value={jobInfo.vehicleNumber} disabled />
+                        <select id="vehicle-number" value={vehicleId} onChange={e => setVehicleId(e.target.value)} required>
+                            <option value="" disabled>-- กรุณาเลือกรถ --</option>
+                            {availableVehicles.map(v => (
+                                <option key={v.id} value={v.id}>{v.vehicle_number}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="form-group">
                         <label htmlFor="battery-serial">ซีเรียลแบต *</label>
@@ -597,7 +607,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 </div>
 
                 <div className="form-actions">
-                    <button type="submit" className="btn-success">ส่งงาน</button>
+                    <button type="submit" className="btn-success" disabled={isSubmitting}>
+                        {isSubmitting ? 'กำลังส่งงาน...' : 'ส่งงาน'}
+                    </button>
                     <button type="button" className="btn-secondary" onClick={() => setView('dashboard')}>ยกเลิก</button>
                 </div>
             </form>
@@ -712,6 +724,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                             >
                                                 <div className="part-name">{part.name}</div>
                                                 <div className="part-details">
+                                                    {part.part_number && (
+                                                        <span className="part-code">[รหัส: {part.part_number}]</span>
+                                                    )}
                                                     <span className="part-unit">({part.unit})</span>
                                                 </div>
                                                 {selectedPart && (

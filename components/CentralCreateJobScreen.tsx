@@ -40,6 +40,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
 
     // State for dynamic parts
     const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
@@ -143,12 +144,14 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
         const allParts = Object.values(partsBySystem).flat();
         const searchTerm = partsSearchTerm.toLowerCase().trim();
         return allParts.filter(part =>
-            part.name.toLowerCase().includes(searchTerm)
+            part.name.toLowerCase().includes(searchTerm) ||
+            (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return; // ป้องกันการกดซ้ำ
 
         if (!selectedGolfCourseId) {
             alert('กรุณาเลือกสนามกอล์ฟ');
@@ -188,6 +191,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
         }
 
         try {
+            setIsSubmitting(true); // เริ่มส่งงาน
             // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
             const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
                 user_id: user.id.toString(),
@@ -214,6 +218,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
             onJobCreate(newJob as Job);
 
         } catch (error) {
+            setIsSubmitting(false); // ยกเลิกสถานะ loading
             alert('เกิดข้อผิดพลาดในการสร้างงาน กรุณาลองใหม่อีกครั้ง');
             console.error('Error creating job:', error);
         }
@@ -510,8 +515,8 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                 />
 
                 <div className="form-actions">
-                    <button type="submit" className={`btn-primary ${styles.createJobBtn}`}>
-                        สร้างงานซ่อม
+                    <button type="submit" className={`btn-primary ${styles.createJobBtn}`} disabled={isSubmitting}>
+                        {isSubmitting ? 'กำลังสร้างงาน...' : 'สร้างงานซ่อม'}
                     </button>
                     <button
                         type="button"
@@ -597,8 +602,13 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                                                 className={`part-item ${selectedParts.some(p => p.id === part.id) ? 'selected' : ''}`}
                                                 onClick={() => handlePartSelection(part)}
                                             >
-                                                <span className="part-name">{part.name}</span>
-                                                <span className="part-unit">({part.unit})</span>
+                                                <div className="part-name">{part.name}</div>
+                                                <div className="part-details">
+                                                    {part.part_number && (
+                                                        <span className="part-code">[รหัส: {part.part_number}]</span>
+                                                    )}
+                                                    <span className="part-unit">({part.unit})</span>
+                                                </div>
                                                 {selectedParts.some(p => p.id === part.id) && (
                                                     <span className="selected-indicator">✓</span>
                                                 )}

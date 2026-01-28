@@ -17,18 +17,18 @@ interface JobDetailsModalProps {
 }
 
 const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = [], onClose }: JobDetailsModalProps) => {
-  
+
   // ปรับปรุงฟังก์ชัน getPartName ให้รองรับข้อมูลจากหลายแหล่ง
   const getPartName = (part: any) => {
     // ลำดับความสำคัญ: name > part_name > ค้นหาจาก part_id
     if (part.name) {
       return part.name;
     }
-    
+
     if (part.part_name) {
       return part.part_name;
     }
-    
+
     // ถ้ามี part_id ให้ค้นหาจาก PARTS_BY_SYSTEM_DISPLAY
     if (part.part_id) {
       for (const system of Object.values(PARTS_BY_SYSTEM_DISPLAY)) {
@@ -39,7 +39,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
       }
       return `อะไหล่ ID: ${part.part_id}`;
     }
-    
+
     // ถ้าไม่มีข้อมูลใดๆ
     return 'ไม่ระบุชื่ออะไหล่';
   };
@@ -49,7 +49,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
     if (!partsUsageLog || partsUsageLog.length === 0) {
       return [];
     }
-    
+
     // หา logs ที่เกี่ยวข้องกับ job นี้
     // ตรวจสอบทั้ง jobId ที่ตรงกันทั้งหมด และ jobId ที่เป็นส่วนหน้าของ ObjectId
     let jobUsageLogs = partsUsageLog.filter(log => {
@@ -59,35 +59,35 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
       const startsWithJobId = job.id.startsWith(log.jobId.toString());
       // ตรวจสอบว่า log.jobId เริ่มต้นด้วย job.id หรือไม่ (สำหรับกรณีที่ job.id เป็นส่วนหน้า)
       const logStartsWithJobId = log.jobId.toString().startsWith(job.id);
-      
+
       return exactMatch || startsWithJobId || logStartsWithJobId;
     });
-    
+
     // ถ้ายังไม่เจอ ให้ลองค้นหาจาก vehicleNumber
     if (jobUsageLogs.length === 0) {
-      jobUsageLogs = partsUsageLog.filter(log => 
+      jobUsageLogs = partsUsageLog.filter(log =>
         log.vehicleNumber === job.vehicle_number ||
         log.vehicleSerial === job.vehicle_number
       );
     }
-    
+
     if (!jobUsageLogs || jobUsageLogs.length === 0) {
       return [];
     }
-    
+
     // แปลง PartsUsageLog เป็น format ที่ใช้แสดงผล
     const parts = jobUsageLogs.map(log => ({
       name: log.partName, // ใช้ partName แทน name
       quantity_used: log.quantityUsed,
       system: log.system
     }));
-    
+
     return parts;
   };
 
   // ใช้ข้อมูลอะไหล่จาก job.parts หรือจาก PartsUsageLog หรือจาก job.parts_used
   let partsToDisplay = [];
-  
+
   // ลำดับความสำคัญขึ้นอยู่กับสถานะงาน:
   // - สำหรับงาน pending: job.parts > job.parts_used
   // - สำหรับงาน approved/completed: PartsUsageLog > job.parts > job.parts_used
@@ -174,7 +174,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
       }
 
       let date: Date;
-      
+
       // ถ้าเป็น Date object อยู่แล้ว
       if (dateInput instanceof Date) {
         date = dateInput;
@@ -185,7 +185,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
         if (dateInput.trim() === '') {
           return 'ไม่ระบุวันที่';
         }
-        
+
         // ถ้าเป็น timestamp (number string)
         if (/^\d+$/.test(dateInput)) {
           date = new Date(parseInt(dateInput));
@@ -288,6 +288,13 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                   หมายเลขรถ:
                 </label>
                 <span>{job.vehicle_number}</span>
+              </div>
+              <div className={styles['info-item']}>
+                <label>
+                  <span className={styles['label-icon']}>🔢</span>
+                  ซีเรียลรถ:
+                </label>
+                <span>{vehicleInfo?.serial_number || '-'}</span>
               </div>
               <div className={styles['info-item']}>
                 <label>
@@ -398,10 +405,10 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                       <tr key={`part-${index}-${getPartName(part).slice(0, 10)}`}>
                         <td>{getPartName(part)}</td>
                         <td>
-                            <span className={styles['quantity-badge']}>
-                              {part.quantity_used || 'ไม่ระบุ'}
-                            </span>
-                          </td>
+                          <span className={styles['quantity-badge']}>
+                            {part.quantity_used || 'ไม่ระบุ'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -461,7 +468,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                 {job.images.map((image, index) => {
                   // ตรวจสอบและสร้าง URL ที่ถูกต้องสำหรับการแสดงผล
                   let displaySrc = image;
-                  
+
                   // ถ้าเป็น external URL ให้ใช้ตามเดิม
                   if (image.startsWith('http://') || image.startsWith('https://')) {
                     displaySrc = image;
@@ -474,12 +481,12 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                   else {
                     displaySrc = `/api/uploads/maintenance/${image}`;
                   }
-                  
+
                   return (
                     <div key={`image-${index}-${image.slice(-10)}`} className={styles['image-item']}>
-                      <Image 
-                        src={displaySrc} 
-                        alt={`รูปภาพงาน ${index + 1}`} 
+                      <Image
+                        src={displaySrc}
+                        alt={`รูปภาพงาน ${index + 1}`}
                         className={styles['job-image']}
                         width={200}
                         height={150}

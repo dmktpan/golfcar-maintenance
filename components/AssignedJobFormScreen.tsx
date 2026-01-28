@@ -63,6 +63,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [additionalSubTasks, setAdditionalSubTasks] = useState<string[]>([]);
     const [newSubTask, setNewSubTask] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
 
     // โหลดข้อมูลอะไหล่จากระบบ stock เมื่อ component mount
     useEffect(() => {
@@ -123,8 +124,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
         // ถ้ามีคำค้นหา ให้ค้นหาจากทุก category
         const allParts = Object.values(partsBySystem).flat();
+        const searchTerm = partsSearchTerm.toLowerCase().trim();
         return allParts.filter((part: CategorizedPart) =>
-            part.name.toLowerCase().includes(partsSearchTerm.toLowerCase())
+            part.name.toLowerCase().includes(searchTerm) ||
+            (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
     };
 
@@ -172,6 +175,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return; // ป้องกันการกดซ้ำ
 
         const allSubTasks = [...subTasks, ...additionalSubTasks];
         // แก้ไข: เฉพาะ PM เท่านั้นที่ต้องมีงานย่อย สำหรับ BM และ RC ไม่บังคับ
@@ -187,6 +191,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         }
 
         try {
+            setIsSubmitting(true); // เริ่มส่งงาน
             // อัปเดตข้อมูลงาน - ส่งข้อมูลครบถ้วนตาม API requirements
             const updatedJob: Job = {
                 ...job,
@@ -215,6 +220,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             onJobUpdate(updatedJob);
 
         } catch (error) {
+            setIsSubmitting(false); // ยกเลิกสถานะ loading
             alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
             console.error('Error updating job:', error);
         }
@@ -564,7 +570,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                 </div>
 
                 <div className="form-actions">
-                    <button type="submit" className="btn-success">บันทึกและส่งงาน</button>
+                    <button type="submit" className="btn-success" disabled={isSubmitting}>
+                        {isSubmitting ? 'กำลังส่งงาน...' : 'บันทึกและส่งงาน'}
+                    </button>
                     <button type="button" className="btn-secondary" onClick={() => setView('dashboard')}>ยกเลิก</button>
                 </div>
             </form>
@@ -657,7 +665,12 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             return (
                                                 <div key={part.id} className="part-item">
                                                     <div className="part-name">{part.name}</div>
-                                                    <div className="part-details">({part.unit})</div>
+                                                    <div className="part-details">
+                                                        {part.part_number && (
+                                                            <span className="part-code">[รหัส: {part.part_number}]</span>
+                                                        )}
+                                                        <span>({part.unit})</span>
+                                                    </div>
                                                     {selectedPart && (
                                                         <div className="selected-quantity">
                                                             เลือกแล้ว: {selectedPart.quantity} {part.unit}

@@ -1,4 +1,3 @@
-
 :root {
   --primary-color: #667eea;
   --primary-dark: #5a67d8;
@@ -12,7 +11,7 @@
   --success-color: #48bb78;
   --warning-color: #f6ad55;
   --danger-color: #f56565;
-  
+
   /* Admin Dashboard Colors */
   --admin-bg: #1A2533;
   --admin-card-bg: #2C3E50;
@@ -21,19 +20,19 @@
   --welcome-bg-color: #DFF0D8;
   --welcome-text-color: #3C763D;
   --welcome-border-color: #D6E9C6;
-  
+
   /* Bulk Upload Colors */
   --info-bg: #E8F4FD;
   --info-border: #B3D9FF;
   --course-tag-bg: #F0F8FF;
   --course-tag-border: #87CEEB;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
-  
+
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s ease;
@@ -62,18 +61,40 @@ body {
 }
 
 /* Global Typography */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.3;
   margin-bottom: 0.5rem;
 }
 
-h1 { font-size: 2.5rem; }
-h2 { font-size: 2rem; }
-h3 { font-size: 1.5rem; }
-h4 { font-size: 1.25rem; }
-h5 { font-size: 1.125rem; }
-h6 { font-size: 1rem; }
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
+
+h5 {
+  font-size: 1.125rem;
+}
+
+h6 {
+  font-size: 1rem;
+}
 
 p {
   margin-bottom: 1rem;
@@ -131,25 +152,28 @@ p {
 }
 
 .header-nav {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
 }
+
 .header-nav a {
-    color: var(--text-light);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    opacity: 0.8;
-    transition: opacity 0.2s;
+  color: var(--text-light);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
+
 .header-nav a:hover {
-    opacity: 1;
+  opacity: 1;
 }
+
 .header-nav svg {
-    position: relative;
-    top: -1px;
+  position: relative;
+  top: -1px;
 }
 
 
@@ -171,7 +195,8 @@ p {
   white-space: nowrap;
 }
 
-button, .button {
+button,
+.button {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -204,6 +229,7 @@ button:disabled {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -214,6 +240,7 @@ button:disabled {
     opacity: 0;
     transform: scale(0.9) translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -225,6 +252,7 @@ button:disabled {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+
   to {
     opacity: 0;
     transform: scale(0.9) translateY(-20px);
@@ -249,21 +277,21 @@ button:disabled {
     margin: 1rem;
     max-width: calc(100vw - 2rem);
   }
-  
+
   .modal-header {
     padding: 1rem;
   }
-  
+
   .modal-body {
     padding: 1rem;
   }
-  
+
   .modal-footer {
     padding: 1rem;
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .modal-footer button {
     width: 100%;
   }
@@ -365,12 +393,13 @@ button:disabled {
 }
 
 .btn-accent {
-    background-color: var(--admin-accent-color);
-    color: var(--admin-bg);
-    font-weight: 700;
+  background-color: var(--admin-accent-color);
+  color: var(--admin-bg);
+  font-weight: 700;
 }
+
 .btn-accent:hover {
-    filter: brightness(1.1);
+  filter: brightness(1.1);
 }
 
 
@@ -469,9 +498,17 @@ textarea {
   justify-content: space-between;
 }
 
-.job-card.status-pending { border-color: var(--warning-color); }
-.job-card.status-approved { border-color: var(--success-color); }
-.job-card.status-rejected { border-color: var(--danger-color); }
+.job-card.status-pending {
+  border-color: var(--warning-color);
+}
+
+.job-card.status-approved {
+  border-color: var(--success-color);
+}
+
+.job-card.status-rejected {
+  border-color: var(--danger-color);
+}
 
 
 .job-card-header {
@@ -485,12 +522,14 @@ textarea {
   font-size: 0.9rem;
   word-break: break-word;
 }
+
 .job-card-body p strong {
-    font-weight: 500;
+  font-weight: 500;
 }
+
 .job-card-body ul {
-    list-style-position: inside;
-    padding-left: 0;
+  list-style-position: inside;
+  padding-left: 0;
 }
 
 .job-card-footer {
@@ -503,234 +542,348 @@ textarea {
 }
 
 .status-badge {
-    display: inline-block;
-    padding: 0.25em 0.6em;
-    font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.25rem;
-    color: var(--text-light);
+  display: inline-block;
+  padding: 0.25em 0.6em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  color: var(--text-light);
 }
 
-.status-badge.pending { background-color: var(--warning-color); color: #000; }
-.status-badge.approved { background-color: var(--success-color); }
-.status-badge.rejected { background-color: var(--danger-color); }
+.status-badge.pending {
+  background-color: var(--warning-color);
+  color: #000;
+}
+
+.status-badge.approved {
+  background-color: var(--success-color);
+}
+
+.status-badge.rejected {
+  background-color: var(--danger-color);
+}
 
 .parts-table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
-.parts-table th, .parts-table td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
+
+.parts-table th,
+.parts-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
 }
+
 .parts-table th {
-    font-weight: 700;
-    background-color: var(--accent-color);
+  font-weight: 700;
+  background-color: var(--accent-color);
 }
 
 .error-message {
-    color: var(--danger-color);
-    margin-top: 0.5rem;
-    text-align: center;
+  color: var(--danger-color);
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
 .nav-buttons {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    flex-wrap: wrap;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 /* --- Create Job Screen Specific --- */
 .info-box {
-    background-color: var(--primary-color);
-    color: var(--text-light);
-    border-radius: 6px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
 }
+
 .info-box h4 {
-    margin-bottom: 0.5rem;
-    font-weight: 700;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
 }
+
 .info-box p {
-    margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
+
 .form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
 }
+
 .sub-task-selection {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 0.75rem;
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }
+
 .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
+
 .display-box {
-    background-color: var(--accent-color);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 1rem;
-    min-height: 50px;
+  background-color: var(--accent-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  min-height: 50px;
 }
+
 .part-selection-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
+
 .part-selection-item input {
-    width: 80px;
+  width: 80px;
 }
+
 .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
 /* --- Admin Dashboard --- */
 .welcome-banner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--welcome-border-color);
-    border-radius: 8px;
-    background-color: var(--welcome-bg-color);
-    color: var(--welcome-text-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--welcome-border-color);
+  border-radius: 8px;
+  background-color: var(--welcome-bg-color);
+  color: var(--welcome-text-color);
 }
+
 .dismiss-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    line-height: 1;
-    cursor: pointer;
-    color: inherit;
-    opacity: 0.7;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
 }
+
 .dismiss-btn:hover {
-    opacity: 1;
+  opacity: 1;
 }
 
 .admin-dashboard {
-    background-color: var(--admin-bg);
-    color: var(--admin-text-color);
-    padding: 2rem;
-    border-radius: 12px;
+  background-color: var(--admin-bg);
+  color: var(--admin-text-color);
+  padding: 2rem;
+  border-radius: 12px;
 }
+
 .admin-dashboard-title {
-    text-align: center;
-    font-size: 2rem;
-    margin-bottom: 2rem;
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 2rem;
 }
+
 .admin-dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
+
 .admin-card {
-    background-color: var(--admin-card-bg);
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--admin-card-bg);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
 .admin-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }
+
 .admin-card-icon {
-    color: var(--admin-accent-color);
-    margin-bottom: 1rem;
+  color: var(--admin-accent-color);
+  margin-bottom: 1rem;
 }
+
 .admin-card-title {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-light);
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-light);
 }
+
 .admin-card-description {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    flex-grow: 1;
-    margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  flex-grow: 1;
+  margin-bottom: 1.5rem;
 }
 
 
 @media (max-width: 992px) {
-    .header-nav span {
-        display: none;
-    }
-    .header-nav {
-        gap: 0.8rem;
-    }
-    .header-nav a {
-        padding: 0.5rem;
-    }
+  .header-nav span {
+    display: none;
+  }
+
+  .header-nav {
+    gap: 0.8rem;
+  }
+
+  .header-nav a {
+    padding: 0.5rem;
+  }
 }
 
 
 /* Global Utility Classes */
-.text-center { text-align: center; }
-.text-left { text-align: left; }
-.text-right { text-align: right; }
+.text-center {
+  text-align: center;
+}
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
+.text-left {
+  text-align: left;
+}
 
-.gap-1 { gap: 0.25rem; }
-.gap-2 { gap: 0.5rem; }
-.gap-3 { gap: 0.75rem; }
-.gap-4 { gap: 1rem; }
+.text-right {
+  text-align: right;
+}
 
-.mb-1 { margin-bottom: 0.25rem; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-3 { margin-bottom: 0.75rem; }
-.mb-4 { margin-bottom: 1rem; }
+.flex {
+  display: flex;
+}
 
-.mt-1 { margin-top: 0.25rem; }
-.mt-2 { margin-top: 0.5rem; }
-.mt-3 { margin-top: 0.75rem; }
-.mt-4 { margin-top: 1rem; }
+.flex-col {
+  flex-direction: column;
+}
 
-.p-1 { padding: 0.25rem; }
-.p-2 { padding: 0.5rem; }
-.p-3 { padding: 0.75rem; }
-.p-4 { padding: 1rem; }
+.items-center {
+  align-items: center;
+}
 
-.rounded { border-radius: 0.375rem; }
-.rounded-lg { border-radius: 0.5rem; }
-.rounded-xl { border-radius: 0.75rem; }
+.justify-center {
+  justify-content: center;
+}
 
-.shadow { box-shadow: var(--shadow-sm); }
-.shadow-md { box-shadow: var(--shadow-md); }
-.shadow-lg { box-shadow: var(--shadow-lg); }
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 0.25rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-3 {
+  gap: 0.75rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
+
+.mb-4 {
+  margin-bottom: 1rem;
+}
+
+.mt-1 {
+  margin-top: 0.25rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.p-1 {
+  padding: 0.25rem;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.p-3 {
+  padding: 0.75rem;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.rounded {
+  border-radius: 0.375rem;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+
+.shadow {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
 
 /* Global Animation Classes */
 .fade-in {
@@ -738,8 +891,13 @@ textarea {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .slide-up {
@@ -751,6 +909,7 @@ textarea {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -762,59 +921,73 @@ textarea {
   .container {
     padding: 1rem;
   }
-  
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.75rem; }
-  h3 { font-size: 1.25rem; }
-  
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
   .btn {
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
-    min-height: 44px; /* เพิ่มขนาดขั้นต่ำสำหรับ touch */
+    min-height: 44px;
+    /* เพิ่มขนาดขั้นต่ำสำหรับ touch */
   }
-  
+
   .header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
     padding: 1rem;
   }
+
   .user-info {
     width: 100%;
     justify-content: space-between;
   }
+
   .header-nav {
-      width: 100%;
-      justify-content: space-around;
-      padding-top: 0.5rem;
-      border-top: 1px solid rgba(255,255,255,0.2);
-      flex-wrap: wrap;
-      gap: 0.5rem;
+    width: 100%;
+    justify-content: space-around;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
+
   .form-actions {
     justify-content: stretch;
     flex-direction: column;
     gap: 0.75rem;
   }
+
   .form-actions button {
     flex-grow: 1;
     min-height: 44px;
   }
-  
+
   .form-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .form-group {
     margin-bottom: 1rem;
   }
-  
+
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -823,68 +996,71 @@ textarea {
   input[type="file"],
   select,
   textarea {
-    font-size: 16px; /* ป้องกันการซูมอัตโนมัติบน iOS */
+    font-size: 16px;
+    /* ป้องกันการซูมอัตโนมัติบน iOS */
     padding: 0.75rem;
-    min-height: 44px; /* เพิ่มขนาดขั้นต่ำสำหรับ touch */
+    min-height: 44px;
+    /* เพิ่มขนาดขั้นต่ำสำหรับ touch */
   }
-  
+
   .sub-task-selection {
     grid-template-columns: 1fr;
   }
-  
+
   .nav-buttons {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .nav-buttons button {
     width: 100%;
     min-height: 44px;
   }
-  
+
   .page-header h1 {
     font-size: 1.5rem;
   }
-  
+
   .job-list {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   .golf-course-management .tab-navigation {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .golf-course-management .section-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .golf-course-management .header-controls {
     width: 100%;
     margin-top: 1rem;
   }
-  
+
   .assigned-job-info {
     padding: 1rem;
   }
-  
+
   .parts-log-table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
-    -webkit-overflow-scrolling: touch; /* เพิ่ม smooth scrolling บน iOS */
+    -webkit-overflow-scrolling: touch;
+    /* เพิ่ม smooth scrolling บน iOS */
   }
-  
+
   .parts-table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* เพิ่ม responsive สำหรับ modal */
   .modal-content {
     width: 95%;
@@ -893,19 +1069,20 @@ textarea {
     max-height: 90vh;
     overflow-y: auto;
   }
-  
+
   /* เพิ่ม responsive สำหรับ card */
   .card {
     margin-bottom: 1rem;
     padding: 1rem;
   }
-  
+
   /* เพิ่ม responsive สำหรับ table */
   table {
     font-size: 0.875rem;
   }
-  
-  th, td {
+
+  th,
+  td {
     padding: 0.5rem 0.25rem;
   }
 }
@@ -914,142 +1091,156 @@ textarea {
   .container {
     padding: 0.75rem;
   }
-  
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.125rem; }
-  
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+
   .btn {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
-    min-height: 48px; /* เพิ่มขนาดสำหรับ mobile */
-    width: 100%; /* ปุ่มเต็มความกว้างบน mobile */
+    min-height: 48px;
+    /* เพิ่มขนาดสำหรับ mobile */
+    width: 100%;
+    /* ปุ่มเต็มความกว้างบน mobile */
   }
-  
+
   .header-nav a {
-      flex-direction: column;
-      gap: 0.2rem;
-      font-size: 0.75rem;
-      padding: 0.5rem 0.25rem;
-      min-height: 48px;
-      justify-content: center;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.25rem;
+    min-height: 48px;
+    justify-content: center;
   }
-   .admin-dashboard-grid {
-      grid-template-columns: 1fr;
+
+  .admin-dashboard-grid {
+    grid-template-columns: 1fr;
   }
-  
+
   .header-title {
-      font-size: 1.2rem;
+    font-size: 1.2rem;
   }
-  
+
   .header-title svg {
-      width: 24px;
-      height: 24px;
+    width: 24px;
+    height: 24px;
   }
-  
-  button, .button {
-      padding: 0.75rem 1rem;
-      font-size: 0.9rem;
-      min-height: 48px;
-      width: 100%;
+
+  button,
+  .button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-height: 48px;
+    width: 100%;
   }
-  
+
   .modal-content {
-      width: 98%;
-      padding: 1rem;
-      margin: 0.5rem;
-      max-height: 95vh;
+    width: 98%;
+    padding: 1rem;
+    margin: 0.5rem;
+    max-height: 95vh;
   }
-  
+
   .modal-header h3 {
-      font-size: 1.1rem;
+    font-size: 1.1rem;
   }
-  
+
   .modal-body {
-      padding: 1rem;
+    padding: 1rem;
   }
-  
+
   .parts-grid {
-      grid-template-columns: 1fr;
+    grid-template-columns: 1fr;
   }
-  
+
   .part-item {
-      padding: 0.75rem;
+    padding: 0.75rem;
   }
-  
+
   .selected-part-item {
-      width: 100%;
+    width: 100%;
   }
-  
+
   .task-button {
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
-      min-height: 48px;
-      width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    min-height: 48px;
+    width: 100%;
   }
-  
+
   .admin-card {
-      padding: 1rem;
+    padding: 1rem;
   }
-  
+
   .parts-log-table {
-      font-size: 0.8rem;
+    font-size: 0.8rem;
   }
-  
+
   .parts-log-table th,
   .parts-log-table td {
-      padding: 0.5rem 0.4rem;
+    padding: 0.5rem 0.4rem;
   }
-  
+
   /* เพิ่ม responsive สำหรับ form */
   .form-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  
+
   .form-group {
     margin-bottom: 0.75rem;
   }
-  
-  input, select, textarea {
+
+  input,
+  select,
+  textarea {
     font-size: 16px;
     padding: 0.875rem;
     min-height: 48px;
   }
-  
+
   /* เพิ่ม responsive สำหรับ navigation */
   .tab-navigation {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .tab-button {
     min-height: 48px;
     padding: 0.75rem;
   }
-  
+
   /* เพิ่ม responsive สำหรับ filter */
   .filter-buttons {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .filter-button {
     min-height: 48px;
     padding: 0.75rem;
     width: 100%;
   }
-  
+
   /* เพิ่ม responsive สำหรับ stats */
   .stat-card {
     padding: 1rem;
     text-align: center;
   }
-  
+
   .stat-number {
     font-size: 2rem;
   }
-  
+
   .stat-label {
     font-size: 0.8rem;
   }
@@ -1057,20 +1248,21 @@ textarea {
 
 /* Touch-friendly interactions */
 @media (hover: none) and (pointer: coarse) {
+
   .btn:hover,
   button:hover,
   .button:hover {
     transform: none;
     box-shadow: none;
   }
-  
+
   .btn:active,
   button:active,
   .button:active {
     transform: scale(0.98);
     transition: transform 0.1s ease;
   }
-  
+
   .card:hover {
     transform: none;
     box-shadow: var(--shadow-md);
@@ -1094,6 +1286,7 @@ textarea:focus,
 
 /* Prevent zoom on input focus on iOS */
 @media screen and (-webkit-min-device-pixel-ratio: 0) {
+
   select,
   textarea,
   input[type="text"],
@@ -1131,11 +1324,11 @@ textarea:focus,
   .section-spacing {
     margin-bottom: 1.5rem;
   }
-  
+
   .content-spacing {
     margin-bottom: 1rem;
   }
-  
+
   .tight-spacing {
     margin-bottom: 0.5rem;
   }
@@ -1162,16 +1355,23 @@ textarea:focus,
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
+
 @media print {
+
   .btn,
   .header,
   .no-print {
     display: none !important;
   }
-  
+
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
@@ -1180,173 +1380,173 @@ textarea:focus,
 
 /* Parts Log Filters */
 .parts-log-filters {
-    background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e9ecef;
 }
 
 .filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .filter-row:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .filter-group {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .filter-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-    font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  font-size: 0.9rem;
 }
 
 .filter-group input,
 .filter-group select {
-    padding: 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.9rem;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 .filter-group input:focus,
 .filter-group select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .filter-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
 }
 
 .sort-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .sort-controls label {
-    font-weight: 600;
-    color: var(--text-color);
+  font-weight: 600;
+  color: var(--text-color);
 }
 
 .sort-controls select {
-    padding: 0.5rem;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.9rem;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 /* Results Summary */
 .results-summary {
-    margin-bottom: 1rem;
-    padding: 0.75rem 1rem;
-    background-color: #e3f2fd;
-    border-left: 4px solid var(--primary-color);
-    border-radius: 4px;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #e3f2fd;
+  border-left: 4px solid var(--primary-color);
+  border-radius: 4px;
 }
 
 .results-summary p {
-    margin: 0;
-    font-weight: 600;
-    color: var(--primary-color);
+  margin: 0;
+  font-weight: 600;
+  color: var(--primary-color);
 }
 
 /* Parts Log Table */
 .parts-log-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    border-radius: 8px;
-    overflow: hidden;
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .parts-log-table th {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 1rem 0.75rem;
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.9rem;
-    white-space: nowrap;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .parts-log-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 0.9rem;
-    white-space: nowrap;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .parts-log-table tbody tr:hover {
-    background-color: #f8f9fa;
+  background-color: #f8f9fa;
 }
 
 .parts-log-table tbody tr:last-child td {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .no-data {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-    padding: 2rem !important;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem !important;
 }
 
 .no-access-message {
-    text-align: center;
-    padding: 3rem 2rem;
-    background: #f8f9fa;
-    border-radius: 12px;
-    border: 2px solid #e9ecef;
-    margin: 2rem 0;
+  text-align: center;
+  padding: 3rem 2rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  margin: 2rem 0;
 }
 
 .no-access-message p {
-    color: #6c757d;
-    font-size: 1.1rem;
-    margin: 0;
-    line-height: 1.6;
+  color: #6c757d;
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.6;
 }
 
 /* Job Type Badges */
 .job-type-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .job-type-badge.pm {
-    background-color: #d4edda;
-    color: #155724;
+  background-color: #d4edda;
+  color: #155724;
 }
 
 .job-type-badge.bm {
-    background-color: #f8d7da;
-    color: #721c24;
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 .job-type-badge.recondition {
-    background-color: #fff3cd;
-    color: #856404;
+  background-color: #fff3cd;
+  color: #856404;
 }
 
 /* Parts Management Screen Styles - Enhanced */
@@ -1652,7 +1852,7 @@ textarea:focus,
   .parts-log-container {
     padding: 0.5rem;
   }
-  
+
   .filter-row {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
@@ -1664,35 +1864,35 @@ textarea:focus,
     gap: 1rem;
     text-align: center;
   }
-  
+
   .parts-log-header-actions {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .filter-row {
     grid-template-columns: 1fr;
   }
-  
+
   .filter-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .sort-controls {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .parts-log-table {
     font-size: 0.8rem;
   }
-  
+
   .parts-log-table th,
   .parts-log-table td {
     padding: 0.5rem 0.25rem;
   }
-  
+
   .results-header {
     flex-direction: column;
     gap: 0.5rem;
@@ -1704,18 +1904,19 @@ textarea:focus,
   .parts-log-filters {
     padding: 1rem;
   }
-  
+
   .parts-log-table th,
   .parts-log-table td {
     padding: 0.4rem 0.2rem;
     font-size: 0.75rem;
   }
-  
+
   .status-badge {
     padding: 0.2rem 0.5rem;
     font-size: 0.7rem;
   }
 }
+
 /* Serial History Styles */
 .serial-history-list {
   display: flex;
@@ -1845,135 +2046,135 @@ textarea:focus,
 }
 
 .filter-section {
-    margin-bottom: 1.5rem;
-    background-color: var(--accent-color);
-    padding: 1rem;
-    border-radius: 8px;
+  margin-bottom: 1.5rem;
+  background-color: var(--accent-color);
+  padding: 1rem;
+  border-radius: 8px;
 }
 
 .search-box {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 
 .search-box input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 1rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
 }
 
 .filter-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .filter-group {
-    display: flex;
-    flex-direction: column;
-    min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
 }
 
 .filter-group label {
-    margin-bottom: 0.3rem;
-    font-weight: 500;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
 }
 
 .filter-group select,
 .filter-group input {
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
 }
 
 .history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .history-card {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border-left: 4px solid var(--primary-color);
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border-left: 4px solid var(--primary-color);
 }
 
 .history-card-header {
-    padding: 1rem;
-    background-color: var(--accent-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 1rem;
+  background-color: var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .history-date {
-    font-size: 0.9rem;
-    color: var(--text-color);
-    opacity: 0.8;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  opacity: 0.8;
 }
 
 .history-card-body {
-    padding: 1rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
+  padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
 .history-details {
-    flex: 1;
-    min-width: 300px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .history-parts {
-    flex: 1;
-    min-width: 250px;
+  flex: 1;
+  min-width: 250px;
 }
 
 .history-card-footer {
-    padding: 1rem;
-    background-color: #f9f9f9;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .no-data {
-    text-align: center;
-    padding: 2rem;
-    color: #666;
-    font-style: italic;
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
 }
 
 /* MultiAssignScreen Styles */
 .assignment-item {
-    background-color: var(--accent-color);
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
+  background-color: var(--accent-color);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
 }
 
 .assignment-actions {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: flex-end;
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .full-width {
-    grid-column: 1 / -1;
+  grid-column: 1 / -1;
 }
 
 .success-message {
-    background-color: var(--welcome-bg-color);
-    color: var(--welcome-text-color);
-    border: 1px solid var(--welcome-border-color);
-    padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    font-weight: 500;
+  background-color: var(--welcome-bg-color);
+  color: var(--welcome-text-color);
+  border: 1px solid var(--welcome-border-color);
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 500;
 }
 
 /* Admin Management Styles */
@@ -2611,57 +2812,57 @@ textarea:focus,
   .golf-course-management {
     padding: 1rem;
   }
-  
+
   .golf-course-management .header-section {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .golf-course-management .header-controls {
     width: 100%;
     justify-content: flex-start;
   }
-  
+
   .golf-course-management .tab-navigation {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .golf-course-management .tab-button {
     width: 100%;
   }
-  
+
   .golf-course-management .section-header {
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
   }
-  
+
   .golf-course-management .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .golf-course-management .filter-controls {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .golf-course-management .bulk-actions {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .golf-course-management .data-table {
     font-size: 0.8rem;
   }
-  
+
   .golf-course-management .data-table th,
   .golf-course-management .data-table td {
     padding: 0.5rem 0.25rem;
   }
-  
+
   .golf-course-management .modal-content {
     width: 95%;
     max-height: 90vh;
@@ -2672,13 +2873,13 @@ textarea:focus,
   .golf-course-management h1 {
     font-size: 1.5rem;
   }
-  
+
   .golf-course-management .header-controls {
     flex-direction: column;
     width: 100%;
   }
-  
-  .golf-course-management .header-controls > * {
+
+  .golf-course-management .header-controls>* {
     width: 100%;
     text-align: center;
   }
@@ -2727,6 +2928,7 @@ textarea:focus,
 .vehicles-section {
   margin-bottom: 30px;
 }
+
 /* Dashboard Styles */
 .dashboard-container {
   width: 100%;
@@ -2921,16 +3123,16 @@ textarea:focus,
   .job-info-grid {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .filter-controls {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .filter-buttons {
     width: 100%;
   }
-  
+
   .filter-btn {
     flex: 1;
     text-align: center;
@@ -2945,666 +3147,724 @@ textarea:focus,
 
 /* Maintenance Categories Styling */
 .maintenance-categories {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .category-section {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background-color: #fafafa;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
 }
 
 .category-title {
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
 }
 
 .task-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .task-button {
-    padding: 0.75rem 1rem;
-    border: 2px solid #007bff;
-    background-color: white;
-    color: #007bff;
-    border-radius: 25px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
+  padding: 0.75rem 1rem;
+  border: 2px solid #007bff;
+  background-color: white;
+  color: #007bff;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .task-button:hover {
-    background-color: #e3f2fd;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+  background-color: #e3f2fd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 }
 
 .task-button.selected {
-    background-color: #007bff;
-    color: white;
-    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+  background-color: #007bff;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .task-button.selected:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
 }
 
 /* Responsive design for task buttons */
 @media (max-width: 768px) {
-    .task-buttons {
-        flex-direction: column;
-    }
-    
-    .task-button {
-        width: 100%;
-        justify-content: center;
-        text-align: center;
-    }
+  .task-buttons {
+    flex-direction: column;
+  }
+
+  .task-button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 /* Parts Section Styling */
 .parts-section {
-    margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .btn-add-parts {
-    background-color: #1e3a8a;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
+  background-color: #1e3a8a;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
 
 .btn-add-parts:hover {
-    background-color: #1e40af;
+  background-color: #1e40af;
 }
 
 .selected-parts-list {
-    margin-top: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 /* Table header for 3-column layout */
 .parts-table-header {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr 1fr;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 0.875rem;
-    color: #333;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  color: #333;
 }
 
 .selected-part-item {
-    display: flex;
-    align-items: center;
-    background-color: #e3f2fd;
-    border: 1px solid #2196f3;
-    border-radius: 20px;
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  background-color: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
 }
 
 /* Three-column layout for parts */
 .selected-part-item.three-column {
-    display: grid;
-    grid-template-columns: 2fr 1.5fr 1fr;
-    gap: 0.5rem;
-    align-items: center;
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr;
+  gap: 0.5rem;
+  align-items: center;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .part-name-col {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .part-name {
-    font-weight: 500;
-    color: #333;
+  font-weight: 500;
+  color: #333;
 }
 
 .part-unit {
-    font-size: 0.8rem;
-    color: #666;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Part Code - รหัสอะไหล่ */
+.part-code {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 400;
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* Part Details - จัดเรียงแบบ stacked */
+.part-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+}
+
+.part-details .part-code {
+  color: #1976d2;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.part-details .part-unit,
+.part-details span:last-child {
+  color: #666;
+  font-size: 0.8rem;
 }
 
 .quantity-col {
-    display: flex;
-    justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .remove-col {
-    display: flex;
-    justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .remove-part-btn {
-    background: none;
-    border: none;
-    color: #f44336;
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-left: 0.5rem;
-    cursor: pointer;
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background: none;
+  border: none;
+  color: #f44336;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mobile small text for cancel button */
 .mobile-small-text {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    cursor: pointer;
-    width: auto;
-    height: auto;
-    margin: 0;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  width: auto;
+  height: auto;
+  margin: 0;
 }
 
 .mobile-small-text:hover {
-    background-color: #d32f2f;
+  background-color: #d32f2f;
 }
 
 /* Responsive adjustments for mobile */
 @media (max-width: 768px) {
-    .parts-table-header {
-        font-size: 0.75rem;
-        padding: 0.375rem;
-    }
-    
-    .selected-part-item.three-column {
-        padding: 0.5rem;
-        grid-template-columns: 2fr 1.2fr 0.8fr;
-    }
-    
-    .part-name {
-        font-size: 0.875rem;
-    }
-    
-    .part-unit {
-        font-size: 0.7rem;
-    }
-    
-    .mobile-small-text {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.4rem;
-    }
-    
-    .quantity-input {
-        width: 50px;
-        font-size: 0.8rem;
-    }
-    
-    .quantity-btn {
-        font-size: 0.8rem;
-        padding: 0.2rem 0.4rem;
-    }
+  .parts-table-header {
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
+
+  .selected-part-item.three-column {
+    padding: 0.5rem;
+    grid-template-columns: 2fr 1.2fr 0.8fr;
+  }
+
+  .part-name {
+    font-size: 0.875rem;
+  }
+
+  .part-unit {
+    font-size: 0.7rem;
+  }
+
+  .mobile-small-text {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .quantity-input {
+    width: 50px;
+    font-size: 0.8rem;
+  }
+
+  .quantity-btn {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.4rem;
+  }
 }
 
 .remove-part-btn:hover {
-    background-color: #ffebee;
-    border-radius: 50%;
+  background-color: #ffebee;
+  border-radius: 50%;
 }
 
 /* Modal Styling */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    /* เพิ่มการจัดการสำหรับ iOS Safari */
-    -webkit-overflow-scrolling: touch;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  /* เพิ่มการจัดการสำหรับ iOS Safari */
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
-    background: white;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 80vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    background-color: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
 }
 
 .modal-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
 }
 
 .modal-close:hover {
-    background-color: #e0e0e0;
+  background-color: #e0e0e0;
 }
 
 .modal-tabs {
-    display: flex;
-    border-bottom: 1px solid #e0e0e0;
-    background-color: #f8f9fa;
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
 }
 
 .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
 }
 
 .parts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
 }
 
 .part-item {
-    padding: 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.3s ease;
-    background-color: white;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+  background-color: white;
 }
 
 .part-item:hover {
-    border-color: #007bff;
-    background-color: #f8f9ff;
+  border-color: #007bff;
+  background-color: #f8f9ff;
 }
 
 .part-item.selected {
-    border-color: #007bff;
-    background-color: #007bff;
-    color: white;
+  border-color: #007bff;
+  background-color: #007bff;
+  color: white;
 }
 
 .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    border-top: 1px solid #e0e0e0;
-    background-color: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f9fa;
 }
 
 /* Responsive Modal */
 @media (max-width: 768px) {
-    .modal-content {
-        width: 95%;
-        max-height: 70vh; /* ลดจาก 90vh เป็น 70vh เพื่อให้แป้นพิมพ์ไม่บดบัง */
-        margin-bottom: 20vh; /* เพิ่ม margin ด้านล่างเพื่อหลีกเลี่ยงแป้นพิมพ์ */
-    }
-    
-    /* ซ่อนแท็บปกติและแสดง dropdown menu บนมือถือ */
-    .modal-tabs {
-        display: none;
-    }
-    
-    /* แสดง dropdown menu สำหรับมือถือ */
-    .mobile-category-dropdown {
-        display: block;
-        margin-bottom: 1rem;
-    }
-    
-    .category-dropdown-button {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s ease;
-    }
-    
-    .category-dropdown-button:hover {
-        background-color: #0056b3;
-    }
-    
-    .category-dropdown-button.open {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-    }
-    
-    .dropdown-arrow {
-        transition: transform 0.2s ease;
-    }
-    
-    .dropdown-arrow.open {
-        transform: rotate(180deg);
-    }
-    
-    .category-dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background-color: white;
-        border: 1px solid #dee2e6;
-        border-top: none;
-        border-radius: 0 0 6px 6px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999; /* เพิ่ม z-index ให้สูงขึ้น */
-        max-height: 250px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch; /* สำหรับ iOS */
-    }
-    
-    .category-dropdown-item {
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        border-bottom: 1px solid #f1f3f4;
-        font-size: 0.85rem;
-        transition: background-color 0.2s ease;
-    }
-    
-    .category-dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .category-dropdown-item.active {
-        background-color: #e3f2fd;
-        color: #1976d2;
-        font-weight: 500;
-    }
-    
-    .category-dropdown-item:last-child {
-        border-bottom: none;
-    }
-    
-    .mobile-category-dropdown {
-        position: relative;
-        width: 100%;
-        margin-bottom: 1rem;
-        z-index: 100;
-    }
-    
-    /* ซ่อน dropdown เมื่อคลิกข้างนอก */
-    .mobile-category-dropdown.open {
-        z-index: 1000;
-    }
-    
-    /* Mobile Header Dropdown - แทนที่ปุ่ม X */
-    .mobile-header-dropdown {
-        display: block; /* แสดงบนมือถือ */
-        position: relative;
-    }
-    
-    .header-category-dropdown-button {
-        padding: 0.5rem 0.8rem;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        min-width: 120px;
-        justify-content: space-between;
-    }
-    
-    .header-category-dropdown-button:hover {
-        background-color: #218838;
-    }
-    
-    .header-category-dropdown-menu {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background-color: white;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999;
-        min-width: 150px;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    
-    .header-category-dropdown-item {
-        padding: 0.6rem 0.8rem;
-        cursor: pointer;
-        border-bottom: 1px solid #f1f3f4;
-        font-size: 0.8rem;
-        transition: background-color 0.2s ease;
-    }
-    
-    .header-category-dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .header-category-dropdown-item.active {
-        background-color: #e3f2fd;
-        color: #1976d2;
-        font-weight: 500;
-    }
-    
-    .header-category-dropdown-item:last-child {
-         border-bottom: none;
-     }
+  .modal-content {
+    width: 95%;
+    max-height: 70vh;
+    /* ลดจาก 90vh เป็น 70vh เพื่อให้แป้นพิมพ์ไม่บดบัง */
+    margin-bottom: 20vh;
+    /* เพิ่ม margin ด้านล่างเพื่อหลีกเลี่ยงแป้นพิมพ์ */
+  }
+
+  /* ซ่อนแท็บปกติและแสดง dropdown menu บนมือถือ */
+  .modal-tabs {
+    display: none;
+  }
+
+  /* แสดง dropdown menu สำหรับมือถือ */
+  .mobile-category-dropdown {
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .category-dropdown-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+  }
+
+  .category-dropdown-button:hover {
+    background-color: #0056b3;
+  }
+
+  .category-dropdown-button.open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .dropdown-arrow {
+    transition: transform 0.2s ease;
+  }
+
+  .dropdown-arrow.open {
+    transform: rotate(180deg);
+  }
+
+  .category-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    /* เพิ่ม z-index ให้สูงขึ้น */
+    max-height: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* สำหรับ iOS */
+  }
+
+  .category-dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 0.85rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .category-dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  .category-dropdown-item.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+  }
+
+  .category-dropdown-item:last-child {
+    border-bottom: none;
+  }
+
+  .mobile-category-dropdown {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+    z-index: 100;
+  }
+
+  /* ซ่อน dropdown เมื่อคลิกข้างนอก */
+  .mobile-category-dropdown.open {
+    z-index: 1000;
+  }
+
+  /* Mobile Header Dropdown - แทนที่ปุ่ม X */
+  .mobile-header-dropdown {
+    display: block;
+    /* แสดงบนมือถือ */
+    position: relative;
+  }
+
+  .header-category-dropdown-button {
+    padding: 0.5rem 0.8rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 120px;
+    justify-content: space-between;
+  }
+
+  .header-category-dropdown-button:hover {
+    background-color: #218838;
+  }
+
+  .header-category-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    min-width: 150px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .header-category-dropdown-item {
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 0.8rem;
+    transition: background-color 0.2s ease;
+  }
+
+  .header-category-dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  .header-category-dropdown-item.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+  }
+
+  .header-category-dropdown-item:last-child {
+    border-bottom: none;
+  }
 }
 
 /* ซ่อน mobile header dropdown บนเดสก์ท็อป */
 @media (min-width: 769px) {
-    .mobile-header-dropdown {
-        display: none;
-    }
+  .mobile-header-dropdown {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
-     .tab-button {
-        flex: none;
-        min-width: 50%;
-        padding: 0.4rem 0.8rem; /* ลดขนาด padding */
-        font-size: 0.8rem; /* ลดขนาดฟอนต์ */
-    }
-    
-    .parts-grid {
-        grid-template-columns: 1fr;
-        gap: 0.2rem; /* ลดขนาด gap เพิ่มเติม */
-        padding: 0.5rem 0; /* เพิ่ม padding บนล่าง */
-    }
-    
-    /* ปรับขนาด parts list สำหรับมือถือ - ขยายพื้นที่แสดงผล */
-    .parts-list {
-        max-height: 500px; /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%; /* ขยายความกว้างเต็มที่ */
-        margin: 0;
-        padding: 0.5rem;
-    }
-    
-    /* ขยายกรอบการแสดงผล parts grid */
-    .parts-grid {
-        max-height: 500px; /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        width: 100%; /* ขยายความกว้างเต็มที่ */
-        margin: 0;
-        padding: 0.5rem;
-    }
-    
-    .part-item {
-        padding: 0.3rem 0.5rem; /* ลดขนาด padding เพิ่มเติม */
-        margin-bottom: 0.15rem; /* ลดระยะห่างระหว่างรายการ */
-        border-radius: 4px;
-        display: block; /* เปลี่ยนเป็น block เพื่อให้ปุ่มเต็มความกว้าง */
-        width: 100%;
-        min-height: 45px; /* ลดความสูงขั้นต่ำ */
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .part-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .part-item.selected {
-        background-color: #e3f2fd;
-        border: 1px solid #2196f3;
-    }
-    
-    .part-name {
-        font-size: 0.8rem;
-        line-height: 1.2;
-        margin-bottom: 0.1rem;
-        font-weight: 500;
-        color: #333;
-        word-wrap: break-word;
-        white-space: normal; /* อนุญาตให้ข้อความขึ้นบรรทัดใหม่ */
-    }
-    
-    .part-unit {
-        font-size: 0.7rem;
-        color: #666;
-        margin-top: 0.1rem;
-        display: block;
-    }
-    
-    .part-details {
-        font-size: 0.7rem;
-        margin-top: 0.1rem;
-    }
-    
-    /* ปรับขนาดปุ่มเลือกอะไหล่ - อัตราส่วน 1:3 */
-    .btn-select-part {
-        padding: 0.3rem 0.6rem;
-        font-size: 0.75rem;
-        min-width: 90px; /* อัตราส่วน 1:3 (30px:90px) */
-        height: 30px;
-        border-radius: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: inline-block;
-        text-align: center;
-        line-height: 1.2;
-        max-width: 120px; /* จำกัดความกว้างสูงสุด */
-    }
-    
-    /* ปรับขนาด selected quantity indicator */
-    .selected-quantity {
-        font-size: 0.65rem;
-        padding: 0.2rem 0.4rem;
-        background-color: #4caf50;
-        color: white;
-        border-radius: 12px;
-        display: inline-block;
-        margin-top: 0.2rem;
-        font-weight: 500;
-        min-width: auto;
-        text-align: center;
-    }
-    
-    /* ปรับ selected indicator */
-    .selected-indicator {
-        color: #4caf50;
-        font-weight: bold;
-        font-size: 0.9rem;
-        margin-left: 0.3rem;
-        float: right;
-    }
-    
-    /* ปรับขนาด search input */
-    .search-input {
-        padding: 0.6rem; /* ลดขนาด padding */
-        font-size: 0.9rem; /* ลดขนาดฟอนต์ */
-    }
-    
-    /* ปรับขนาด modal header และ footer */
-    .modal-header {
-        padding: 0.8rem 1rem; /* ลดขนาด padding */
-    }
-    
-    .modal-header h3 {
-        font-size: 1.1rem; /* ลดขนาดฟอนต์ */
-    }
-    
-    .modal-footer {
-        padding: 0.8rem 1rem; /* ลดขนาด padding */
-    }
-    
-    .modal-body {
-        padding: 0.8rem; /* ลดขนาด padding เพิ่มเติม */
-    }
-    
-    /* ปรับขนาด selected quantity indicator */
-    .selected-quantity {
-        font-size: 0.7rem;
-        padding: 0.15rem 0.3rem;
-        top: -6px;
-        right: -6px;
-    }
+  .tab-button {
+    flex: none;
+    min-width: 50%;
+    padding: 0.4rem 0.8rem;
+    /* ลดขนาด padding */
+    font-size: 0.8rem;
+    /* ลดขนาดฟอนต์ */
+  }
+
+  .parts-grid {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+    /* ลดขนาด gap เพิ่มเติม */
+    padding: 0.5rem 0;
+    /* เพิ่ม padding บนล่าง */
+  }
+
+  /* ปรับขนาด parts list สำหรับมือถือ - ขยายพื้นที่แสดงผล */
+  .parts-list {
+    max-height: 500px;
+    /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    /* ขยายความกว้างเต็มที่ */
+    margin: 0;
+    padding: 0.5rem;
+  }
+
+  /* ขยายกรอบการแสดงผล parts grid */
+  .parts-grid {
+    max-height: 500px;
+    /* เพิ่มความสูงเพื่อแสดงรายการได้มากขึ้น */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    /* ขยายความกว้างเต็มที่ */
+    margin: 0;
+    padding: 0.5rem;
+  }
+
+  .part-item {
+    padding: 0.3rem 0.5rem;
+    /* ลดขนาด padding เพิ่มเติม */
+    margin-bottom: 0.15rem;
+    /* ลดระยะห่างระหว่างรายการ */
+    border-radius: 4px;
+    display: block;
+    /* เปลี่ยนเป็น block เพื่อให้ปุ่มเต็มความกว้าง */
+    width: 100%;
+    min-height: 45px;
+    /* ลดความสูงขั้นต่ำ */
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .part-item:hover {
+    background-color: #f8f9fa;
+  }
+
+  .part-item.selected {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+  }
+
+  .part-name {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    margin-bottom: 0.1rem;
+    font-weight: 500;
+    color: #333;
+    word-wrap: break-word;
+    white-space: normal;
+    /* อนุญาตให้ข้อความขึ้นบรรทัดใหม่ */
+  }
+
+  .part-unit {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 0.1rem;
+    display: block;
+  }
+
+  .part-details {
+    font-size: 0.7rem;
+    margin-top: 0.1rem;
+  }
+
+  /* ปรับขนาดปุ่มเลือกอะไหล่ - อัตราส่วน 1:3 */
+  .btn-select-part {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    min-width: 90px;
+    /* อัตราส่วน 1:3 (30px:90px) */
+    height: 30px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    text-align: center;
+    line-height: 1.2;
+    max-width: 120px;
+    /* จำกัดความกว้างสูงสุด */
+  }
+
+  /* ปรับขนาด selected quantity indicator */
+  .selected-quantity {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+    background-color: #4caf50;
+    color: white;
+    border-radius: 12px;
+    display: inline-block;
+    margin-top: 0.2rem;
+    font-weight: 500;
+    min-width: auto;
+    text-align: center;
+  }
+
+  /* ปรับ selected indicator */
+  .selected-indicator {
+    color: #4caf50;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-left: 0.3rem;
+    float: right;
+  }
+
+  /* ปรับขนาด search input */
+  .search-input {
+    padding: 0.6rem;
+    /* ลดขนาด padding */
+    font-size: 0.9rem;
+    /* ลดขนาดฟอนต์ */
+  }
+
+  /* ปรับขนาด modal header และ footer */
+  .modal-header {
+    padding: 0.8rem 1rem;
+    /* ลดขนาด padding */
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
+    /* ลดขนาดฟอนต์ */
+  }
+
+  .modal-footer {
+    padding: 0.8rem 1rem;
+    /* ลดขนาด padding */
+  }
+
+  .modal-body {
+    padding: 0.8rem;
+    /* ลดขนาด padding เพิ่มเติม */
+  }
+
+  /* ปรับขนาด selected quantity indicator */
+  .selected-quantity {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.3rem;
+    top: -6px;
+    right: -6px;
+  }
 }
 
 /* Bulk Upload Styles */
@@ -3958,11 +4218,11 @@ textarea:focus,
   margin-top: 0.5rem;
 }
 
-.parts-summary > div {
+.parts-summary>div {
   margin-bottom: 0.75rem;
 }
 
-.parts-summary > div:last-child {
+.parts-summary>div:last-child {
   margin-bottom: 0;
 }
 
@@ -3990,11 +4250,11 @@ textarea:focus,
     margin-top: 1.5rem;
     padding-top: 1rem;
   }
-  
+
   .summary-box {
     padding: 1rem;
   }
-  
+
   .summary-item {
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
@@ -4133,16 +4393,16 @@ textarea:focus,
     flex-direction: column;
     gap: 0.25rem;
   }
-  
+
   .tab-button {
     justify-content: flex-start;
     padding: 1rem;
   }
-  
+
   .history-header {
     padding: 0.75rem;
   }
-  
+
   .history-header h3 {
     font-size: 1.1rem;
   }
@@ -4273,20 +4533,20 @@ textarea:focus,
   .assigned-job-info {
     padding: 1rem;
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  
+
   .subtask-input {
     flex-direction: column;
   }
-  
+
   .form-actions {
     flex-direction: column-reverse;
   }
-  
+
   .form-actions button {
     width: 100%;
   }
@@ -4704,37 +4964,37 @@ textarea:focus,
   .serial-history-container {
     padding: 16px;
   }
-  
+
   .serial-header {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
+
   .filters-row {
     grid-template-columns: 1fr;
   }
-  
+
   .filters-options {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .data-table {
     font-size: 0.8rem;
   }
-  
+
   .data-table th,
   .data-table td {
     padding: 8px 6px;
   }
-  
+
   .details-col {
     max-width: 200px;
   }
@@ -4744,7 +5004,7 @@ textarea:focus,
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .stat-number {
     font-size: 2rem;
   }
@@ -4873,13 +5133,13 @@ textarea:focus,
   .filters-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .filter-actions {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .checkbox-group {
     flex-direction: column;
     align-items: flex-start;
@@ -5051,70 +5311,81 @@ textarea:focus,
   .selected-part-item {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.6rem; /* ลดขนาด gap */
-    padding: 0.6rem; /* ลดขนาด padding */
+    gap: 0.6rem;
+    /* ลดขนาด gap */
+    padding: 0.6rem;
+    /* ลดขนาด padding */
   }
-  
+
   .quantity-controls {
     justify-content: center;
   }
-  
+
   .part-info {
     text-align: center;
-    font-size: 0.9rem; /* ลดขนาดฟอนต์ */
+    font-size: 0.9rem;
+    /* ลดขนาดฟอนต์ */
   }
-  
+
   /* ปรับขนาด parts tabs สำหรับมือถือ */
   .parts-tabs {
-    gap: 0.3rem; /* ลดขนาด gap */
+    gap: 0.3rem;
+    /* ลดขนาด gap */
   }
-  
+
   /* ปรับขนาด selected quantity indicator */
   .selected-quantity {
-    font-size: 0.7rem; /* ลดขนาดฟอนต์ */
-    padding: 0.2rem 0.4rem; /* ลดขนาด padding */
+    font-size: 0.7rem;
+    /* ลดขนาดฟอนต์ */
+    padding: 0.2rem 0.4rem;
+    /* ลดขนาด padding */
   }
-  
+
   /* ปรับขนาด part details */
   .part-details {
-    font-size: 0.8rem; /* ลดขนาดฟอนต์ */
-    margin-top: 0.3rem; /* ลดขนาด margin */
+    font-size: 0.8rem;
+    /* ลดขนาดฟอนต์ */
+    margin-top: 0.3rem;
+    /* ลดขนาด margin */
   }
-  
+
   /* ปรับขนาด modal สำหรับ viewport ที่เล็กมาก */
   @media (max-height: 600px) {
     .modal-content {
-      max-height: 60vh; /* ลดขนาดเพิ่มเติมสำหรับหน้าจอเตี้ย */
+      max-height: 60vh;
+      /* ลดขนาดเพิ่มเติมสำหรับหน้าจอเตี้ย */
       margin-bottom: 25vh;
     }
-    
+
     .parts-list {
-      max-height: 200px; /* ลดขนาดเพิ่มเติม */
+      max-height: 200px;
+      /* ลดขนาดเพิ่มเติม */
     }
   }
-  
+
   /* จัดการเมื่อแป้นพิมพ์เสมือนปรากฏ (viewport height ลดลงมาก) */
   @media (max-height: 500px) {
     .modal-content {
       max-height: 50vh;
       margin-bottom: 30vh;
-      transform: translateY(-10vh); /* เลื่อน modal ขึ้นเล็กน้อย */
+      transform: translateY(-10vh);
+      /* เลื่อน modal ขึ้นเล็กน้อย */
     }
-    
+
     .parts-list {
       max-height: 150px;
     }
-    
+
     .modal-body {
       padding: 0.5rem;
     }
-    
+
     .search-input {
       padding: 0.5rem;
       font-size: 0.85rem;
     }
   }
-  
+
   /* สำหรับหน้าจอที่เตี้ยมาก (แป้นพิมพ์เต็มหน้าจอ) */
   @media (max-height: 400px) {
     .modal-content {
@@ -5122,15 +5393,15 @@ textarea:focus,
       margin-bottom: 35vh;
       transform: translateY(-15vh);
     }
-    
+
     .parts-list {
       max-height: 120px;
     }
-    
+
     .modal-header {
       padding: 0.5rem 0.8rem;
     }
-    
+
     .modal-footer {
       padding: 0.5rem 0.8rem;
     }
@@ -5143,6 +5414,7 @@ textarea:focus,
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -5246,7 +5518,7 @@ textarea:focus,
   .transfer-form {
     gap: 0.75rem;
   }
-  
+
   .selected-vehicles {
     margin-top: 0.75rem;
     padding: 0.75rem;
@@ -5342,7 +5614,7 @@ datalist {
   .filter-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .filter-hint {
     font-size: 0.7rem;
   }
@@ -5400,6 +5672,7 @@ datalist {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -5443,13 +5716,13 @@ datalist {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .form-row .input-group,
   .form-row select {
     width: 100%;
     min-width: unset;
   }
-  
+
   .form-row button {
     width: 100%;
     align-self: stretch;
@@ -5546,7 +5819,7 @@ datalist {
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   .cause-button {
     min-width: unset;
     width: 100%;
@@ -5729,23 +6002,23 @@ datalist {
     gap: 0.75rem;
     padding: 0.75rem;
   }
-  
+
   .part-item {
     padding: 0.75rem;
   }
-  
+
   .part-name {
     font-size: 0.875rem;
   }
-  
+
   .search-input-container {
     max-width: none;
   }
-  
+
   .parts-search-section {
     padding: 0.75rem;
   }
-  
+
   .no-parts-found {
     padding: 2rem 1rem;
     margin: 0.75rem;
@@ -5812,13 +6085,13 @@ datalist {
     width: 100%;
     justify-content: flex-end;
   }
-  
+
   .assignment-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .assignment-header .btn-sm {
     align-self: flex-end;
   }
@@ -5879,6 +6152,7 @@ datalist {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -5949,22 +6223,22 @@ datalist {
   .modal-overlay {
     padding: 0.5rem;
   }
-  
+
   .modal-content {
     max-width: 100%;
     max-height: 95vh;
     border-radius: 12px;
   }
-  
+
   .modal-header,
   .modal-form {
     padding: 1rem;
   }
-  
+
   .modal-actions {
     flex-direction: column;
   }
-  
+
   .modal-actions .btn-primary,
   .modal-actions .btn-secondary {
     width: 100%;
@@ -6060,12 +6334,12 @@ datalist {
   .table-container {
     font-size: 0.875rem;
   }
-  
+
   .table-container .parts-table th,
   .table-container .parts-table td {
     padding: 0.75rem 0.5rem;
   }
-  
+
   .table-container .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
@@ -6075,77 +6349,77 @@ datalist {
 
 /* Assignment Summary Modal Styles */
 .assignment-summary {
-    max-height: 400px;
-    overflow-y: auto;
-    margin-top: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 1rem;
 }
 
 .summary-item {
-    background-color: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .summary-item:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .summary-item h4 {
-    margin: 0 0 0.75rem 0;
-    color: #007bff;
-    font-size: 1rem;
-    font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  color: #007bff;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .summary-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 0.25rem 0;
-    border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .summary-row:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .summary-row .label {
-    font-weight: 600;
-    color: #495057;
-    min-width: 120px;
-    flex-shrink: 0;
+  font-weight: 600;
+  color: #495057;
+  min-width: 120px;
+  flex-shrink: 0;
 }
 
 .summary-row .value {
-    color: #212529;
-    text-align: right;
-    flex: 1;
-    margin-left: 1rem;
+  color: #212529;
+  text-align: right;
+  flex: 1;
+  margin-left: 1rem;
 }
 
 @media (max-width: 768px) {
-    .summary-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-    }
-    
-    .summary-row .label {
-        min-width: auto;
-    }
-    
-    .summary-row .value {
-        text-align: left;
-        margin-left: 0;
-    }
+  .summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .summary-row .label {
+    min-width: auto;
+  }
+
+  .summary-row .value {
+    text-align: left;
+    margin-left: 0;
+  }
 }
 
 /* Filter Inputs */
