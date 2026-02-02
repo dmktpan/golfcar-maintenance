@@ -416,6 +416,9 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     'บันทึกอะไหล่': job.partsNotes || '-',
                     'ผู้ดำเนินการ': job.userName,
                     'สถานะ': getStatusText(job.status),
+                    'ผู้อนุมัติ': job.approved_by_name || '-',
+                    'วันที่อนุมัติ': job.approved_at ? formatDateForExcel(job.approved_at) : '-',
+                    'เหตุผลที่ไม่อนุมัติ': job.rejection_reason || '-',
                     'หมายเหตุ': job.remarks || '-',
                     'วันที่อัปเดต': ((job as any).updatedAt || job.updated_at) && ((job as any).updatedAt || job.updated_at) !== ((job as any).createdAt || job.created_at) ? formatDateForExcel((job as any).updatedAt || job.updated_at) : '-'
                 };
@@ -438,6 +441,9 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 { wch: 25 }, // บันทึกอะไหล่
                 { wch: 20 }, // ผู้ดำเนินการ
                 { wch: 12 }, // สถานะ
+                { wch: 20 }, // ผู้อนุมัติ
+                { wch: 15 }, // วันที่อนุมัติ
+                { wch: 25 }, // เหตุผลที่ไม่อนุมัติ
                 { wch: 25 }, // หมายเหตุ
                 { wch: 15 }  // วันที่อัปเดต
             ];
@@ -696,6 +702,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                 <th>ระบบ</th>
                                 <th>อะไหล่ที่ใช้</th>
                                 <th>ผู้ดำเนินการ</th>
+                                <th>ผู้อนุมัติ</th>
                                 <th
                                     className="sortable"
                                     onClick={() => handleSort('status')}
@@ -708,6 +715,15 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                         <tbody>
                             {filteredAndSortedJobs.map(job => (
                                 <React.Fragment key={job.id}>
+                                    {/* Debug logging */}
+                                    {job.status === 'approved' && !job.approved_by_name && (() => {
+                                        console.log('⚠️ Job approved but missing approver info:', {
+                                            id: job.id,
+                                            vehicle: job.vehicle_number
+                                        });
+                                        return null;
+                                    })()}
+
                                     <tr className="main-row">
                                         <td>
                                             <button
@@ -745,6 +761,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                             })()}
                                         </td>
                                         <td>{job.userName}</td>
+                                        <td>{job.approved_by_name || '-'}</td>
                                         <td>
                                             <StatusBadge status={job.status} />
                                         </td>
@@ -1329,7 +1346,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     }
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 
