@@ -74,6 +74,19 @@ export async function POST(request: NextRequest) {
             });
 
             if (user) {
+              // ตรวจสอบว่า user ถูกระงับการใช้งานหรือไม่
+              if ((user as any).is_active === false) {
+                console.log('❌ User is disabled:', user.code);
+                return NextResponse.json(
+                  {
+                    success: false,
+                    message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+                    data: null
+                  },
+                  { status: 403 }
+                );
+              }
+
               console.log('✅ Internal API fallback success for staff');
 
               // Update isOnline and lastActive
@@ -104,6 +117,19 @@ export async function POST(request: NextRequest) {
             });
 
             if (user) {
+              // ตรวจสอบว่า user ถูกระงับการใช้งานหรือไม่
+              if ((user as any).is_active === false) {
+                console.log('❌ User is disabled:', user.code);
+                return NextResponse.json(
+                  {
+                    success: false,
+                    message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+                    data: null
+                  },
+                  { status: 403 }
+                );
+              }
+
               // ตรวจสอบรหัสผ่านจากฐานข้อมูล (เฉพาะ password ใหม่เท่านั้น)
               if (password === user.password) {
                 console.log('✅ Internal API fallback success for admin/supervisor/central');

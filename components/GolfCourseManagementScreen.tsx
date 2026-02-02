@@ -692,6 +692,17 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     window.URL.revokeObjectURL(url);
   };
 
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Vehicle, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: keyof Vehicle) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesCourse = filterCourse ? String(vehicle.golf_course_id) === filterCourse : true;
     const matchesSerial = filterSerial
@@ -705,7 +716,73 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       : true;
 
     return matchesCourse && matchesSerial && matchesBatterySerial && matchesVehicleNumber;
+  }).sort((a, b) => {
+    if (!sortConfig) return 0;
+
+    const { key, direction } = sortConfig;
+
+    // Handle specific fields that might need custom sorting
+    let aValue: any = a[key];
+    let bValue: any = b[key];
+
+    // Handle null/undefined
+    if (aValue === null || aValue === undefined) aValue = '';
+    if (bValue === null || bValue === undefined) bValue = '';
+
+    // Handle course name sorting (special case since it's derived usually, but here we have golf_course_name)
+    if (key === 'golf_course_id') {
+      // if sorting by course ID, maybe we want to sort by name instead?
+      // let's stick to the key for now, but user might expect name sort if clicking course column
+      // For now, let's allow sorting by the actual key or data available
+    }
+
+    // Numeric sorting for vehicle number if possible
+    if (key === 'vehicle_number') {
+      const aNum = parseInt(aValue);
+      const bNum = parseInt(bValue);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        if (aNum < bNum) return direction === 'asc' ? -1 : 1;
+        if (aNum > bNum) return direction === 'asc' ? 1 : -1;
+        // if equal or mixed with strings, fall back to string comparison
+      }
+      // Natural sort for strings with numbers (e.g. V1, V2, V10)
+      return direction === 'asc'
+        ? String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
+        : String(bValue).localeCompare(String(aValue), undefined, { numeric: true, sensitivity: 'base' });
+    }
+
+    if (aValue < bValue) {
+      return direction === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return direction === 'asc' ? 1 : -1;
+    }
+    return 0;
   });
+
+  const getSortIcon = (key: keyof Vehicle) => {
+    if (!sortConfig || sortConfig.key !== key) return <span className="sort-icon text-gray-400">↕</span>;
+    return sortConfig.direction === 'asc'
+      ? <span className="sort-icon text-blue-600">↑</span>
+      : <span className="sort-icon text-blue-600">↓</span>;
+  };
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  // Reset to first page when filtering
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCourse, filterSerial, filterBatterySerial, filterVehicleNumber]);
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentVehicles = filteredVehicles.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredVehicles.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="golf-course-management">
@@ -734,7 +811,19 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       {activeTab === 'courses' && (
         <div className="courses-section">
           <div className="section-header">
-            <h2>สนามกอล์ฟ</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <h2>สนามกอล์ฟ</h2>
+              <span style={{
+                backgroundColor: '#e0f2fe',
+                color: '#0369a1',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '0.9rem',
+                fontWeight: 500
+              }}>
+                ทั้งหมด {golfCourses.length} สนาม
+              </span>
+            </div>
             <button
               onClick={() => setShowAddCourseForm(true)}
               className="add-button"
@@ -832,7 +921,19 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       {activeTab === 'vehicles' && (
         <div className="vehicles-section">
           <div className="section-header">
-            <h2>รถกอล์ฟ</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <h2>รถกอล์ฟ</h2>
+              <span style={{
+                backgroundColor: '#dcfce7',
+                color: '#15803d',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '0.9rem',
+                fontWeight: 500
+              }}>
+                ทั้งหมด {vehicles.length} คัน
+              </span>
+            </div>
             <div className="header-actions">
               <button onClick={() => setShowBulkUploadModal(true)} className="bulk-button">
                 📁 อัปโหลดจำนวนมาก
@@ -987,17 +1088,41 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                       checked={selectedVehicles.length === filteredVehicles.length && filteredVehicles.length > 0}
                     />
                   </th>
-                  <th>หมายเลขซีเรียล</th>
-                  <th>หมายเลขรถ</th>
-                  <th>ซีเรียลแบต</th>
-                  <th>สนาม</th>
-                  <th>สถานะ</th>
+                  <th onClick={() => handleSort('serial_number')} className="sortable-header">
+                    <div className="th-content">
+                      หมายเลขซีเรียล {getSortIcon('serial_number')}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('vehicle_number')} className="sortable-header">
+                    <div className="th-content">
+                      หมายเลขรถ {getSortIcon('vehicle_number')}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('battery_serial')} className="sortable-header">
+                    <div className="th-content">
+                      ซีเรียลแบต {getSortIcon('battery_serial')}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('golf_course_name')} className="sortable-header">
+                    <div className="th-content">
+                      สนาม {getSortIcon('golf_course_name')}
+                    </div>
+                  </th>
+                  <th onClick={() => handleSort('status')} className="sortable-header">
+                    <div className="th-content">
+                      สถานะ {getSortIcon('status')}
+                    </div>
+                  </th>
                   <th>การจัดการ</th>
-                  <th>วันที่ย้าย</th>
+                  <th onClick={() => handleSort('transfer_date')} className="sortable-header">
+                    <div className="th-content">
+                      วันที่ย้าย {getSortIcon('transfer_date')}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredVehicles.map((vehicle, index) => {
+                {currentVehicles.map((vehicle, index) => {
                   const course = golfCourses.find(c => c.id === vehicle.golf_course_id);
                   return (
                     <tr key={`vehicle-${vehicle.id}-${index}`}>
@@ -1121,6 +1246,69 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="pagination-container">
+            <div className="pagination-info">
+              แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredVehicles.length)} จากทั้งหมด {filteredVehicles.length} รายการ
+            </div>
+
+            <div className="pagination-controls">
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="items-per-page-select"
+              >
+                <option value={10}>10 / หน้า</option>
+                <option value={20}>20 / หน้า</option>
+                <option value={50}>50 / หน้า</option>
+                <option value={100}>100 / หน้า</option>
+              </select>
+
+              <div className="page-buttons">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="page-btn"
+                >
+                  &lt;
+                </button>
+
+                {/* Logic to show limited page numbers (e.g. 1 2 ... 5 6 7 ... 10) can be complex.
+                    For simplicity, let's show basic range or simple previous/next with current page input if needed.
+                    Let's implement a simple sliding window if there are many pages. */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Logic to center the current page
+                  let startPage = Math.max(1, currentPage - 2);
+                  if (startPage + 4 > totalPages) startPage = Math.max(1, totalPages - 4);
+                  const page = startPage + i;
+
+                  if (page > totalPages) return null;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => paginate(page)}
+                      className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="page-btn"
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

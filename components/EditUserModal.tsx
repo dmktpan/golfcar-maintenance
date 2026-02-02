@@ -60,7 +60,7 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
     const handleManagedCoursesChange = (courseId: string, checked: boolean) => {
         setFormData(prev => ({
             ...prev,
-            managed_golf_courses: checked 
+            managed_golf_courses: checked
                 ? [...prev.managed_golf_courses, courseId]
                 : prev.managed_golf_courses.filter(id => id !== courseId)
         }));
@@ -127,12 +127,12 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
 
     return (
         <div className="modal-overlay" onClick={handleClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3>แก้ไขข้อมูลผู้ใช้</h3>
-                    <button 
-                        type="button" 
-                        className="modal-close-btn"
+                    <h2>แก้ไขข้อมูลผู้ใช้</h2>
+                    <button
+                        type="button"
+                        className="close-modal-btn"
                         onClick={handleClose}
                         disabled={isLoading}
                     >
@@ -140,30 +140,32 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="modal-form">
-                    <div className="form-grid">
+                <div className="modal-body">
+                    <form onSubmit={handleSubmit} className="form-grid">
                         <div className="form-group">
                             <label htmlFor="edit-code">รหัสพนักงาน</label>
-                            <input 
-                                type="text" 
-                                id="edit-code" 
-                                name="code" 
-                                value={formData.code} 
-                                onChange={handleInputChange} 
-                                required 
+                            <input
+                                type="text"
+                                id="edit-code"
+                                name="code"
+                                className="modern-input"
+                                value={formData.code}
+                                onChange={handleInputChange}
+                                required
                                 disabled={isLoading}
                             />
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="edit-username">ชื่อผู้ใช้ (Username)</label>
-                            <input 
-                                type="text" 
-                                id="edit-username" 
-                                name="username" 
-                                value={formData.username} 
-                                onChange={handleInputChange} 
-                                required 
+                            <input
+                                type="text"
+                                id="edit-username"
+                                name="username"
+                                className="modern-input"
+                                value={formData.username}
+                                onChange={handleInputChange}
+                                required
                                 disabled={isLoading}
                                 placeholder="ใช้สำหรับเข้าสู่ระบบ"
                             />
@@ -171,24 +173,26 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
 
                         <div className="form-group">
                             <label htmlFor="edit-name">ชื่อ-นามสกุล</label>
-                            <input 
-                                type="text" 
-                                id="edit-name" 
-                                name="name" 
-                                value={formData.name} 
-                                onChange={handleInputChange} 
-                                required 
+                            <input
+                                type="text"
+                                id="edit-name"
+                                name="name"
+                                className="modern-input"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                required
                                 disabled={isLoading}
                             />
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="edit-role">ตำแหน่ง</label>
-                            <select 
-                                id="edit-role" 
-                                name="role" 
-                                value={formData.role} 
-                                onChange={handleInputChange} 
+                            <select
+                                id="edit-role"
+                                name="role"
+                                className="modern-select"
+                                value={formData.role}
+                                onChange={handleInputChange}
                                 required
                                 disabled={isLoading}
                             >
@@ -201,11 +205,12 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
 
                         <div className="form-group">
                             <label htmlFor="edit-golf_course_id">สนามกอล์ฟหลัก</label>
-                            <select 
-                                id="edit-golf_course_id" 
-                                name="golf_course_id" 
-                                value={formData.golf_course_id} 
-                                onChange={handleInputChange} 
+                            <select
+                                id="edit-golf_course_id"
+                                name="golf_course_id"
+                                className="modern-select"
+                                value={formData.golf_course_id}
+                                onChange={handleInputChange}
                                 required
                                 disabled={isLoading}
                             >
@@ -222,31 +227,22 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                                 <label htmlFor="edit-password">
                                     รหัสผ่าน (เว้นว่างหากไม่ต้องการเปลี่ยน)
                                 </label>
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                    <input 
+                                <div className="password-input-wrapper">
+                                    <input
                                         type={showPassword ? "text" : "password"}
-                                        id="edit-password" 
-                                        name="password" 
-                                        value={formData.password || ''} 
-                                        onChange={handleInputChange} 
+                                        id="edit-password"
+                                        name="password"
+                                        className="modern-input"
+                                        value={formData.password || ''}
+                                        onChange={handleInputChange}
                                         disabled={isLoading}
                                         placeholder="เว้นว่างหากไม่ต้องการเปลี่ยน"
-                                        style={{ paddingRight: '50px', flex: 1 }}
+                                        style={{ paddingRight: '50px' }}
                                     />
                                     <button
                                         type="button"
+                                        className="toggle-password-btn"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        style={{
-                                            position: 'absolute',
-                                            right: '10px',
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            fontSize: '14px',
-                                            color: '#666',
-                                            padding: '5px',
-                                            zIndex: 1
-                                        }}
                                         disabled={isLoading}
                                         title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                                     >
@@ -255,84 +251,87 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* แสดงการเลือกสนามที่ดูแลเฉพาะหัวหน้า */}
-                    {formData.role === 'supervisor' && (
-                        <div className="form-group full-width">
-                            <label>สนามกอล์ฟที่รับผิดชอบ:</label>
-                            <div className="select-all-buttons" style={{ marginBottom: '1rem' }}>
-                                <button 
-                                    type="button" 
-                                    className="btn-secondary btn-sm"
-                                    onClick={handleSelectAllCourses}
-                                    disabled={isLoading}
-                                >
-                                    ✅ เลือกทั้งหมด
-                                </button>
-                                <button 
-                                    type="button" 
-                                    className="btn-outline btn-sm"
-                                    onClick={handleDeselectAllCourses}
-                                    disabled={isLoading}
-                                >
-                                    ❌ ยกเลิกทั้งหมด
-                                </button>
+                        {/* แสดงการเลือกสนามที่ดูแลเฉพาะหัวหน้า */}
+                        {formData.role === 'supervisor' && (
+                            <div className="form-group full-width">
+                                <label>สนามกอล์ฟที่รับผิดชอบ:</label>
+                                <div className="select-all-buttons">
+                                    <button
+                                        type="button"
+                                        className="btn-text"
+                                        onClick={handleSelectAllCourses}
+                                        disabled={isLoading}
+                                    >
+                                        ✅ เลือกทั้งหมด
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn-text danger"
+                                        onClick={handleDeselectAllCourses}
+                                        disabled={isLoading}
+                                    >
+                                        ❌ ยกเลิกทั้งหมด
+                                    </button>
+                                </div>
+                                <div className="checkbox-grid">
+                                    {golfCourses.map(course => (
+                                        <label key={course.id} className="checkbox-item">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.managed_golf_courses.includes(course.id)}
+                                                onChange={(e) => handleManagedCoursesChange(course.id, e.target.checked)}
+                                                disabled={isLoading}
+                                            />
+                                            {course.name}
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="info-box-modern" style={{ marginTop: '0.5rem' }}>
+                                    <small>
+                                        หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br />
+                                        <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
+                                    </small>
+                                </div>
                             </div>
-                            <div className="checkbox-group">
-                                {golfCourses.map(course => (
-                                    <label key={course.id} className="checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.managed_golf_courses.includes(course.id)}
-                                            onChange={(e) => handleManagedCoursesChange(course.id, e.target.checked)}
-                                            disabled={isLoading}
-                                        />
-                                        {course.name}
-                                    </label>
-                                ))}
-                            </div>
-                            <small className="form-hint">
-                                หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br/>
-                                <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
-                            </small>
-                        </div>
-                    )}
+                        )}
 
-                    {formData.role === 'central' && (
-                        <div className="form-group full-width">
-                            <div className="info-box">
-                                <strong>หมายเหตุ:</strong> ส่วนกลางจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟและสร้างงานสำหรับทุกสนามได้
+                        {formData.role === 'central' && (
+                            <div className="form-group full-width">
+                                <div className="info-box-modern">
+                                    <strong>หมายเหตุ:</strong> ส่วนกลางจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟและสร้างงานสำหรับทุกสนามได้
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {formData.role === 'admin' && (
-                        <div className="form-group full-width">
-                            <div className="info-box">
-                                <strong>หมายเหตุ:</strong> ผู้ดูแลระบบจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟโดยอัตโนมัติ
+                        {formData.role === 'admin' && (
+                            <div className="form-group full-width">
+                                <div className="info-box-modern">
+                                    <strong>หมายเหตุ:</strong> ผู้ดูแลระบบจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟโดยอัตโนมัติ
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </form>
+                </div>
 
-                    <div className="modal-actions">
-                        <button 
-                            type="button" 
-                            className="btn-secondary" 
-                            onClick={handleClose}
-                            disabled={isLoading}
-                        >
-                            ยกเลิก
-                        </button>
-                        <button 
-                            type="submit" 
-                            className="btn-primary"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูล'}
-                        </button>
-                    </div>
-                </form>
+                <div className="modal-footer">
+                    <button
+                        type="button"
+                        className="btn-cancel"
+                        onClick={handleClose}
+                        disabled={isLoading}
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        type="submit"
+                        className="btn-submit"
+                        disabled={isLoading}
+                        onClick={(e) => handleSubmit(e as any)}
+                    >
+                        {isLoading ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูล'}
+                    </button>
+                </div>
             </div>
         </div>
     );

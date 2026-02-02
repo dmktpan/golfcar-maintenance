@@ -34,6 +34,8 @@ model User {
   password             String?  // เพิ่ม password field
   managed_golf_courses String[] @db.ObjectId
   permissions          String[] // สิทธิ์การใช้งานเพิ่มเติม
+  is_active            Boolean  @default(true) // สถานะการใช้งาน (false = ถูกระงับ)
+  disabled_at          DateTime? // วันที่ถูกระงับ
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   lastActive           DateTime? @default(now())

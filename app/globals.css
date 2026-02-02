@@ -2251,9 +2251,9 @@ textarea:focus,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .golf-course-management .back-button {
@@ -2284,54 +2284,53 @@ textarea:focus,
   margin: 0;
 }
 
-/* Tab Navigation - Enhanced */
+/* Modern Tab Navigation */
 .golf-course-management .tab-navigation {
-  display: flex;
+  display: inline-flex;
   margin-bottom: 2rem;
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  padding: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 0.25rem;
+  border: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .golf-course-management .tab-button {
-  flex: 1;
-  padding: 1rem 1.5rem;
-  background: none;
+  padding: 0.75rem 2rem;
+  background: transparent;
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
-  color: var(--text-color);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #64748b;
   position: relative;
+  min-width: 140px;
 }
 
 .golf-course-management .tab-button:hover {
-  background-color: var(--accent-color);
   color: var(--primary-color);
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
 .golf-course-management .tab-button.active {
-  background-color: var(--primary-color);
-  color: var(--text-light);
+  background-color: white;
+  color: var(--primary-color);
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(13, 71, 161, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Section Headers */
+/* Modern Section Headers */
 .golf-course-management .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  border-left: 4px solid var(--primary-color);
+  margin-bottom: 2rem;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .golf-course-management .section-header h2 {
@@ -2406,14 +2405,14 @@ textarea:focus,
   transform: translateY(-1px);
 }
 
-/* Form Sections */
+/* Modern Card Forms */
 .golf-course-management .form-section {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .golf-course-management .form-section h3 {
@@ -2450,105 +2449,157 @@ textarea:focus,
   box-shadow: 0 0 0 2px var(--accent-color);
 }
 
-.golf-course-management .save-button {
-  background-color: var(--success-color);
-  color: var(--text-light);
+/* Modern Button Styles */
+.golf-course-management .save-button,
+.golf-course-management .add-button,
+.golf-course-management .bulk-button {
+  background-color: var(--primary-color);
+  color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(var(--primary-color-rgb), 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.golf-course-management .save-button:hover {
-  filter: brightness(1.1);
+.golf-course-management .save-button:hover,
+.golf-course-management .add-button:hover,
+.golf-course-management .bulk-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(var(--primary-color-rgb), 0.3);
+  filter: brightness(1.05);
 }
 
 .golf-course-management .cancel-button {
-  background-color: var(--border-color);
-  color: var(--text-color);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  font-size: 1rem;
+  background-color: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s;
 }
 
 .golf-course-management .cancel-button:hover {
-  background-color: var(--danger-color);
-  color: var(--text-light);
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.golf-course-management .edit-button,
+.golf-course-management .delete-button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .golf-course-management .edit-button {
-  background-color: var(--secondary-color);
-  color: var(--text-light);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  margin-right: 0.5rem;
+  background-color: #e0f2fe;
+  color: #0284c7;
 }
 
 .golf-course-management .edit-button:hover {
-  filter: brightness(1.1);
+  background-color: #bae6fd;
+  color: #0369a1;
 }
 
 .golf-course-management .delete-button {
-  background-color: var(--danger-color);
-  color: var(--text-light);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  background-color: #fee2e2;
+  color: #ef4444;
 }
 
 .golf-course-management .delete-button:hover {
-  filter: brightness(1.1);
+  background-color: #fecaca;
+  color: #dc2626;
 }
 
 /* Tables */
+/* Modern Table Styles */
 .golf-course-management .table-container {
-  background-color: var(--surface-color);
-  border-radius: 8px;
+  background-color: white;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
 }
 
 .golf-course-management .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.95rem;
 }
 
 .golf-course-management .data-table th {
-  background-color: var(--primary-color);
-  color: var(--text-light);
-  padding: 1rem 0.75rem;
+  background-color: #f8fafc;
+  color: #64748b;
+  padding: 1.25rem 1.5rem;
   text-align: left;
   font-weight: 600;
-  font-size: 0.9rem;
-  white-space: nowrap;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.golf-course-management .sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.golf-course-management .sortable-header:hover {
+  background-color: #f1f5f9;
+}
+
+.golf-course-management .th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.golf-course-management .sort-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.golf-course-management .data-table tr {
+  transition: background-color 0.15s;
 }
 
 .golf-course-management .data-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  color: #334155;
+}
+
+.golf-course-management .data-table tbody tr {
+  transition: all 0.2s ease;
 }
 
 .golf-course-management .data-table tbody tr:hover {
-  background-color: var(--accent-color);
+  background-color: #f8fafc;
 }
 
 .golf-course-management .data-table tbody tr:last-child td {
@@ -2559,6 +2610,9 @@ textarea:focus,
   width: 18px;
   height: 18px;
   cursor: pointer;
+  border-radius: 4px;
+  border: 2px solid #cbd5e1;
+  accent-color: var(--primary-color);
 }
 
 .golf-course-management .data-table input[type="text"],
@@ -2593,34 +2647,55 @@ textarea:focus,
 
 /* Filter Section */
 .golf-course-management .filter-section {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  background-color: white;
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f3f4f6;
+  transition: box-shadow 0.2s;
+}
+
+.golf-course-management .filter-section:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .golf-course-management .filter-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 0;
+}
+
+.golf-course-management .filter-item {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .golf-course-management .filter-controls label {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-color);
-  white-space: nowrap;
+  color: #6b7280;
 }
 
-.golf-course-management .filter-controls select {
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  min-width: 150px;
+.golf-course-management .filter-controls select,
+.golf-course-management .filter-controls input {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  background-color: #f9fafb;
+  transition: all 0.2s;
+}
+
+.golf-course-management .filter-controls select:focus,
+.golf-course-management .filter-controls input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .golf-course-management .bulk-actions {
@@ -2650,6 +2725,76 @@ textarea:focus,
 .golf-course-management .transfer-button:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
+}
+
+/* Pagination Styling */
+.golf-course-management .pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: white;
+  border-top: 1px solid #e2e8f0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.golf-course-management .pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.golf-course-management .pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.golf-course-management .items-per-page-select {
+  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-color: #d1d5db;
+  border-radius: 6px;
+  background-color: white;
+  color: #374151;
+  cursor: pointer;
+}
+
+.golf-course-management .page-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.golf-course-management .page-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 2.25rem;
+}
+
+.golf-course-management .page-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.golf-course-management .page-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.golf-course-management .page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f9fafb;
 }
 
 /* Modals */
@@ -6449,4 +6594,716 @@ datalist {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* Manage Users Screen Styles - Modern Redesign */
+.manage-users-screen {
+  padding: 1.5rem;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.manage-users-screen .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.manage-users-screen .page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.manage-users-screen .page-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.manage-users-screen .header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.manage-users-screen .history-button,
+.manage-users-screen .back-button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.manage-users-screen .history-button {
+  background-color: white;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.manage-users-screen .back-button {
+  background-color: white;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+}
+
+.manage-users-screen .history-button:hover,
+.manage-users-screen .back-button:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Role Tabs */
+.role-tabs-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.role-tabs {
+  display: flex;
+  background-color: #e2e8f0;
+  padding: 0.25rem;
+  border-radius: 12px;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.role-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.role-tab.active {
+  background-color: white;
+  color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+.role-tab:hover:not(.active) {
+  color: #334155;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.tab-count {
+  background-color: #f1f5f9;
+  color: #64748b;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.role-tab.active .tab-count {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.add-user-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  white-space: nowrap;
+}
+
+.add-user-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* Main Content Area */
+.manage-users-screen .content-card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.manage-users-screen .card-header {
+  padding: 1.5rem;
+  background-color: white;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  /* Left, Center, Right */
+  align-items: center;
+  gap: 1rem;
+}
+
+.manage-users-screen .card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  justify-self: start;
+}
+
+.manage-users-screen .search-box {
+  width: 100%;
+  max-width: 400px;
+  /* Limit width */
+  margin: 0;
+  justify-self: center;
+}
+
+.manage-users-screen .view-toggle {
+  justify-self: end;
+}
+
+/* Content Card */
+.content-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Modern Table */
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modern-table td {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  transition: background-color 0.2s;
+}
+
+.modern-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+.user-code-badge {
+  background-color: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+}
+
+.user-info .user-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.user-info .user-username {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.role-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.role-badge.admin {
+  background-color: #ede9fe;
+  color: #7c3aed;
+}
+
+.role-badge.supervisor {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.role-badge.staff {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.role-badge.central {
+  background-color: #ffedd5;
+  color: #ea580c;
+}
+
+.role-badge.all {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.action-btn.edit {
+  background-color: #e0f2fe;
+}
+
+.action-btn.edit:hover {
+  background-color: #bae6fd;
+}
+
+.action-btn.delete {
+  background-color: #fee2e2;
+}
+
+.action-btn.delete:hover {
+  background-color: #fecaca;
+}
+
+.no-data {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.no-data-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #94a3b8;
+}
+
+.no-data-content span {
+  font-size: 2rem;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-content.large-modal {
+  width: 100%;
+  max-width: 600px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e293b;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* Modern Form */
+.form-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.modern-input,
+.modern-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  background-color: #f8fafc;
+}
+
+.modern-input:focus,
+.modern-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #94a3b8;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.info-box-modern {
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #1e40af;
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-cancel {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #cbd5e1;
+  background: transparent;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.btn-submit {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: var(--primary-color);
+  border-radius: 10px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-text.danger {
+  color: #ef4444;
+}
+
+/* View Toggle & Header Controls */
+.manage-users-screen .header-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.view-toggle {
+  display: inline-flex;
+  background-color: #f1f5f9;
+  /* Slate-100 */
+  padding: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  /* Slate-500 */
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  color: #0f172a;
+  /* Slate-900 */
+}
+
+.view-btn.active {
+  background-color: white;
+  color: #0f172a;
+  /* Slate-900 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+/* User Card Grid (Mobile/Tablet optimized) */
+.user-card-grid {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  background-color: #f8fafc;
+}
+
+.user-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.user-card-header {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fafbfc;
+}
+
+.user-card-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-card-body {
+  padding: 1.25rem;
+}
+
+.card-user-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.card-user-username {
+  margin: 0.25rem 0 1rem 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.detail-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #334155;
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-item.status-inactive .detail-value {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .manage-users-screen .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .manage-users-screen .header-controls {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .view-toggle {
+    margin-right: auto;
+  }
+
+  .search-box {
+    width: auto;
+    flex: 1;
+    max-width: none;
+  }
+
+  .role-tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
 }

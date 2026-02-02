@@ -22,6 +22,7 @@ import GolfCourseManagementScreen from '@/components/GolfCourseManagementScreen'
 import AssignedJobFormScreen from '@/components/AssignedJobFormScreen';
 import ViewAssignedJobsScreen from '@/components/ViewAssignedJobsScreen';
 import SupervisorPendingJobsScreen from '@/components/SupervisorPendingJobsScreen';
+import EmployeeHistoryScreen from '@/components/EmployeeHistoryScreen';
 
 // เพิ่มอินเตอร์เฟซสำหรับสิทธิ์ของผู้ใช้
 export interface UserPermission {
@@ -1310,6 +1311,14 @@ export default function HomePage() {
             setView={handleSetView}
             golfCourses={golfCourses}
             user={user}
+          />
+        )}
+        {view === 'employee_history' && user.role === 'admin' && (
+          <EmployeeHistoryScreen
+            users={users}
+            setUsers={setUsers}
+            setView={handleSetView}
+            golfCourses={golfCourses}
           />
         )}
         {view === 'history' && (

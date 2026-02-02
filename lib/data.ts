@@ -10,6 +10,7 @@ export type View =
   | 'stock_management'
   | 'admin_dashboard'
   | 'manage_users'
+  | 'employee_history'
   | 'history'
   | 'multi_assign'
   | 'serial_history'
@@ -36,6 +37,8 @@ export interface User {
   managed_golf_courses?: string[];
   password?: string;
   permissions?: string[]; // สิทธิ์การใช้งานเพิ่มเติม
+  is_active?: boolean; // สถานะการใช้งาน (false = ถูกระงับ)
+  disabled_at?: string; // วันที่ถูกระงับ
 }
 
 export interface GolfCourse {

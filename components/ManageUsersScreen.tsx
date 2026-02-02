@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { User, UserRole, GolfCourse, View } from '@/lib/data';
 import EditUserModal from './EditUserModal';
-import styles from './ManageUsersScreen.module.css';
 
 interface ManageUsersScreenProps {
     setView: (view: View) => void;
@@ -15,7 +14,11 @@ interface ManageUsersScreenProps {
 
 const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: ManageUsersScreenProps) => {
     const isAdmin = user.role === 'admin';
-    const isSupervisor = user.role === 'supervisor';
+
+    // State definitions moved to top
+    const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('staff');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
     const [newUser, setNewUser] = useState<{
         code: string;
@@ -185,23 +188,38 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
         }
     };
 
-    const handleDeleteUser = async (userId: number) => {
-        if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
+
+
+    // ระงับการใช้งานผู้ใช้
+    const handleDisableUser = async (targetUser: User) => {
+        const confirmMessage = targetUser.is_active === false
+            ? `คุณต้องการเปิดใช้งานบัญชี "${targetUser.name}" อีกครั้งหรือไม่?`
+            : `คุณต้องการระงับการใช้งานบัญชี "${targetUser.name}" หรือไม่?\n\n(พนักงานจะไม่สามารถเข้าสู่ระบบได้ แต่ข้อมูลงานจะยังคงอยู่)`;
+
+        if (window.confirm(confirmMessage)) {
             try {
-                const response = await fetch(`/api/users/${userId}`, {
-                    method: 'DELETE'
+                const newStatus = targetUser.is_active === false ? true : false;
+                const response = await fetch(`/api/users/${targetUser.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ is_active: newStatus })
                 });
 
                 if (response.ok) {
-                    setUsers(users.filter(user => user.id !== userId));
-                    alert('ลบผู้ใช้สำเร็จ');
+                    const result = await response.json();
+                    setUsers(users.map(u =>
+                        u.id === targetUser.id ? { ...u, is_active: newStatus, disabled_at: result.data.disabled_at } : u
+                    ));
+                    alert(result.message);
                 } else {
                     const error = await response.json();
                     alert(`เกิดข้อผิดพลาด: ${error.message}`);
                 }
             } catch (error) {
-                console.error('Error deleting user:', error);
-                alert('เกิดข้อผิดพลาดในการลบข้อมูล');
+                console.error('Error updating user status:', error);
+                alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ');
             }
         }
     };
@@ -225,289 +243,408 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
             .join(', ');
     };
 
-    // Filter users based on search term
-    const filteredUsers = users.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchTerm.toLowerCase())
+
+
+    // Filter users based on search term, role, and active status
+    const filteredUsers = users.filter(u =>
+        (u.is_active !== false) &&
+        (selectedRole === 'all' || u.role === selectedRole) &&
+        (
+            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.username.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
+    // Count users by role
+    const countByRole = (role: UserRole | 'all') => {
+        if (role === 'all') return users.filter(u => u.is_active !== false).length;
+        return users.filter(u => u.is_active !== false && u.role === role).length;
+    };
+
     return (
-        <div className="card">
+        <div className="manage-users-screen">
             <div className="page-header">
-                <h2>จัดการผู้ใช้งานระบบ</h2>
-                <button className="btn-outline" onClick={() => setView('admin_dashboard')}>กลับไปหน้าหลัก</button>
-            </div>
-
-            {/* Add User Section */}
-            <div className="section-card">
-                <h3 className="section-title">เพิ่มผู้ใช้ใหม่</h3>
-                <form onSubmit={handleAddUser} className="form-grid">
-                    <div className="form-group">
-                        <label htmlFor="code">รหัสพนักงาน</label>
-                        <input
-                            type="text"
-                            id="code"
-                            name="code"
-                            value={newUser.code}
-                            onChange={handleInputChange}
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="username">ชื่อผู้ใช้ (Username)</label>
-                        <input
-                            type="text"
-                            id="username"
-                            name="username"
-                            value={newUser.username}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="ใช้สำหรับเข้าสู่ระบบ"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="name">ชื่อ-นามสกุล</label>
-                        <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={newUser.name}
-                            onChange={handleInputChange}
-                            required
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="role">ตำแหน่ง</label>
-                        <select
-                            id="role"
-                            name="role"
-                            value={newUser.role}
-                            onChange={handleInputChange}
-                            required
+                <div>
+                    <h1 className="page-title">จัดการผู้ใช้งานระบบ</h1>
+                    <p className="page-subtitle">จัดการข้อมูลพนักงาน, สิทธิ์การเข้าถึง และบทบาทหน้าที่</p>
+                </div>
+                <div className="header-actions">
+                    {isAdmin && (
+                        <button
+                            className="history-button"
+                            onClick={() => setView('employee_history' as View)}
                         >
-                            <option value="staff">พนักงานทั่วไป</option>
-                            <option value="supervisor">หัวหน้างาน</option>
-                            {isAdmin && <option value="central">ส่วนกลาง</option>}
-                            {isAdmin && <option value="admin">ผู้ดูแลระบบ</option>}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="golf_course_id">สนามกอล์ฟหลัก</label>
-                        <select
-                            id="golf_course_id"
-                            name="golf_course_id"
-                            value={newUser.golf_course_id}
-                            onChange={handleInputChange}
-                            required
-                        >
-                            <option value="">เลือกสนามกอล์ฟ</option>
-                            {golfCourses.map(course => (
-                                <option key={course.id} value={course.id}>{course.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* แสดงช่อง password สำหรับ Admin, หัวหน้า และส่วนกลาง */}
-                    {(newUser.role === 'admin' || newUser.role === 'supervisor' || newUser.role === 'central') && (
-                        <div className="form-group">
-                            <label htmlFor="password">
-                                รหัสผ่าน
-                            </label>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    id="password"
-                                    name="password"
-                                    value={newUser.password || ''}
-                                    onChange={handleInputChange}
-                                    required
-                                    placeholder="ใส่รหัสผ่าน"
-                                    style={{ paddingRight: '50px', flex: 1 }}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '10px',
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        color: '#666',
-                                        padding: '5px',
-                                        zIndex: 1
-                                    }}
-                                    title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
-                                >
-                                    {showPassword ? "🙈" : "👁️"}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* แสดงการเลือกสนามที่ดูแลเฉพาะหัวหน้า */}
-                    {newUser.role === 'supervisor' && (
-                        <div className="form-group full-width">
-                            <label>สนามกอล์ฟที่รับผิดชอบ:</label>
-                            <div className="select-all-buttons" style={{ marginBottom: '1rem' }}>
-                                <button
-                                    type="button"
-                                    className="btn-secondary btn-sm"
-                                    onClick={handleSelectAllCourses}
-                                >
-                                    ✅ เลือกทั้งหมด
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn-outline btn-sm"
-                                    onClick={handleDeselectAllCourses}
-                                >
-                                    ❌ ยกเลิกทั้งหมด
-                                </button>
-                            </div>
-                            <div className="checkbox-group">
-                                {golfCourses.map(course => (
-                                    <label key={course.id} className="checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={newUser.managed_golf_courses.includes(course.id)}
-                                            onChange={(e) => handleManagedCoursesChange(course.id, e.target.checked)}
-                                        />
-                                        {course.name}
-                                    </label>
-                                ))}
-                            </div>
-                            <small className="form-hint">
-                                หัวหน้าสามารถเลือก &quot;ทั้งหมด&quot; เพื่อดูแลทุกสนาม หรือเลือกเฉพาะสนามที่รับผิดชอบ<br />
-                                <strong>หมายเหตุ:</strong> หัวหน้าที่เลือกทั้งหมดจะสามารถดูประวัติ (History) ของทุกสนามได้
-                            </small>
-                        </div>
-                    )}
-
-                    {newUser.role === 'central' && (
-                        <div className="form-group full-width">
-                            <div className="info-box">
-                                <strong>หมายเหตุ:</strong> ส่วนกลางจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟและสร้างงานสำหรับทุกสนามได้
-                            </div>
-                        </div>
-                    )}
-
-                    {newUser.role === 'admin' && (
-                        <div className="form-group full-width">
-                            <div className="info-box">
-                                <strong>หมายเหตุ:</strong> ผู้ดูแลระบบจะสามารถเข้าถึงข้อมูลทุกสนามกอล์ฟโดยอัตโนมัติ
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="form-actions">
-                        <button type="submit" className="btn-primary">
-                            เพิ่มผู้ใช้
+                            📋 ประวัติพนักงาน
                         </button>
-                    </div>
-                </form>
-            </div>
-
-            {/* Users List Section */}
-            <div className="section-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 className="section-title" style={{ margin: 0 }}>รายชื่อผู้ใช้ทั้งหมด</h3>
-                    <div className="search-box" style={{ width: '300px' }}>
-                        <input
-                            type="text"
-                            placeholder="ค้นหาชื่อ, รหัส หรือ username..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid #ddd',
-                                fontSize: '14px'
-                            }}
-                        />
-                    </div>
+                    )}
+                    <button className="back-button" onClick={() => setView('admin_dashboard')}>
+                        กลับไปหน้าหลัก
+                    </button>
                 </div>
             </div>
-            <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>รหัสพนักงาน</th>
-                            <th>ชื่อ-นามสกุล</th>
-                            <th>ตำแหน่ง</th>
-                            <th>สนามกอล์ฟหลัก</th>
-                            <th>สนามที่รับผิดชอบ</th>
-                            <th>การจัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+
+            {/* Role Tabs */}
+            <div className="role-tabs-container">
+                <div className="role-tabs">
+                    {[
+                        { id: 'all', label: 'ทั้งหมด', icon: '👥' },
+                        { id: 'staff', label: 'พนักงาน', icon: '👷' },
+                        { id: 'central', label: 'ส่วนกลาง', icon: '🏢' },
+                        { id: 'supervisor', label: 'หัวหน้างาน', icon: '👔' },
+                        { id: 'admin', label: 'ผู้ดูแลระบบ', icon: '🛡️' }
+                    ].map((tab) => {
+                        if (tab.id === 'central' && !isAdmin) return null; // Only admin sees central tab if needed, or consistent with roles
+                        return (
+                            <button
+                                key={tab.id}
+                                className={`role-tab ${selectedRole === tab.id ? 'active' : ''}`}
+                                onClick={() => setSelectedRole(tab.id as UserRole | 'all')}
+                            >
+                                <span className="tab-icon">{tab.icon}</span>
+                                <span className="tab-label">{tab.label}</span>
+                                <span className="tab-count">{countByRole(tab.id as UserRole | 'all')}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+                <button
+                    className="add-user-button"
+                    onClick={() => setIsAddModalOpen(true)}
+                >
+                    + เพิ่มผู้ใช้ใหม่
+                </button>
+            </div>
+
+            {/* Search and Table Section */}
+            <div className="content-card">
+                <div className="card-header">
+                    <h3>รายชื่อผู้ใช้ ({roleLabel(selectedRole)})</h3>
+
+                    <div className="search-box">
+                        <span className="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="ค้นหาชื่อ, รหัส..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="view-toggle">
+                        <button
+                            className={`view-btn ${viewMode === 'card' ? 'active' : ''}`}
+                            onClick={() => setViewMode('card')}
+                            title="มุมมองการ์ด"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4H8V8H4V4Z" />
+                                <path d="M10 4H14V8H10V4Z" />
+                                <path d="M16 4H20V8H16V4Z" />
+                                <path d="M4 10H8V14H4V10Z" />
+                                <path d="M10 10H14V14H10V10Z" />
+                                <path d="M16 10H20V14H16V10Z" />
+                                <path d="M4 16H8V20H4V16Z" />
+                                <path d="M10 16H14V20H10V16Z" />
+                                <path d="M16 16H20V20H16V16Z" />
+                            </svg>
+                        </button>
+                        <button
+                            className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                            onClick={() => setViewMode('table')}
+                            title="มุมมองตาราง"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="5" width="18" height="14" rx="2" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {viewMode === 'table' ? (
+                    <div className="table-container">
+                        <table className="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสพนักงาน</th>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th>ตำแหน่ง</th>
+                                    <th>สนามกอล์ฟหลัก</th>
+                                    <th>สนามที่รับผิดชอบ</th>
+                                    <th>การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.length > 0 ? (
+                                    filteredUsers.map(user => (
+                                        <tr key={user.id}>
+                                            <td>
+                                                <span className="user-code-badge">{user.code}</span>
+                                            </td>
+                                            <td>
+                                                <div className="user-info">
+                                                    <div className="user-name">{user.name}</div>
+                                                    <div className="user-username">@{user.username}</div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`role-badge ${user.role}`}>
+                                                    {roleLabel(user.role)}
+                                                </span>
+                                            </td>
+                                            <td>{getGolfCourseName(user.golf_course_id)}</td>
+                                            <td>
+                                                <div className="managed-courses" title={getManagedCoursesText(user)}>
+                                                    {getManagedCoursesText(user)}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="action-buttons">
+                                                    {(isAdmin || user.role !== 'admin') && (
+                                                        <>
+                                                            <button
+                                                                className="action-btn edit"
+                                                                onClick={() => handleEditUser(user)}
+                                                                title="แก้ไข"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                className="action-btn delete"
+                                                                onClick={() => handleDisableUser(user)}
+                                                                title="ลบ/ระงับ"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={6} className="no-data">
+                                            <div className="no-data-content">
+                                                <span>🚫</span>
+                                                <p>ไม่พบข้อมูลผู้ใช้ในหมวดหมู่นี้</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="user-card-grid">
                         {filteredUsers.length > 0 ? (
                             filteredUsers.map(user => (
-                                <tr key={user.id}>
-                                    <td>
-                                        <span className={styles.userCode}>{user.code}</span>
-                                    </td>
-                                    <td>
-                                        <div style={{ fontWeight: 500 }}>{user.name}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{user.username}</div>
-                                    </td>
-                                    <td>
-                                        <span className={`${styles.roleBadge} ${user.role === 'admin' ? styles.roleAdmin :
-                                            user.role === 'supervisor' ? styles.roleSupervisor :
-                                                user.role === 'central' ? styles.roleCentral :
-                                                    styles.roleStaff
-                                            }`}>
-                                            {user.role === 'staff' && 'พนักงานทั่วไป'}
-                                            {user.role === 'supervisor' && 'หัวหน้างาน'}
-                                            {user.role === 'central' && 'ส่วนกลาง'}
-                                            {user.role === 'admin' && 'ผู้ดูแลระบบ'}
-                                        </span>
-                                    </td>
-                                    <td>{getGolfCourseName(user.golf_course_id)}</td>
-                                    <td>
-                                        <div className={styles.managedCourses} title={getManagedCoursesText(user)}>
-                                            {getManagedCoursesText(user)}
+                                <div className="user-card" key={user.id}>
+                                    <div className="user-card-header">
+                                        <div className="user-card-info">
+                                            <span className="user-code-badge">{user.code}</span>
+                                            <span className={`role-badge ${user.role}`}>{roleLabel(user.role)}</span>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div className={styles.actionButtons}>
-                                            {/* Supervisor ไม่สามารถแก้ไขหรือลบ Admin ได้ */}
+                                        <div className="action-buttons">
                                             {(isAdmin || user.role !== 'admin') && (
                                                 <>
-                                                    <button
-                                                        className={styles.editButton}
-                                                        onClick={() => handleEditUser(user)}
-                                                    >
-                                                        แก้ไข
+                                                    <button className="action-btn edit" onClick={() => handleEditUser(user)} title="แก้ไข">
+                                                        ✏️
                                                     </button>
-                                                    <button
-                                                        className={styles.deleteButton}
-                                                        onClick={() => handleDeleteUser(user.id)}
-                                                    >
-                                                        ลบ
+                                                    <button className="action-btn delete" onClick={() => handleDisableUser(user)} title={user.is_active === false ? "เปิดใช้งาน" : "ระงับการใช้งาน"}>
+                                                        {user.is_active === false ? "✅" : "🚫"}
                                                     </button>
                                                 </>
                                             )}
-                                            {isSupervisor && user.role === 'admin' && (
-                                                <span className="text-muted" style={{ fontSize: '0.85rem' }}>ไม่มีสิทธิ์</span>
+                                        </div>
+                                    </div>
+                                    <div className="user-card-body">
+                                        <h4 className="card-user-name">{user.name}</h4>
+                                        <p className="card-user-username">@{user.username}</p>
+
+                                        <div className="card-details">
+                                            <div className="detail-item">
+                                                <span className="detail-label">สนามหลัก:</span>
+                                                <span className="detail-value">{getGolfCourseName(user.golf_course_id)}</span>
+                                            </div>
+                                            {(user.role === 'supervisor' || user.role === 'admin') && (
+                                                <div className="detail-item">
+                                                    <span className="detail-label">ดูแล:</span>
+                                                    <span className="detail-value">{getManagedCoursesText(user)}</span>
+                                                </div>
+                                            )}
+                                            {user.is_active === false && (
+                                                <div className="detail-item status-inactive">
+                                                    <span className="detail-label">สถานะ:</span>
+                                                    <span className="detail-value">ระงับการใช้งาน</span>
+                                                </div>
                                             )}
                                         </div>
-                                    </td>
-                                </tr>
+                                    </div>
+                                </div>
                             ))
                         ) : (
-                            <tr>
-                                <td colSpan={6} className={styles.noData}>
-                                    ไม่พบข้อมูลผู้ใช้ที่ค้นหา
-                                </td>
-                            </tr>
+                            <div className="no-data full-width-col">
+                                <div className="no-data-content">
+                                    <span>🔍</span>
+                                    <p>ไม่พบข้อมูลผู้ใช้งานตามเงื่อนไขที่ค้นหา</p>
+                                </div>
+                            </div>
                         )}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
+
+            {/* Add User Modal */}
+            {isAddModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content large-modal">
+                        <div className="modal-header">
+                            <h2>เพิ่มผู้ใช้งานใหม่</h2>
+                            <button onClick={() => setIsAddModalOpen(false)} className="close-modal-btn">×</button>
+                        </div>
+                        <div className="modal-body">
+                            <form onSubmit={(e) => {
+                                handleAddUser(e);
+                                setIsAddModalOpen(false);
+                            }} className="form-grid">
+                                <div className="form-group">
+                                    <label htmlFor="code">รหัสพนักงาน</label>
+                                    <input
+                                        type="text"
+                                        id="code"
+                                        name="code"
+                                        value={newUser.code}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="username">ชื่อผู้ใช้ (Username)</label>
+                                    <input
+                                        type="text"
+                                        id="username"
+                                        name="username"
+                                        value={newUser.username}
+                                        onChange={handleInputChange}
+                                        required
+                                        placeholder="ใช้สำหรับเข้าสู่ระบบ"
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="name">ชื่อ-นามสกุล</label>
+                                    <input
+                                        type="text"
+                                        id="name"
+                                        name="name"
+                                        value={newUser.name}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="modern-input"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="role">ตำแหน่ง</label>
+                                    <select
+                                        id="role"
+                                        name="role"
+                                        value={newUser.role}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="modern-select"
+                                    >
+                                        <option value="staff">พนักงานทั่วไป</option>
+                                        <option value="supervisor">หัวหน้างาน</option>
+                                        {isAdmin && <option value="central">ส่วนกลาง</option>}
+                                        {isAdmin && <option value="admin">ผู้ดูแลระบบ</option>}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="golf_course_id">สนามกอล์ฟหลัก</label>
+                                    <select
+                                        id="golf_course_id"
+                                        name="golf_course_id"
+                                        value={newUser.golf_course_id}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="modern-select"
+                                    >
+                                        <option value="">เลือกสนามกอล์ฟ</option>
+                                        {golfCourses.map(course => (
+                                            <option key={course.id} value={course.id}>{course.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Password Field */}
+                                {(newUser.role === 'admin' || newUser.role === 'supervisor' || newUser.role === 'central') && (
+                                    <div className="form-group">
+                                        <label htmlFor="password">รหัสผ่าน</label>
+                                        <div className="password-input-wrapper">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                id="password"
+                                                name="password"
+                                                value={newUser.password || ''}
+                                                onChange={handleInputChange}
+                                                required
+                                                placeholder="ใส่รหัสผ่าน"
+                                                className="modern-input"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                className="toggle-password-btn"
+                                            >
+                                                {showPassword ? "🙈" : "👁️"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Managed Courses for Supervisor */}
+                                {newUser.role === 'supervisor' && (
+                                    <div className="form-group full-width">
+                                        <label>สนามกอล์ฟที่รับผิดชอบ</label>
+                                        <div className="select-all-buttons">
+                                            <button type="button" className="btn-text" onClick={handleSelectAllCourses}>เลือกทั้งหมด</button>
+                                            <button type="button" className="btn-text danger" onClick={handleDeselectAllCourses}>ยกเลิกทั้งหมด</button>
+                                        </div>
+                                        <div className="checkbox-grid">
+                                            {golfCourses.map(course => (
+                                                <label key={course.id} className="checkbox-item">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={newUser.managed_golf_courses.includes(course.id)}
+                                                        onChange={(e) => handleManagedCoursesChange(course.id, e.target.checked)}
+                                                    />
+                                                    <span>{course.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(newUser.role === 'central' || newUser.role === 'admin') && (
+                                    <div className="form-group full-width">
+                                        <div className="info-box-modern">
+                                            ℹ️ <strong>Note:</strong> {newUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ส่วนกลาง'} จะเข้าถึงทุกสนามโดยอัตโนมัติ
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="modal-footer">
+                                    <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-cancel">ยกเลิก</button>
+                                    <button type="submit" className="btn-submit">บันทึก</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Edit User Modal */}
             <EditUserModal
                 isOpen={isEditModalOpen}
@@ -520,5 +657,16 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
         </div>
     );
 };
+
+const roleLabel = (role: string | 'all') => {
+    switch (role) {
+        case 'admin': return 'ผู้ดูแลระบบ';
+        case 'supervisor': return 'หัวหน้างาน';
+        case 'staff': return 'พนักงานทั่วไป';
+        case 'central': return 'ส่วนกลาง';
+        case 'all': return 'ทั้งหมด';
+        default: return role;
+    }
+}
 
 export default ManageUsersScreen;
