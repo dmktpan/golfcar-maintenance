@@ -198,6 +198,9 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                             >
                                 <option value="staff">พนักงานทั่วไป</option>
                                 <option value="supervisor">หัวหน้างาน</option>
+                                <option value="manager">ผู้จัดการ</option>
+                                <option value="stock">สต๊อก</option>
+                                <option value="clerk">ธุรการ</option>
                                 {isAdmin && <option value="central">ส่วนกลาง</option>}
                                 {isAdmin && <option value="admin">ผู้ดูแลระบบ</option>}
                             </select>

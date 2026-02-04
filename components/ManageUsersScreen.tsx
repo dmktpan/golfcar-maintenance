@@ -290,8 +290,11 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                     {[
                         { id: 'all', label: 'ทั้งหมด', icon: '👥' },
                         { id: 'staff', label: 'พนักงาน', icon: '👷' },
-                        { id: 'central', label: 'ส่วนกลาง', icon: '🏢' },
                         { id: 'supervisor', label: 'หัวหน้างาน', icon: '👔' },
+                        { id: 'manager', label: 'ผู้จัดการ', icon: '💼' },
+                        { id: 'stock', label: 'สต๊อก', icon: '📦' },
+                        { id: 'clerk', label: 'ธุรการ', icon: '📋' },
+                        { id: 'central', label: 'ส่วนกลาง', icon: '🏢' },
                         { id: 'admin', label: 'ผู้ดูแลระบบ', icon: '🛡️' }
                     ].map((tab) => {
                         if (tab.id === 'central' && !isAdmin) return null; // Only admin sees central tab if needed, or consistent with roles
@@ -557,6 +560,9 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                                     >
                                         <option value="staff">พนักงานทั่วไป</option>
                                         <option value="supervisor">หัวหน้างาน</option>
+                                        <option value="manager">ผู้จัดการ</option>
+                                        <option value="stock">สต๊อก</option>
+                                        <option value="clerk">ธุรการ</option>
                                         {isAdmin && <option value="central">ส่วนกลาง</option>}
                                         {isAdmin && <option value="admin">ผู้ดูแลระบบ</option>}
                                     </select>
@@ -664,6 +670,9 @@ const roleLabel = (role: string | 'all') => {
         case 'supervisor': return 'หัวหน้างาน';
         case 'staff': return 'พนักงานทั่วไป';
         case 'central': return 'ส่วนกลาง';
+        case 'manager': return 'ผู้จัดการ';
+        case 'stock': return 'สต๊อก';
+        case 'clerk': return 'ธุรการ';
         case 'all': return 'ทั้งหมด';
         default: return role;
     }

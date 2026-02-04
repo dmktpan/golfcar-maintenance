@@ -18,17 +18,34 @@ interface Permission {
     name: string;
     description: string;
     roles: UserRole[];
+    category: 'view' | 'action'; // view = ดูได้, action = แก้ไข/ดำเนินการได้
+    relatedTo?: string; // เชื่อมโยงกับ permission อื่น (เช่น approve เชื่อมกับ view)
 }
 
-const MOCK_PERMISSIONS: Permission[] = [
-    { id: 'manage_users', name: 'จัดการผู้ใช้', description: 'สามารถเพิ่ม แก้ไข และลบผู้ใช้ในระบบ', roles: ['admin'] },
-    { id: 'manage_admins', name: 'จัดการผู้ดูแล', description: 'สามารถเพิ่ม แก้ไข และลบผู้ดูแลระบบ', roles: ['admin'] },
-    { id: 'approve_jobs', name: 'อนุมัติงาน', description: 'สามารถอนุมัติหรือปฏิเสธงานที่ส่งเข้ามา', roles: ['admin', 'supervisor'] },
-    { id: 'manage_parts', name: 'จัดการอะไหล่', description: 'สามารถเพิ่ม แก้ไข และลบข้อมูลอะไหล่', roles: ['admin', 'supervisor'] },
-    { id: 'view_reports', name: 'ดูรายงาน', description: 'สามารถดูรายงานต่างๆ ในระบบ', roles: ['admin', 'supervisor'] },
-    { id: 'manage_golf_courses', name: 'จัดการสนามกอล์ฟ', description: 'สามารถเพิ่ม แก้ไข และลบข้อมูลสนามกอล์ฟ', roles: ['admin'] },
-    { id: 'manage_vehicles', name: 'จัดการรถกอล์ฟ', description: 'สามารถเพิ่ม แก้ไข และลบข้อมูลรถกอล์ฟ', roles: ['admin', 'supervisor'] },
+// สิทธิ์ดู (View Permissions)
+const VIEW_PERMISSIONS: Permission[] = [
+    { id: 'pending_jobs:view', name: 'ดูงานที่รอตรวจสอบ', description: 'ดูรายการงานที่รอการอนุมัติ', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'view' },
+    { id: 'history:view', name: 'ดูประวัติซ่อมบำรุง', description: 'ดูประวัติการซ่อมบำรุงทั้งหมด', roles: ['admin', 'supervisor', 'manager', 'clerk', 'central'], category: 'view' },
+    { id: 'golf_course:view', name: 'ดูข้อมูลสนามและซีเรียล', description: 'ดูข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'central'], category: 'view' },
+    { id: 'users:view', name: 'ดูรายชื่อผู้ใช้งาน', description: 'ดูรายชื่อผู้ใช้ในระบบ', roles: ['admin', 'supervisor', 'manager'], category: 'view' },
+    { id: 'serial_history:view', name: 'ดูประวัติซีเรียล', description: 'ดูประวัติการใช้งานรถแต่ละคัน', roles: ['admin', 'supervisor', 'manager', 'stock', 'central'], category: 'view' },
+    { id: 'stock:view', name: 'ดูระบบสต็อก', description: 'ดูรายการอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'staff', 'central'], category: 'view' },
 ];
+
+// สิทธิ์แก้ไข/ดำเนินการ (Action Permissions)
+const ACTION_PERMISSIONS: Permission[] = [
+    { id: 'pending_jobs:approve', name: 'อนุมัติ/ปฏิเสธงาน', description: 'สามารถอนุมัติหรือปฏิเสธงานที่รอตรวจสอบ', roles: ['admin', 'supervisor', 'manager'], category: 'action', relatedTo: 'pending_jobs:view' },
+    { id: 'central_job:create', name: 'สร้างงานซ่อม-ส่วนกลาง', description: 'สร้างงานซ่อมสำหรับทุกสนาม', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'action' },
+    { id: 'multi_assign:manage', name: 'มอบหมายงานหลายคน', description: 'มอบหมายงานให้หลายคนพร้อมกัน', roles: ['admin', 'supervisor', 'manager'], category: 'action' },
+    { id: 'history:edit', name: 'แก้ไขประวัติซ่อมบำรุง', description: 'แก้ไขข้อมูลประวัติการซ่อมบำรุง', roles: ['admin', 'supervisor'], category: 'action', relatedTo: 'history:view' },
+    { id: 'golf_course:edit', name: 'แก้ไขข้อมูลสนามและซีเรียล', description: 'เพิ่ม แก้ไข ลบข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock'], category: 'action', relatedTo: 'golf_course:view' },
+    { id: 'users:edit', name: 'แก้ไขผู้ใช้งาน', description: 'เพิ่ม แก้ไข และลบผู้ใช้งาน', roles: ['admin', 'supervisor', 'manager'], category: 'action', relatedTo: 'users:view' },
+    { id: 'system:manage', name: 'จัดการระบบ', description: 'ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง', roles: ['admin'], category: 'action' },
+    { id: 'stock:edit', name: 'แก้ไขระบบสต็อก', description: 'เพิ่ม แก้ไข ลบอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'stock'], category: 'action', relatedTo: 'stock:view' },
+];
+
+// รวมทั้งหมด
+const ALL_PERMISSIONS: Permission[] = [...VIEW_PERMISSIONS, ...ACTION_PERMISSIONS];
 
 const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions, getUserPermissions, golfCourses, user }: AdminManagementScreenProps) => {
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -103,7 +120,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
 
         // ถ้าไม่มีสิทธิ์ที่บันทึกไว้ ให้กำหนดสิทธิ์เริ่มต้นตามบทบาท
         if (!permissions || permissions.length === 0) {
-            const defaultPermissions = MOCK_PERMISSIONS
+            const defaultPermissions = ALL_PERMISSIONS
                 .filter(permission => permission.roles.includes(user.role))
                 .map(permission => permission.id);
             setCurrentUserPermissions(defaultPermissions);
@@ -125,7 +142,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         if (selectedUser && selectedUser.id === userId) {
             setSelectedUser({ ...selectedUser, role: newRole });
             // อัพเดทสิทธิ์ตามบทบาทใหม่
-            const permissions = MOCK_PERMISSIONS
+            const permissions = ALL_PERMISSIONS
                 .filter(permission => permission.roles.includes(newRole))
                 .map(permission => permission.id);
             setCurrentUserPermissions(permissions);
@@ -313,10 +330,13 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                             </button>
                         </div>
 
+                        {/* สิทธิ์ดู */}
                         <div style={{ marginBottom: '1.5rem' }}>
-                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155', fontSize: '1rem' }}>สิทธิ์การใช้งาน:</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                                {MOCK_PERMISSIONS.map(permission => {
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                👁️ สิทธิ์ดู (View)
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                                {VIEW_PERMISSIONS.map(permission => {
                                     const isDisabled = !permission.roles.includes(selectedUser.role);
                                     const isChecked = currentUserPermissions.includes(permission.id);
                                     return (
@@ -326,10 +346,10 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                                 display: 'flex',
                                                 alignItems: 'flex-start',
                                                 gap: '0.75rem',
-                                                padding: '1rem',
-                                                background: isDisabled ? '#f8fafc' : isChecked ? '#f0f9ff' : '#ffffff',
-                                                borderRadius: '12px',
-                                                border: `1px solid ${isDisabled ? '#e2e8f0' : isChecked ? '#0ea5e9' : '#e2e8f0'}`,
+                                                padding: '0.875rem',
+                                                background: isDisabled ? '#f8fafc' : isChecked ? '#f0fdf4' : '#ffffff',
+                                                borderRadius: '10px',
+                                                border: `1px solid ${isDisabled ? '#e2e8f0' : isChecked ? '#22c55e' : '#e2e8f0'}`,
                                                 opacity: isDisabled ? 0.6 : 1,
                                                 transition: 'all 0.2s ease'
                                             }}
@@ -344,20 +364,86 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                                     width: '18px',
                                                     height: '18px',
                                                     marginTop: '2px',
-                                                    cursor: isDisabled || isSaving ? 'not-allowed' : 'pointer'
+                                                    cursor: isDisabled || isSaving ? 'not-allowed' : 'pointer',
+                                                    accentColor: '#22c55e'
                                                 }}
                                             />
                                             <label
                                                 htmlFor={`permission-${permission.id}`}
                                                 style={{ cursor: isDisabled || isSaving ? 'not-allowed' : 'pointer', flex: 1 }}
                                             >
-                                                <strong style={{ color: '#1e293b', fontSize: '0.95rem' }}>{permission.name}</strong>
-                                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                                <strong style={{ color: '#1e293b', fontSize: '0.9rem' }}>{permission.name}</strong>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
                                                     {permission.description}
                                                 </div>
                                                 {isDisabled && (
-                                                    <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                                                    <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '0.15rem' }}>
                                                         ❌ ไม่อนุญาตสำหรับตำแหน่งนี้
+                                                    </div>
+                                                )}
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* สิทธิ์แก้ไข/ดำเนินการ */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                ✏️ สิทธิ์แก้ไข/ดำเนินการ (Action)
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem' }}>
+                                {ACTION_PERMISSIONS.map(permission => {
+                                    const isDisabled = !permission.roles.includes(selectedUser.role);
+                                    const isChecked = currentUserPermissions.includes(permission.id);
+                                    // ถ้ามี relatedTo ต้องมีสิทธิ์ view ก่อน
+                                    const needsViewPermission = permission.relatedTo && !currentUserPermissions.includes(permission.relatedTo);
+                                    return (
+                                        <div
+                                            key={permission.id}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'flex-start',
+                                                gap: '0.75rem',
+                                                padding: '0.875rem',
+                                                background: isDisabled || needsViewPermission ? '#f8fafc' : isChecked ? '#fef3c7' : '#ffffff',
+                                                borderRadius: '10px',
+                                                border: `1px solid ${isDisabled || needsViewPermission ? '#e2e8f0' : isChecked ? '#f59e0b' : '#e2e8f0'}`,
+                                                opacity: isDisabled || needsViewPermission ? 0.6 : 1,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                id={`permission-${permission.id}`}
+                                                checked={isChecked}
+                                                onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
+                                                disabled={isDisabled || isSaving || !!needsViewPermission}
+                                                style={{
+                                                    width: '18px',
+                                                    height: '18px',
+                                                    marginTop: '2px',
+                                                    cursor: isDisabled || isSaving || needsViewPermission ? 'not-allowed' : 'pointer',
+                                                    accentColor: '#f59e0b'
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor={`permission-${permission.id}`}
+                                                style={{ cursor: isDisabled || isSaving || needsViewPermission ? 'not-allowed' : 'pointer', flex: 1 }}
+                                            >
+                                                <strong style={{ color: '#1e293b', fontSize: '0.9rem' }}>{permission.name}</strong>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                                                    {permission.description}
+                                                </div>
+                                                {isDisabled && (
+                                                    <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '0.15rem' }}>
+                                                        ❌ ไม่อนุญาตสำหรับตำแหน่งนี้
+                                                    </div>
+                                                )}
+                                                {needsViewPermission && !isDisabled && (
+                                                    <div style={{ fontSize: '0.7rem', color: '#f59e0b', marginTop: '0.15rem' }}>
+                                                        ⚠️ ต้องเปิดสิทธิ์ดูก่อน
                                                     </div>
                                                 )}
                                             </label>

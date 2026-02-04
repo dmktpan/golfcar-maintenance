@@ -205,6 +205,9 @@ enum UserRole {
   technician
   viewer
   central
+  manager
+  stock
+  clerk
 }
 
 enum JobType {

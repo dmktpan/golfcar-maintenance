@@ -72,7 +72,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
-    // เตรียมข้อมูลสำหรับ External API โดยรวมข้อมูลอะไหล่ด้วย
     const jobData: any = {
       ...body,
       // ตรวจสอบและเพิ่มข้อมูลอะไหล่ถ้ามี

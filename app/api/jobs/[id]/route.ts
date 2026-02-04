@@ -174,34 +174,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }, { status: 400 });
     }
 
-    // สร้างข้อมูลสำหรับ Prisma
-    const updateData: any = {
-      type,
-      status,
-      vehicle_id: vehicle_id,
-      vehicle_number: vehicle_number?.trim(),
-      golf_course_id: golf_course_id,
-      user_id: user_id,
-      userName: userName?.trim(),
-      system: system?.trim(),
-      subTasks: subTasks || [],
-      remarks: remarks?.trim(),
-      bmCause: bmCause,
-      battery_serial: battery_serial?.trim(),
-      assigned_to: assigned_to || null,
-      partsNotes: partsNotes?.trim(),
-      images: images || []
-    };
 
-    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเป็น approved หรือ rejected
-    if (status === 'approved' || status === 'rejected') {
-      updateData.approved_by_id = approved_by_id || null;
-      updateData.approved_by_name = approved_by_name?.trim() || null;
-      updateData.approved_at = new Date();
-      if (status === 'rejected') {
-        updateData.rejection_reason = rejection_reason?.trim() || null;
-      }
-    }
 
     // ใช้ transaction เพื่อจัดการ parts และ serial history
     const job = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -242,7 +215,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         battery_serial: battery_serial?.trim() || oldJob.battery_serial,
         assigned_to: assigned_to || oldJob.assigned_to,
         partsNotes: partsNotes?.trim() || oldJob.partsNotes,
-        images: images || oldJob.images || []
+        images: images || oldJob.images || [],
+
+        // Approval fields logic
+        approved_by_id: (status === 'approved' || status === 'rejected') ? (approved_by_id || null) : oldJob.approved_by_id,
+        approved_by_name: (status === 'approved' || status === 'rejected') ? (approved_by_name?.trim() || null) : oldJob.approved_by_name,
+        approved_at: (status === 'approved' || status === 'rejected') ? new Date() : oldJob.approved_at,
+        rejection_reason: (status === 'rejected') ? (rejection_reason?.trim() || null) : (status === 'approved' ? null : oldJob.rejection_reason)
       };
 
       console.log('Final update data:', finalData);

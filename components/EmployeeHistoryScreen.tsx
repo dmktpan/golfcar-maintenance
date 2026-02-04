@@ -126,12 +126,18 @@ const EmployeeHistoryScreen = ({ setView, users, setUsers, golfCourses }: Employ
                                         <span className={`${styles.roleBadge} ${user.role === 'admin' ? styles.roleAdmin :
                                             user.role === 'supervisor' ? styles.roleSupervisor :
                                                 user.role === 'central' ? styles.roleCentral :
-                                                    styles.roleStaff
+                                                    user.role === 'manager' ? styles.roleManager :
+                                                        user.role === 'stock' ? styles.roleStock :
+                                                            user.role === 'clerk' ? styles.roleClerk :
+                                                                styles.roleStaff
                                             }`} style={{ opacity: 0.6 }}>
                                             {user.role === 'staff' && 'พนักงานทั่วไป'}
                                             {user.role === 'supervisor' && 'หัวหน้างาน'}
                                             {user.role === 'central' && 'ส่วนกลาง'}
                                             {user.role === 'admin' && 'ผู้ดูแลระบบ'}
+                                            {user.role === 'manager' && 'ผู้จัดการ'}
+                                            {user.role === 'stock' && 'สต๊อก'}
+                                            {user.role === 'clerk' && 'ธุรการ'}
                                         </span>
                                     </td>
                                     <td>{getGolfCourseName(user.golf_course_id)}</td>

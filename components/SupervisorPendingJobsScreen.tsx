@@ -35,12 +35,12 @@ function SupervisorPendingJobsScreen({
     const hasApprovePermission = (): boolean => {
         // admin มีสิทธิ์ทั้งหมด
         if (user.role === 'admin') return true;
-        // ตรวจสอบจาก permissions array
+        // ตรวจสอบจาก permissions array (ใช้ ID ใหม่ pending_jobs:approve)
         if (user.permissions && Array.isArray(user.permissions)) {
-            return user.permissions.includes('approve_jobs');
+            return user.permissions.includes('pending_jobs:approve') || user.permissions.includes('approve_jobs');
         }
-        // ถ้าไม่มี permissions array ให้อนุญาตตาม role เดิม (supervisor มีสิทธิ์)
-        return user.role === 'supervisor';
+        // ถ้าไม่มี permissions array ให้อนุญาตตาม role เดิม (supervisor และ manager มีสิทธิ์)
+        return user.role === 'supervisor' || user.role === 'manager';
     };
 
     // Calculate assigned jobs count (assigned + in_progress status)
