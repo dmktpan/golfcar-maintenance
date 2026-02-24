@@ -144,6 +144,8 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     />
                 )}
 
+
+
                 {/* 2. สร้างงานซ่อม - ส่วนกลาง */}
                 {canCreateCentralJob && (
                     <AdminDashboardCard

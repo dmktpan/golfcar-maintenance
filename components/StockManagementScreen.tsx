@@ -1,24 +1,31 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { Part } from '@/lib/data';
-import { 
-  MagnifyingGlassIcon, 
-  PlusIcon, 
-  PencilIcon, 
+import { Part, User, GolfCourse, PartsUsageLog, Job } from '@/lib/data';
+import {
+  MagnifyingGlassIcon,
+  PlusIcon,
+  PencilIcon,
   TrashIcon,
   DocumentArrowDownIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
   DocumentArrowUpIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  BuildingStorefrontIcon,
+  ChartBarIcon,
+  ArrowsRightLeftIcon
 } from '@heroicons/react/24/outline';
 
 interface StockManagementScreenProps {
   parts: Part[];
+  golfCourses?: GolfCourse[];
+  partsUsageLog?: PartsUsageLog[];
+  jobs?: Job[];
   onPartsUpdate: () => void;
+  user: User | null;
 }
 
 interface PartFormData {
@@ -31,11 +38,23 @@ interface PartFormData {
   max_qty: number;
 }
 
-const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, onPartsUpdate }) => {
+const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, golfCourses = [], partsUsageLog = [], jobs = [], onPartsUpdate, user }) => {
+  const [stockHubSearch, setStockHubSearch] = useState('');
+  const [selectedHubCourse, setSelectedHubCourse] = useState<string | null>(null);
+  const [stockHubTab, setStockHubTab] = useState<'outgoing' | 'incoming'>('outgoing');
+  // Permission Check
+  const canEditStock = useMemo(() => {
+    return user?.permissions?.includes('stock:edit') || false;
+  }, [user]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [stockLevelFilter, setStockLevelFilter] = useState<'all' | 'low' | 'normal' | 'high'>('all');
   const [showAddMethodModal, setShowAddMethodModal] = useState(false);
+  const [showStockHub, setShowStockHub] = useState(false); // New State
+  const [showBreakdownModal, setShowBreakdownModal] = useState(false); // New State
+  const [showMoveModal, setShowMoveModal] = useState(false); // New State
+  const [selectedPartForAction, setSelectedPartForAction] = useState<Part | null>(null); // New State
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTabbedModal, setShowTabbedModal] = useState(false);
@@ -45,7 +64,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   const [loading, setLoading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [duplicatePartNumbers, setDuplicatePartNumbers] = useState<string[]>([]);
-  
+
   const [formData, setFormData] = useState<PartFormData>({
     name: '',
     part_number: '',
@@ -60,14 +79,14 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   const statistics = useMemo(() => {
     const totalParts = parts.length;
     const totalStock = parts.reduce((sum, part) => sum + part.stock_qty, 0);
-    const lowStockParts = parts.filter(part => 
+    const lowStockParts = parts.filter(part =>
       part.stock_qty <= part.min_qty
     ).length;
-    const highStockParts = parts.filter(part => 
+    const highStockParts = parts.filter(part =>
       part.stock_qty >= part.max_qty
     ).length;
     const categories = Array.from(new Set(parts.map(part => part.category).filter(Boolean))).length;
-    
+
     return {
       totalParts,
       totalStock,
@@ -80,20 +99,20 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   // กรองข้อมูล
   const filteredParts = useMemo(() => {
     return parts.filter(part => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (part.part_number && part.part_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (part.category && part.category.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+
       const matchesCategory = !categoryFilter || part.category === categoryFilter;
-      
-      const matchesStockLevel = stockLevelFilter === 'all' || 
+
+      const matchesStockLevel = stockLevelFilter === 'all' ||
         (stockLevelFilter === 'low' && part.stock_qty <= part.min_qty) ||
         (stockLevelFilter === 'high' && part.stock_qty >= part.max_qty) ||
-        (stockLevelFilter === 'normal' && 
+        (stockLevelFilter === 'normal' &&
           part.stock_qty > part.min_qty && part.stock_qty < part.max_qty
         );
-      
+
       return matchesSearch && matchesCategory && matchesStockLevel;
     });
   }, [parts, searchTerm, categoryFilter, stockLevelFilter]);
@@ -120,8 +139,8 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   // ฟังก์ชันตรวจสอบรหัสอะไหล่ซ้ำ
   const checkDuplicatePartNumber = (partNumber: string, excludeId?: string) => {
     if (!partNumber.trim()) return false;
-    return parts.some(part => 
-      part.part_number === partNumber.trim() && 
+    return parts.some(part =>
+      part.part_number === partNumber.trim() &&
       part.id !== excludeId
     );
   };
@@ -180,7 +199,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
           },
           body: JSON.stringify(partData),
         });
-        
+
         const result = await response.json();
         if (!result.success) {
           console.error('Error adding part:', result.message);
@@ -220,21 +239,21 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   // ฟังก์ชันสำหรับเพิ่มอะไหล่ใหม่
   const handleAddPart = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // ตรวจสอบว่ามีรหัสอะไหล่หรือไม่
     if (!formData.part_number || formData.part_number.trim() === '') {
       alert('กรุณากรอกรหัสอะไหล่');
       return;
     }
-    
+
     // ตรวจสอบรหัสอะไหล่ซ้ำ
     if (checkDuplicatePartNumber(formData.part_number)) {
       alert(`รหัสอะไหล่ "${formData.part_number}" มีอยู่แล้วในระบบ กรุณาใช้รหัสอื่น`);
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch('/api/parts', {
         method: 'POST',
@@ -243,9 +262,9 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
         },
         body: JSON.stringify(formData),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setShowAddModal(false);
         setShowTabbedModal(false);
@@ -267,21 +286,21 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
   const handleEditPart = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPart) return;
-    
+
     // ตรวจสอบว่ามีรหัสอะไหล่หรือไม่
     if (!formData.part_number || formData.part_number.trim() === '') {
       alert('กรุณากรอกรหัสอะไหล่');
       return;
     }
-    
+
     // ตรวจสอบรหัสอะไหล่ซ้ำ (ยกเว้นตัวเอง)
     if (checkDuplicatePartNumber(formData.part_number, editingPart.id)) {
       alert(`รหัสอะไหล่ "${formData.part_number}" มีอยู่แล้วในระบบ กรุณาใช้รหัสอื่น`);
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch(`/api/parts/${editingPart.id}`, {
         method: 'PUT',
@@ -290,9 +309,9 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
         },
         body: JSON.stringify(formData),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setShowEditModal(false);
         setEditingPart(null);
@@ -315,16 +334,16 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
     if (!confirm(`คุณต้องการลบอะไหล่ "${partName}" หรือไม่?`)) {
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const response = await fetch(`/api/parts/${partId}`, {
         method: 'DELETE',
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         onPartsUpdate();
         alert('ลบอะไหล่สำเร็จ!');
@@ -364,9 +383,9 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
       'จำนวนคงเหลือ': part.stock_qty,
       'จำนวนขั้นต่ำ': part.min_qty,
       'จำนวนสูงสุด': part.max_qty,
-      'สถานะ Stock': 
+      'สถานะ Stock':
         part.stock_qty <= part.min_qty ? 'ต่ำ' :
-        part.stock_qty >= part.max_qty ? 'สูง' : 'ปกติ',
+          part.stock_qty >= part.max_qty ? 'สูง' : 'ปกติ',
       'วันที่สร้าง': part.createdAt ? new Date(part.createdAt).toLocaleDateString('th-TH') : '-',
       'วันที่อัปเดต': part.updatedAt ? new Date(part.updatedAt).toLocaleDateString('th-TH') : '-'
     }));
@@ -422,7 +441,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
           background: 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%)',
           pointerEvents: 'none'
         }}></div>
-        
+
         <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{
             display: 'inline-flex',
@@ -440,7 +459,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
             <span style={{ fontSize: '1.5rem' }}>📦</span>
             ระบบจัดการ Stock อะไหล่
           </div>
-          
+
           <p style={{
             fontSize: '1.25rem',
             color: '#64748b',
@@ -448,7 +467,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
             fontWeight: '500',
             lineHeight: '1.6'
           }}>ระบบจัดการสต็อกอะไหล่ พร้อมการแจ้งเตือนและรายงาน</p>
-          
+
           {/* Quick Stats in Header */}
           <div style={{
             display: 'flex',
@@ -568,7 +587,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                 />
               </div>
             </div>
-            
+
             {/* Enhanced Category Filter */}
             <div>
               <label style={{
@@ -607,7 +626,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                 ))}
               </select>
             </div>
-            
+
             {/* Enhanced Stock Level Filter */}
             <div>
               <label style={{
@@ -647,7 +666,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
               </select>
             </div>
           </div>
-          
+
           {/* Action Buttons Row */}
           <div style={{
             display: 'flex',
@@ -663,8 +682,43 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
             }}>
               แสดง {filteredParts.length} รายการจากทั้งหมด {parts.length} รายการ
             </div>
-            
+
             <div style={{ display: 'flex', gap: '1rem' }}>
+              {/* Stock Hub Button */}
+              {canEditStock && (
+                <button
+                  onClick={() => {
+                    console.log('Stock Hub clicked');
+                    setShowStockHub(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 1.5rem',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(139, 92, 246, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.2)';
+                  }}
+                >
+                  <BuildingStorefrontIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+                  Stock Hub
+                </button>
+              )}
               <button
                 onClick={exportToExcel}
                 style={{
@@ -694,166 +748,169 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                 <DocumentArrowDownIcon style={{ width: '1.25rem', height: '1.25rem' }} />
                 Export Excel
               </button>
-              
-              <button
-                onClick={() => {
-                  console.log('Add Parts button clicked!');
-                  console.log('Current showAddMethodModal state:', showAddMethodModal);
-                  setShowAddMethodModal(true);
-                  console.log('Setting showAddMethodModal to true');
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.875rem 1.5rem',
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.2)';
-                }}
-              >
-                <PlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-                เพิ่มอะไหล่
-              </button>
+
+              {canEditStock && (
+                <button
+                  onClick={() => {
+                    console.log('Add Parts button clicked!');
+                    console.log('Current showAddMethodModal state:', showAddMethodModal);
+                    setShowAddMethodModal(true);
+                    console.log('Setting showAddMethodModal to true');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 1.5rem',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.2)';
+                  }}
+                >
+                  <PlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+                  เพิ่มอะไหล่
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-        {/* Parts Table */}
+      {/* Parts Table */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid #e5e7eb'
+      }}>
+        {/* Table Header */}
         <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          border: '1px solid #e5e7eb'
+          background: '#f9fafb',
+          padding: '16px 24px',
+          borderBottom: '1px solid #e5e7eb'
         }}>
-          {/* Table Header */}
-          <div style={{
-            background: '#f9fafb',
-            padding: '16px 24px',
-            borderBottom: '1px solid #e5e7eb'
+          <h3 style={{
+            fontSize: '1.125rem',
+            fontWeight: '600',
+            color: '#374151',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#374151',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
+            รายการอะไหล่ทั้งหมด
+            <span style={{
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              background: '#f3f4f6',
+              color: '#6b7280',
+              padding: '4px 12px',
+              borderRadius: '12px',
+              marginLeft: '8px'
             }}>
-              รายการอะไหล่ทั้งหมด
-              <span style={{
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                background: '#f3f4f6',
-                color: '#6b7280',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                marginLeft: '8px'
+              {filteredParts.length} รายการ
+            </span>
+          </h3>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{
+                background: '#f9fafb'
               }}>
-                {filteredParts.length} รายการ
-              </span>
-            </h3>
-          </div>
-          
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{
-                  background: '#f9fafb'
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '140px'
                 }}>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '140px'
-                  }}>
-                    รหัสอะไหล่
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '200px'
-                  }}>
-                    ชื่ออะไหล่
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '120px'
-                  }}>
-                    หมวดหมู่
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'left',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '80px'
-                  }}>
-                    หน่วย
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'center',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '140px'
-                  }}>
-                    จำนวนคงเหลือ
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'center',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '100px'
-                  }}>
-                    MIN/MAX
-                  </th>
-                  <th style={{
-                    padding: '12px 16px',
-                    textAlign: 'center',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    borderBottom: '1px solid #e5e7eb',
-                    minWidth: '100px'
-                  }}>
-                    สถานะ
-                  </th>
+                  รหัสอะไหล่
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '200px'
+                }}>
+                  ชื่ออะไหล่
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '120px'
+                }}>
+                  หมวดหมู่
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '80px'
+                }}>
+                  หน่วย
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '140px'
+                }}>
+                  จำนวนคงเหลือ
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '100px'
+                }}>
+                  MIN/MAX
+                </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '100px'
+                }}>
+                  สถานะ
+                </th>
+                {canEditStock && (
                   <th style={{
                     padding: '12px 16px',
                     textAlign: 'center',
@@ -865,121 +922,163 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                   }}>
                     การจัดการ
                   </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredParts.map((part, index) => (
-                  <tr key={part.id} style={{
-                    borderBottom: '1px solid #f1f5f9',
-                    background: index % 2 === 0 ? '#ffffff' : '#f9fafb'
-                  }}
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredParts.map((part, index) => (
+                <tr key={part.id} style={{
+                  borderBottom: '1px solid #f1f5f9',
+                  background: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+                }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = '#f3f4f6';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : '#f9fafb';
                   }}>
-                    {/* รหัสอะไหล่ */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{
-                        background: '#f3f4f6',
-                        color: '#374151',
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        display: 'inline-block',
-                        fontFamily: 'monospace',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        border: '1px solid #e5e7eb'
-                      }}>
-                        {part.part_number || 'ไม่มีรหัส'}
-                      </div>
-                    </td>
-                    {/* ชื่ออะไหล่ */}
-                    <td style={{
-                      padding: '12px 16px',
-                      fontSize: '0.875rem',
+                  {/* รหัสอะไหล่ */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{
+                      background: '#f3f4f6',
                       color: '#374151',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      display: 'inline-block',
+                      fontFamily: 'monospace',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {part.part_number || 'ไม่มีรหัส'}
+                    </div>
+                  </td>
+                  {/* ชื่ออะไหล่ */}
+                  <td style={{
+                    padding: '12px 16px',
+                    fontSize: '0.875rem',
+                    color: '#374151',
+                    fontWeight: '500'
+                  }}>
+                    {part.name}
+                  </td>
+                  {/* หมวดหมู่ */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      background: '#f3f4f6',
+                      color: '#6b7280',
+                      border: '1px solid #e5e7eb'
+                    }}>
+                      {part.category || 'ไม่ระบุ'}
+                    </span>
+                  </td>
+                  {/* หน่วย */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      color: '#6b7280',
+                      textAlign: 'center'
+                    }}>
+                      {part.unit}
+                    </div>
+                  </td>
+                  {/* จำนวนคงเหลือ */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: '#374151',
+                      textAlign: 'center'
+                    }}>
+                      {part.stock_qty.toLocaleString()}
+                    </div>
+                  </td>
+                  {/* Min/Max */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      textAlign: 'center',
                       fontWeight: '500'
                     }}>
-                      {part.name}
-                    </td>
-                    {/* หมวดหมู่ */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                        background: '#f3f4f6',
-                        color: '#6b7280',
-                        border: '1px solid #e5e7eb'
-                      }}>
-                        {part.category || 'ไม่ระบุ'}
-                      </span>
-                    </td>
-                    {/* หน่วย */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        color: '#6b7280',
-                        textAlign: 'center'
-                      }}>
-                        {part.unit}
-                      </div>
-                    </td>
-                    {/* จำนวนคงเหลือ */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        textAlign: 'center'
-                      }}>
-                        {part.stock_qty.toLocaleString()}
-                      </div>
-                    </td>
-                    {/* Min/Max */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        color: '#6b7280',
-                        textAlign: 'center',
-                        fontWeight: '500'
-                      }}>
-                        {part.min_qty.toLocaleString()} - {part.max_qty.toLocaleString()}
-                      </div>
-                    </td>
-                    {/* สถานะ */}
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        minWidth: '80px',
-                        justifyContent: 'center',
-                        backgroundColor: part.stock_qty <= part.min_qty ? '#fef2f2' : 
-                                       part.stock_qty >= part.max_qty ? '#fff7ed' : '#f0fdf4',
-                        color: part.stock_qty <= part.min_qty ? '#dc2626' : 
-                               part.stock_qty >= part.max_qty ? '#ea580c' : '#16a34a',
-                        border: `1px solid ${part.stock_qty <= part.min_qty ? '#fecaca' : 
-                                             part.stock_qty >= part.max_qty ? '#fed7aa' : '#bbf7d0'}`
-                      }}>
-                        {part.stock_qty <= part.min_qty && <span style={{ marginRight: '4px' }}>⚠️</span>}
-                        {part.stock_qty > part.min_qty && part.stock_qty < part.max_qty && <span style={{ marginRight: '4px' }}>✅</span>}
-                        {part.stock_qty >= part.max_qty && <span style={{ marginRight: '4px' }}>📈</span>}
-                        {getStockLevelText(part)}
-                      </div>
-                    </td>
-                    {/* การจัดการ */}
+                      {part.min_qty.toLocaleString()} - {part.max_qty.toLocaleString()}
+                    </div>
+                  </td>
+                  {/* สถานะ */}
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      minWidth: '80px',
+                      justifyContent: 'center',
+                      backgroundColor: part.stock_qty <= part.min_qty ? '#fef2f2' :
+                        part.stock_qty >= part.max_qty ? '#fff7ed' : '#f0fdf4',
+                      color: part.stock_qty <= part.min_qty ? '#dc2626' :
+                        part.stock_qty >= part.max_qty ? '#ea580c' : '#16a34a',
+                      border: `1px solid ${part.stock_qty <= part.min_qty ? '#fecaca' :
+                        part.stock_qty >= part.max_qty ? '#fed7aa' : '#bbf7d0'}`
+                    }}>
+                      {part.stock_qty <= part.min_qty && <span style={{ marginRight: '4px' }}>⚠️</span>}
+                      {part.stock_qty > part.min_qty && part.stock_qty < part.max_qty && <span style={{ marginRight: '4px' }}>✅</span>}
+                      {part.stock_qty >= part.max_qty && <span style={{ marginRight: '4px' }}>📈</span>}
+                      {getStockLevelText(part)}
+                    </div>
+                  </td>
+                  {/* การจัดการ */}
+                  {canEditStock && (
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedPartForAction(part);
+                            setShowBreakdownModal(true);
+                          }}
+                          title="Stock Breakdown"
+                          style={{
+                            padding: '8px',
+                            background: '#f3f4f6',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            color: '#4b5563',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        >
+                          <ChartBarIcon style={{ width: '16px', height: '16px' }} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedPartForAction(part);
+                            setShowMoveModal(true);
+                          }}
+                          title="Move Parts"
+                          style={{
+                            padding: '8px',
+                            background: '#f3f4f6',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            color: '#4b5563',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#e5e7eb'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                        >
+                          <ArrowsRightLeftIcon style={{ width: '16px', height: '16px' }} />
+                        </button>
                         <button
                           onClick={() => openEditModal(part)}
                           style={{
@@ -1034,40 +1133,41 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {filteredParts.length === 0 && (
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredParts.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+          }}>
             <div style={{
-              textAlign: 'center',
-              padding: '4rem 2rem',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
-            }}>
-              <div style={{
-                fontSize: '4rem',
-                marginBottom: '1rem',
-                opacity: 0.5
-              }}>📦</div>
-              <h3 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: '#6b7280',
-                marginBottom: '0.5rem'
-              }}>ไม่พบข้อมูลอะไหล่</h3>
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#9ca3af',
-                margin: 0
-              }}>ลองเปลี่ยนคำค้นหาหรือตัวกรองเพื่อดูผลลัพธ์ที่แตกต่าง</p>
-            </div>
-          )}
+              fontSize: '4rem',
+              marginBottom: '1rem',
+              opacity: 0.5
+            }}>📦</div>
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#6b7280',
+              marginBottom: '0.5rem'
+            }}>ไม่พบข้อมูลอะไหล่</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#9ca3af',
+              margin: 0
+            }}>ลองเปลี่ยนคำค้นหาหรือตัวกรองเพื่อดูผลลัพธ์ที่แตกต่าง</p>
+          </div>
+        )}
 
         {/* Tabbed Modal for Add Parts */}
         {showTabbedModal && (
-          <div 
+          <div
             style={{
               position: 'fixed',
               top: 0,
@@ -1088,7 +1188,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
               }
             }}
           >
-            <div 
+            <div
               style={{
                 background: 'white',
                 borderRadius: '16px',
@@ -1216,37 +1316,37 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                       <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>อัปโหลดไฟล์ Excel</h3>
                       <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>เพิ่มอะไหล่หลายรายการพร้อมกัน</p>
                     </div>
-                    
+
                     <div style={{ marginBottom: '24px' }}>
                       <button
-                         onClick={exportTemplate}
-                         style={{
-                           width: '100%',
-                           padding: '12px 24px',
-                           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                           color: 'white',
-                           border: 'none',
-                           borderRadius: '12px',
-                           cursor: 'pointer',
-                           fontWeight: '500',
-                           transition: 'all 0.2s',
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           gap: '8px'
-                         }}
-                         onMouseOver={(e) => {
-                           e.currentTarget.style.transform = 'translateY(-2px)';
-                           e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
-                         }}
-                         onMouseOut={(e) => {
-                           e.currentTarget.style.transform = 'translateY(0)';
-                           e.currentTarget.style.boxShadow = 'none';
-                         }}
-                       >
-                         <span style={{ fontSize: '1.2rem' }}>📥</span>
-                         ดาวน์โหลดแม่แบบ Excel
-                       </button>
+                        onClick={exportTemplate}
+                        style={{
+                          width: '100%',
+                          padding: '12px 24px',
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          fontWeight: '500',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>📥</span>
+                        ดาวน์โหลดแม่แบบ Excel
+                      </button>
                     </div>
 
                     <div style={{
@@ -1258,12 +1358,12 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                       marginBottom: '24px'
                     }}>
                       <input
-                         type="file"
-                         accept=".xlsx,.xls"
-                         onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                         style={{ display: 'none' }}
-                         id="excel-upload"
-                       />
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        style={{ display: 'none' }}
+                        id="excel-upload"
+                      />
                       <label
                         htmlFor="excel-upload"
                         style={{
@@ -1289,22 +1389,22 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                     </div>
 
                     {uploadFile && (
-                       <div style={{
-                         background: '#f0f9ff',
-                         border: '1px solid #bae6fd',
-                         borderRadius: '12px',
-                         padding: '16px',
-                         marginBottom: '24px'
-                       }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                           <span style={{ fontSize: '1.5rem' }}>📄</span>
-                           <div style={{ flex: 1 }}>
-                             <p style={{ margin: '0 0 4px 0', fontWeight: '500', color: '#1f2937' }}>ไฟล์ที่เลือก:</p>
-                             <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>{uploadFile.name}</p>
-                           </div>
-                         </div>
-                       </div>
-                     )}
+                      <div style={{
+                        background: '#f0f9ff',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '24px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '1.5rem' }}>📄</span>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: '0 0 4px 0', fontWeight: '500', color: '#1f2937' }}>ไฟล์ที่เลือก:</p>
+                            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>{uploadFile.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {duplicatePartNumbers.length > 0 && (
                       <div style={{
@@ -1334,44 +1434,44 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                     )}
 
                     <button
-                       onClick={handleFileUpload}
-                       disabled={!uploadFile || loading}
-                       style={{
-                         width: '100%',
-                         padding: '16px 24px',
-                         background: !uploadFile || loading ? '#d1d5db' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                         color: 'white',
-                         border: 'none',
-                         borderRadius: '12px',
-                         cursor: !uploadFile || loading ? 'not-allowed' : 'pointer',
-                         fontWeight: '600',
-                         fontSize: '1rem',
-                         transition: 'all 0.2s',
-                         display: 'flex',
-                         alignItems: 'center',
-                         justifyContent: 'center',
-                         gap: '8px'
-                       }}
-                      >
-                       {loading ? (
-                         <>
-                           <div style={{
-                             width: '20px',
-                             height: '20px',
-                             border: '2px solid rgba(255, 255, 255, 0.3)',
-                             borderTop: '2px solid white',
-                             borderRadius: '50%',
-                             animation: 'spin 1s linear infinite'
-                           }}></div>
-                           กำลังอัปโหลด...
-                         </>
-                       ) : (
-                         <>
-                           <span style={{ fontSize: '1.2rem' }}>⬆️</span>
-                           อัปโหลด
-                         </>
-                       )}
-                     </button>
+                      onClick={handleFileUpload}
+                      disabled={!uploadFile || loading}
+                      style={{
+                        width: '100%',
+                        padding: '16px 24px',
+                        background: !uploadFile || loading ? '#d1d5db' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        cursor: !uploadFile || loading ? 'not-allowed' : 'pointer',
+                        fontWeight: '600',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {loading ? (
+                        <>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            border: '2px solid rgba(255, 255, 255, 0.3)',
+                            borderTop: '2px solid white',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite'
+                          }}></div>
+                          กำลังอัปโหลด...
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: '1.2rem' }}>⬆️</span>
+                          อัปโหลด
+                        </>
+                      )}
+                    </button>
                   </div>
                 ) : (
                   /* Manual Add Tab Content */
@@ -1380,7 +1480,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                       <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>เพิ่มอะไหล่ใหม่</h3>
                       <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>กรอกข้อมูลอะไหล่ด้วยตนเอง</p>
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>ชื่ออะไหล่ *</label>
@@ -1388,7 +1488,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                           type="text"
                           required
                           value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -1409,14 +1509,14 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                           }}
                         />
                       </div>
-                      
+
                       <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>รหัสอะไหล่ *</label>
                         <input
                           type="text"
                           required
                           value={formData.part_number}
-                          onChange={(e) => setFormData({...formData, part_number: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
                           style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -1437,13 +1537,13 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                           }}
                         />
                       </div>
-                      
+
                       <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หมวดหมู่</label>
                         <input
                           type="text"
                           value={formData.category}
-                          onChange={(e) => setFormData({...formData, category: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                           style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -1464,14 +1564,14 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                           }}
                         />
                       </div>
-                      
+
                       <div>
                         <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หน่วย *</label>
                         <input
                           type="text"
                           required
                           value={formData.unit}
-                          onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                           style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -1492,7 +1592,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                           }}
                         />
                       </div>
-                      
+
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Stock *</label>
@@ -1501,7 +1601,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                             required
                             min="0"
                             value={formData.stock_qty}
-                            onChange={(e) => setFormData({...formData, stock_qty: parseInt(e.target.value) || 0})}
+                            onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) || 0 })}
                             style={{
                               width: '100%',
                               padding: '12px 16px',
@@ -1522,7 +1622,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                             }}
                           />
                         </div>
-                        
+
                         <div>
                           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Min *</label>
                           <input
@@ -1530,7 +1630,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                             required
                             min="0"
                             value={formData.min_qty}
-                            onChange={(e) => setFormData({...formData, min_qty: parseInt(e.target.value) || 0})}
+                            onChange={(e) => setFormData({ ...formData, min_qty: parseInt(e.target.value) || 0 })}
                             style={{
                               width: '100%',
                               padding: '12px 16px',
@@ -1551,7 +1651,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                             }}
                           />
                         </div>
-                        
+
                         <div>
                           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Max *</label>
                           <input
@@ -1559,7 +1659,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                             required
                             min="0"
                             value={formData.max_qty}
-                            onChange={(e) => setFormData({...formData, max_qty: parseInt(e.target.value) || 0})}
+                            onChange={(e) => setFormData({ ...formData, max_qty: parseInt(e.target.value) || 0 })}
                             style={{
                               width: '100%',
                               padding: '12px 16px',
@@ -1582,7 +1682,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                         </div>
                       </div>
                     </div>
-                    
+
                     <div style={{
                       display: 'flex',
                       justifyContent: 'flex-end',
@@ -1662,7 +1762,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
 
         {/* Add Parts Method Selection Modal */}
         {showAddMethodModal && (
-          <div 
+          <div
             style={{
               position: 'fixed',
               top: 0,
@@ -1682,7 +1782,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
               }
             }}
           >
-            <div 
+            <div
               style={{
                 background: 'white',
                 borderRadius: '16px',
@@ -1740,12 +1840,12 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                   </button>
                 </div>
               </div>
-              
+
               {/* Body */}
               <div style={{ padding: '32px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Excel Upload Option */}
-                  <div 
+                  <div
                     style={{
                       background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
                       border: '2px solid #a7f3d0',
@@ -1783,13 +1883,13 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                       </div>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: '700', color: '#1f2937' }}>อัปโหลดไฟล์ Excel</h3>
-                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>เพิ่มอะไหล่หลายรายการพร้อมกัน<br/>รวดเร็วและสะดวก</p>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>เพิ่มอะไหล่หลายรายการพร้อมกัน<br />รวดเร็วและสะดวก</p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Manual Add Option */}
-                  <div 
+                  <div
                     style={{
                       background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
                       border: '2px solid #93c5fd',
@@ -1827,13 +1927,13 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
                       </div>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: '700', color: '#1f2937' }}>เพิ่มทีละชิ้น</h3>
-                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>กรอกข้อมูลอะไหล่ด้วยตนเอง<br/>ควบคุมรายละเอียดได้ดี</p>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>กรอกข้อมูลอะไหล่ด้วยตนเอง<br />ควบคุมรายละเอียดได้ดี</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               {/* Footer */}
               <div style={{ borderTop: '1px solid #e5e7eb', padding: '24px', textAlign: 'center' }}>
                 <button
@@ -1979,549 +2079,926 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, on
             </div>
           </div>
         )}
-        </div>
+      </div>
 
-        {/* Add Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all duration-300">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <PlusIcon className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h2 className="text-xl font-bold text-gray-900">เพิ่มอะไหล่ใหม่</h2>
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg transform transition-all duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <PlusIcon className="h-6 w-6 text-blue-600" />
                 </div>
+                <h2 className="text-xl font-bold text-gray-900">เพิ่มอะไหล่ใหม่</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleAddPart} className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่ออะไหล่ *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="กรอกชื่ออะไหล่"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสอะไหล่ *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.part_number}
+                    onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="กรอกรหัสอะไหล่"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่</label>
+                  <input
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="กรอกหมวดหมู่ (ไม่บังคับ)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">หน่วย *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="เช่น ชิ้น, กิโลกรัม, ลิตร"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Stock *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.stock_qty}
+                      onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Min *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.min_qty}
+                      onChange={(e) => setFormData({ ...formData, min_qty: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Max *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={formData.max_qty}
+                      onChange={(e) => setFormData({ ...formData, max_qty: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     resetForm();
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
                 >
-                  <XMarkIcon className="h-5 w-5 text-gray-500" />
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      กำลังบันทึก...
+                    </div>
+                  ) : (
+                    'บันทึก'
+                  )}
                 </button>
               </div>
-              <form onSubmit={handleAddPart} className="p-6">
-                <div className="space-y-6">
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* STOCK HUB MODAL — Golf Course Cards with Usage Data & MWR Codes     */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {showStockHub && (() => {
+        // 1. Map Jobs to quickly find job details
+        const jobMap = new Map(jobs.map(j => [j.id, j]));
+
+        // 2. Aggregate Usage Logs (Outgoing)
+        const courseUsageMap = new Map<string, PartsUsageLog[]>();
+        partsUsageLog.forEach(log => {
+          const key = log.golfCourseName || 'ไม่ระบุสนาม';
+          if (!courseUsageMap.has(key)) courseUsageMap.set(key, []);
+          courseUsageMap.get(key)!.push(log);
+        });
+
+        // 3. Aggregate Approved MWRs (Incoming)
+        const courseMwrMap = new Map<string, Job[]>();
+        jobs.filter(j => j.type === 'PART_REQUEST' && j.status === 'approved').forEach(j => {
+          // Find course name safely
+          const courseName = j.golf_course_id ? (golfCourses.find(g => g.id === j.golf_course_id)?.name || 'Unknown Course') : 'Unknown Course';
+          if (!courseMwrMap.has(courseName)) courseMwrMap.set(courseName, []);
+          courseMwrMap.get(courseName)!.push(j);
+        });
+
+        // 4. Combine Course Names
+        const allCourseNames = Array.from(new Set([
+          ...golfCourses.map(gc => gc.name),
+          ...Array.from(courseUsageMap.keys()),
+          ...Array.from(courseMwrMap.keys())
+        ])).sort();
+
+        const filteredCourseNames = stockHubSearch
+          ? allCourseNames.filter(n => n.toLowerCase().includes(stockHubSearch.toLowerCase()))
+          : allCourseNames;
+
+        const thS: React.CSSProperties = { padding: '10px 14px', textAlign: 'left', fontSize: '0.8125rem', fontWeight: 600, color: '#6b7280' };
+        const tdS: React.CSSProperties = { padding: '10px 14px', fontSize: '0.875rem', color: '#374151' };
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', zIndex: 9999, padding: '2rem', overflowY: 'auto' }}
+            onClick={() => { setShowStockHub(false); setSelectedHubCourse(null); }}>
+            <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '1100px', boxShadow: '0 25px 80px rgba(0,0,0,0.15)', overflow: 'hidden', margin: '1rem auto' }}
+              onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #3b82f6 100%)', padding: '2rem 2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '14px', borderRadius: '16px' }}>
+                    <BuildingStorefrontIcon style={{ width: '32px', height: '32px', color: '#fff' }} />
+                  </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่ออะไหล่ *</label>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: 0 }}>Stock Hub — ศูนย์รวมข้อมูลสต็อก</h2>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', margin: '4px 0 0', fontSize: '0.875rem' }}>ตรวจสอบการเบิก (Usage) และการรับเข้า (MWR)</p>
+                  </div>
+                </div>
+                <button onClick={() => { setShowStockHub(false); setSelectedHubCourse(null); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '12px', padding: '10px', cursor: 'pointer', color: '#fff' }}>
+                  <XMarkIcon style={{ width: '24px', height: '24px' }} />
+                </button>
+              </div>
+              {/* Search */}
+              <div style={{ padding: '1.5rem 2.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <input type="text" placeholder="🔍 ค้นหาสนาม..." value={stockHubSearch} onChange={e => setStockHubSearch(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9375rem', outline: 'none' }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#7c3aed'}
+                  onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'} />
+                <p style={{ margin: '8px 0 0', fontSize: '0.8125rem', color: '#6b7280' }}>
+                  พบ {filteredCourseNames.length} สนาม • เบิกอะไหล่ {partsUsageLog.length} รายการ • MWR {jobs.filter(j => j.type === 'PART_REQUEST' && j.status === 'approved').length} รายการ
+                </p>
+              </div>
+              {/* Body */}
+              <div style={{ padding: '1.5rem 2.5rem 2rem', maxHeight: '65vh', overflowY: 'auto' }}>
+                {!selectedHubCourse ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+                    {filteredCourseNames.map(courseName => {
+                      const usageLogs = courseUsageMap.get(courseName) || [];
+                      const mwrLogs = courseMwrMap.get(courseName) || [];
+
+                      const totalQty = usageLogs.reduce((s, l) => s + l.quantityUsed, 0);
+                      // const uniqueParts = new Set(usageLogs.map(l => l.partName)).size; // Removed unused
+                      const hasActivity = usageLogs.length > 0 || mwrLogs.length > 0;
+
+                      return (
+                        <div key={courseName} onClick={() => { setSelectedHubCourse(courseName); setStockHubTab('outgoing'); }}
+                          style={{ border: '1px solid #e5e7eb', borderRadius: '16px', padding: '1.5rem', cursor: 'pointer', transition: 'all 0.2s', background: hasActivity ? 'linear-gradient(135deg, #faf5ff, #f5f3ff)' : '#f9fafb' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(124,58,237,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: hasActivity ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>⛳</div>
+                            <div>
+                              <h4 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>{courseName}</h4>
+                              {!hasActivity && <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>ไม่มีความเคลื่อนไหว</span>}
+                            </div>
+                          </div>
+
+                          {hasActivity && (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '8px 4px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#7c3aed' }}>{totalQty}</div>
+                                <div style={{ fontSize: '0.625rem', color: '#6b7280' }}>ชิ้นที่เบิก</div>
+                              </div>
+                              <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '8px 4px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#059669' }}>{mwrLogs.length}</div>
+                                <div style={{ fontSize: '0.625rem', color: '#6b7280' }}>MWR (รับเข้า)</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {filteredCourseNames.length === 0 && (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>
+                        <BuildingStorefrontIcon style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.4 }} />
+                        <p style={{ margin: 0 }}>ไม่พบสนามที่ตรงกับการค้นหา</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <button onClick={() => setSelectedHubCourse(null)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f3f4f6', border: 'none', borderRadius: '10px', padding: '8px 16px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '1rem' }}>← กลับไปรายชื่อสนาม</button>
+
+                    <div style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', borderRadius: '16px', padding: '1.5rem', color: '#fff', marginBottom: '1.5rem' }}>
+                      <h3 style={{ margin: '0 0 4px', fontSize: '1.25rem', fontWeight: 700 }}>⛳ {selectedHubCourse}</h3>
+                      <p style={{ margin: 0, fontSize: '0.8125rem', opacity: 0.8 }}>ประวัติการเคลื่อนไหวสต็อก</p>
+                    </div>
+
+                    {/* Tabs */}
+                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                      <button
+                        onClick={() => setStockHubTab('outgoing')}
+                        style={{
+                          padding: '10px 16px',
+                          borderBottom: stockHubTab === 'outgoing' ? '3px solid #7c3aed' : '3px solid transparent',
+                          color: stockHubTab === 'outgoing' ? '#7c3aed' : '#6b7280',
+                          fontWeight: stockHubTab === 'outgoing' ? 700 : 500,
+                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem'
+                        }}
+                      >
+                        📤 รายการเบิก (Outgoing)
+                      </button>
+                      <button
+                        onClick={() => setStockHubTab('incoming')}
+                        style={{
+                          padding: '10px 16px',
+                          borderBottom: stockHubTab === 'incoming' ? '3px solid #059669' : '3px solid transparent',
+                          color: stockHubTab === 'incoming' ? '#059669' : '#6b7280',
+                          fontWeight: stockHubTab === 'incoming' ? 700 : 500,
+                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem'
+                        }}
+                      >
+                        📥 รับเข้าสต็อก (MWR Incoming)
+                      </button>
+                    </div>
+
+                    {(() => {
+                      // Logic to render table based on Tab
+                      if (stockHubTab === 'outgoing') {
+                        const logs = courseUsageMap.get(selectedHubCourse) || [];
+                        if (logs.length === 0) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}><p>ยังไม่มีรายการเบิกอะไหล่ของสนามนี้</p></div>;
+                        return (
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                              <thead>
+                                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                                  <th style={thS}>อะไหล่</th>
+                                  <th style={{ ...thS, textAlign: 'center' }}>จำนวน</th>
+                                  <th style={thS}>ผู้เบิก</th>
+                                  <th style={thS}>Job / Ref</th>
+                                  <th style={thS}>ผู้อนุมัติ</th>
+                                  <th style={thS}>วันที่เบิก</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {logs.map((log, idx) => {
+                                  const relatedJob = jobMap.get(log.jobId);
+                                  return (
+                                    <tr key={log.id || idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                                      <td style={tdS}><div style={{ fontWeight: 500 }}>{log.partName}</div></td>
+                                      <td style={{ ...tdS, textAlign: 'center' }}><span style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 600, padding: '4px 12px', borderRadius: '20px', fontSize: '0.8125rem' }}>{log.quantityUsed}</span></td>
+                                      <td style={tdS}><span style={{ fontWeight: 500 }}>{log.usedBy || '—'}</span></td>
+                                      <td style={tdS}><span style={{ fontFamily: 'monospace', background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8125rem', border: '1px solid #e5e7eb' }}>{relatedJob?.vehicle_number ? `Job: ${relatedJob.vehicle_number}` : (relatedJob?.prrNumber || '—')}</span></td>
+                                      <td style={tdS}><span style={{ color: '#059669', fontWeight: 500 }}>{relatedJob?.approved_by_name || '—'}</span></td>
+                                      <td style={tdS}><span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>{log.usedDate ? new Date(log.usedDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span></td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      } else {
+                        // INCOMING (MWR)
+                        const mwrs = courseMwrMap.get(selectedHubCourse) || [];
+                        if (mwrs.length === 0) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}><p>ยังไม่มีรายการรับเข้า (MWR) ของสนามนี้</p></div>;
+
+                        return (
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                              <thead>
+                                <tr style={{ background: '#ecfdf5', borderBottom: '2px solid #d1fae5' }}>
+                                  <th style={thS}>MWR Code</th>
+                                  <th style={thS}>รายการอะไหล่</th>
+                                  <th style={thS}>ผู้เบิก (User)</th>
+                                  <th style={thS}>ผู้อนุมัติ</th>
+                                  <th style={thS}>วันที่อนุมัติ</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {mwrs.map((job, idx) => {
+                                  return (
+                                    <tr key={job.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#f0fdf4' }}>
+                                      <td style={tdS}>
+                                        <span style={{ fontFamily: 'monospace', background: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8125rem', border: '1px solid #bbf7d0', fontWeight: 600 }}>
+                                          {job.mwr_code || '—'}
+                                        </span>
+                                      </td>
+                                      <td style={tdS}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          {job.parts?.map((p, pIdx) => (
+                                            <div key={pIdx} style={{ fontSize: '0.8125rem' }}>
+                                              • <b>{p.part_name}</b> x {p.quantity_used}
+                                            </div>
+                                          ))}
+                                          {(!job.parts || job.parts.length === 0) && <span style={{ color: '#9ca3af' }}>-</span>}
+                                        </div>
+                                      </td>
+                                      <td style={tdS}><span style={{ fontWeight: 500 }}>{job.userName || '—'}</span></td>
+                                      <td style={tdS}><span style={{ color: '#059669', fontWeight: 600 }}>{job.approved_by_name || 'System'}</span></td>
+                                      <td style={tdS}><span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>{job.approved_at ? new Date(job.approved_at).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</span></td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      }
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* BREAKDOWN MODAL — Per-Part Inventory Distribution Across Locations    */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {showBreakdownModal && selectedPartForAction && (() => {
+        const inventoryData = selectedPartForAction.inventory || [];
+        const centralQty = selectedPartForAction.stock_qty;
+        const totalDistributed = inventoryData.reduce((sum, inv) => sum + inv.quantity, 0);
+        const partUsageLogs = partsUsageLog.filter(l => l.partId === selectedPartForAction.id || l.partName === selectedPartForAction.name);
+        const totalUsed = partUsageLogs.reduce((s, l) => s + l.quantityUsed, 0);
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '2rem' }}
+            onClick={() => setShowBreakdownModal(false)}>
+            <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '600px', boxShadow: '0 25px 80px rgba(0,0,0,0.15)', overflow: 'hidden' }}
+              onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%)', padding: '1.75rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '14px' }}>
+                    <ChartBarIcon style={{ width: '28px', height: '28px', color: '#fff' }} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>Stock Breakdown</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)' }}>{selectedPartForAction.name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowBreakdownModal(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '10px', padding: '8px', cursor: 'pointer', color: '#fff' }}>
+                  <XMarkIcon style={{ width: '22px', height: '22px' }} />
+                </button>
+              </div>
+              {/* Stats */}
+              <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  <div style={{ textAlign: 'center', padding: '16px', background: '#eff6ff', borderRadius: '14px', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1d4ed8' }}>{centralQty.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 500, marginTop: '4px' }}>สต็อกส่วนกลาง</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '16px', background: '#fef3c7', borderRadius: '14px', border: '1px solid #fde68a' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#d97706' }}>{totalDistributed.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 500, marginTop: '4px' }}>กระจายตามสนาม</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '16px', background: '#fce7f3', borderRadius: '14px', border: '1px solid #fbcfe8' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#db2777' }}>{totalUsed.toLocaleString()}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#be185d', fontWeight: 500, marginTop: '4px' }}>ใช้ไปทั้งหมด</div>
+                  </div>
+                </div>
+              </div>
+              {/* Location list */}
+              <div style={{ padding: '1rem 2rem', maxHeight: '300px', overflowY: 'auto' }}>
+                <h4 style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>การกระจายตามสถานที่</h4>
+                {inventoryData.length > 0 ? inventoryData.map((inv, idx) => {
+                  const pct = centralQty > 0 ? Math.round((inv.quantity / centralQty) * 100) : 0;
+                  return (
+                    <div key={inv.id || idx} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: idx % 2 === 0 ? '#fafbfc' : '#fff', borderRadius: '10px', marginBottom: '6px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1f2937' }}>{inv.golfCourse?.name || 'ไม่ระบุ'}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                          <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #7c3aed)', borderRadius: '3px' }} />
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500, minWidth: '36px' }}>{pct}%</span>
+                        </div>
+                      </div>
+                      <div style={{ marginLeft: '16px', fontWeight: 700, fontSize: '1.125rem', color: '#4f46e5', minWidth: '60px', textAlign: 'right' }}>
+                        {inv.quantity.toLocaleString()}<span style={{ fontSize: '0.6875rem', color: '#9ca3af', fontWeight: 400 }}> {selectedPartForAction.unit}</span>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                    <ChartBarIcon style={{ width: '40px', height: '40px', margin: '0 auto 12px', opacity: 0.3 }} />
+                    <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 500 }}>อะไหล่ชิ้นนี้อยู่ที่ส่วนกลางทั้งหมด</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.75rem' }}>ยังไม่มีการกระจายไปยังสนามอื่น</p>
+                  </div>
+                )}
+              </div>
+              {/* Footer */}
+              <div style={{ padding: '1rem 2rem', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowBreakdownModal(false)} style={{ padding: '10px 24px', border: '1px solid #d1d5db', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>ปิด</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* MOVE PARTS MODAL                                                       */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {showMoveModal && selectedPartForAction && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '2rem' }}
+          onClick={() => setShowMoveModal(false)}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '520px', boxShadow: '0 25px 80px rgba(0,0,0,0.15)', overflow: 'hidden' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' }}>
+                  <ArrowsRightLeftIcon style={{ width: '24px', height: '24px', color: '#fff' }} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>ย้ายอะไหล่</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)' }}>{selectedPartForAction.name} (คงเหลือ: {selectedPartForAction.stock_qty} {selectedPartForAction.unit})</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMoveModal(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '10px', padding: '8px', cursor: 'pointer', color: '#fff' }}>
+                <XMarkIcon style={{ width: '22px', height: '22px' }} />
+              </button>
+            </div>
+            <div style={{ padding: '2rem' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>จำนวนที่ต้องการย้าย</label>
+                <input type="number" placeholder="ระบุจำนวน" style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none' }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#f97316'} onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'} />
+              </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>ปลายทาง</label>
+                <select style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none', background: '#fff', cursor: 'pointer' }}>
+                  <option value="">เลือกสถานที่...</option>
+                  {golfCourses.map(gc => <option key={gc.id} value={gc.id}>{gc.name}</option>)}
+                </select>
+              </div>
+              <div style={{ padding: '12px 16px', background: '#fff7ed', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#9a3412', fontWeight: 500 }}>⚠️ ฟีเจอร์นี้กำลังพัฒนา — การย้ายจริงจะเปิดให้ใช้งานเร็วๆ นี้</p>
+              </div>
+            </div>
+            <div style={{ padding: '1rem 2rem', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setShowMoveModal(false)} style={{ padding: '10px 20px', border: '1px solid #d1d5db', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>ยกเลิก</button>
+              <button onClick={() => { alert('ฟีเจอร์นี้กำลังพัฒนา'); setShowMoveModal(false); }} style={{ padding: '10px 20px', border: 'none', borderRadius: '10px', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' }}>ย้ายอะไหล่</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal - Tabbed Style */}
+      {showEditModal && editingPart && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditModal(false);
+              setEditingPart(null);
+              resetForm();
+            }
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              padding: '24px',
+              color: 'white'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    width: '50px',
+                    height: '50px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.5rem' }}>✏️</span>
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700' }}>แก้ไขอะไหล่</h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', opacity: 0.9 }}>{editingPart.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingPart(null);
+                    resetForm();
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    fontSize: '1.5rem',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Single Tab Header */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid #e5e7eb',
+              background: '#f9fafb'
+            }}>
+              <div
+                style={{
+                  flex: 1,
+                  padding: '16px 24px',
+                  background: 'white',
+                  color: '#f59e0b',
+                  fontWeight: '600',
+                  borderBottom: '2px solid #f59e0b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>📝</span>
+                แก้ไขข้อมูลอะไหล่
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '32px'
+            }}>
+              <form onSubmit={handleEditPart}>
+                <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>แก้ไขข้อมูลอะไหล่</h3>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>ปรับปรุงข้อมูลอะไหล่ที่เลือก</p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>ชื่ออะไหล่ *</label>
                     <input
                       type="text"
                       required
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s',
+                        outline: 'none'
+                      }}
                       placeholder="กรอกชื่ออะไหล่"
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">รหัสอะไหล่ *</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>รหัสอะไหล่ *</label>
                     <input
                       type="text"
                       required
                       value={formData.part_number}
-                      onChange={(e) => setFormData({...formData, part_number: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s',
+                        outline: 'none'
+                      }}
                       placeholder="กรอกรหัสอะไหล่"
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">หมวดหมู่</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หมวดหมู่</label>
                     <input
                       type="text"
                       value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s',
+                        outline: 'none'
+                      }}
                       placeholder="กรอกหมวดหมู่ (ไม่บังคับ)"
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">หน่วย *</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หน่วย *</label>
                     <input
                       type="text"
                       required
                       value={formData.unit}
-                      onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s',
+                        outline: 'none'
+                      }}
                       placeholder="เช่น ชิ้น, กิโลกรัม, ลิตร"
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Stock *</label>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Stock *</label>
                       <input
                         type="number"
                         required
                         min="0"
                         value={formData.stock_qty}
-                        onChange={(e) => setFormData({...formData, stock_qty: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        onChange={(e) => setFormData({ ...formData, stock_qty: parseInt(e.target.value) || 0 })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
                         placeholder="0"
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#f59e0b';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Min *</label>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Min *</label>
                       <input
                         type="number"
                         required
                         min="0"
                         value={formData.min_qty}
-                        onChange={(e) => setFormData({...formData, min_qty: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        onChange={(e) => setFormData({ ...formData, min_qty: parseInt(e.target.value) || 0 })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
                         placeholder="0"
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#f59e0b';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Max *</label>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Max *</label>
                       <input
                         type="number"
                         required
                         min="0"
                         value={formData.max_qty}
-                        onChange={(e) => setFormData({...formData, max_qty: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        onChange={(e) => setFormData({ ...formData, max_qty: parseInt(e.target.value) || 0 })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '1rem',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
                         placeholder="0"
+                        onFocus={(e) => {
+                          e.currentTarget.style.borderColor = '#f59e0b';
+                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
                       />
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '32px',
+                  paddingTop: '24px',
+                  borderTop: '1px solid #e5e7eb'
+                }}>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowAddModal(false);
-                      resetForm();
-                    }}
-                    className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-                  >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        กำลังบันทึก...
-                      </div>
-                    ) : (
-                      'บันทึก'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Modal - Tabbed Style */}
-        {showEditModal && editingPart && (
-          <div 
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000,
-              padding: '20px'
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowEditModal(false);
-                setEditingPart(null);
-                resetForm();
-              }
-            }}
-          >
-            <div 
-              style={{
-                background: 'white',
-                borderRadius: '16px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                maxWidth: '600px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                padding: '24px',
-                color: 'white'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                      width: '50px',
-                      height: '50px',
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <span style={{ fontSize: '1.5rem' }}>✏️</span>
-                    </div>
-                    <div>
-                      <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700' }}>แก้ไขอะไหล่</h2>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', opacity: 0.9 }}>{editingPart.name}</p>
-                    </div>
-                  </div>
-                  <button
                     onClick={() => {
                       setShowEditModal(false);
                       setEditingPart(null);
                       resetForm();
                     }}
                     style={{
-                      background: 'none',
+                      padding: '12px 24px',
+                      background: '#f3f4f6',
                       border: 'none',
-                      color: 'white',
-                      cursor: 'pointer',
-                      padding: '8px',
                       borderRadius: '8px',
-                      fontSize: '1.5rem',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontWeight: '500',
                       transition: 'all 0.2s'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                      e.currentTarget.style.background = '#e5e7eb';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'none';
+                      e.currentTarget.style.background = '#f3f4f6';
                     }}
                   >
-                    ✕
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      padding: '12px 24px',
+                      background: loading ? '#d1d5db' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          border: '2px solid rgba(255, 255, 255, 0.3)',
+                          borderTop: '2px solid white',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }}></div>
+                        กำลังบันทึก...
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '1rem' }}>💾</span>
+                        บันทึก
+                      </>
+                    )}
                   </button>
                 </div>
-              </div>
-
-              {/* Single Tab Header */}
-              <div style={{
-                display: 'flex',
-                borderBottom: '1px solid #e5e7eb',
-                background: '#f9fafb'
-              }}>
-                <div
-                  style={{
-                    flex: 1,
-                    padding: '16px 24px',
-                    background: 'white',
-                    color: '#f59e0b',
-                    fontWeight: '600',
-                    borderBottom: '2px solid #f59e0b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2rem' }}>📝</span>
-                  แก้ไขข้อมูลอะไหล่
-                </div>
-              </div>
-
-              {/* Tab Content */}
-              <div style={{
-                flex: 1,
-                overflow: 'auto',
-                padding: '32px'
-              }}>
-                <form onSubmit={handleEditPart}>
-                  <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>แก้ไขข้อมูลอะไหล่</h3>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>ปรับปรุงข้อมูลอะไหล่ที่เลือก</p>
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>ชื่ออะไหล่ *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                        placeholder="กรอกชื่ออะไหล่"
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#f59e0b';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#d1d5db';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>รหัสอะไหล่ *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.part_number}
-                        onChange={(e) => setFormData({...formData, part_number: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                        placeholder="กรอกรหัสอะไหล่"
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#f59e0b';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#d1d5db';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หมวดหมู่</label>
-                      <input
-                        type="text"
-                        value={formData.category}
-                        onChange={(e) => setFormData({...formData, category: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                        placeholder="กรอกหมวดหมู่ (ไม่บังคับ)"
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#f59e0b';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#d1d5db';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>หน่วย *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.unit}
-                        onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                        placeholder="เช่น ชิ้น, กิโลกรัม, ลิตร"
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = '#f59e0b';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = '#d1d5db';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Stock *</label>
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          value={formData.stock_qty}
-                          onChange={(e) => setFormData({...formData, stock_qty: parseInt(e.target.value) || 0})}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            border: '2px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                          }}
-                          placeholder="0"
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = '#f59e0b';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Min *</label>
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          value={formData.min_qty}
-                          onChange={(e) => setFormData({...formData, min_qty: parseInt(e.target.value) || 0})}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            border: '2px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                          }}
-                          placeholder="0"
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = '#f59e0b';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Max *</label>
-                        <input
-                          type="number"
-                          required
-                          min="0"
-                          value={formData.max_qty}
-                          onChange={(e) => setFormData({...formData, max_qty: parseInt(e.target.value) || 0})}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            border: '2px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '1rem',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                          }}
-                          placeholder="0"
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = '#f59e0b';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245, 158, 11, 0.1)';
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = '#d1d5db';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '12px',
-                    marginTop: '32px',
-                    paddingTop: '24px',
-                    borderTop: '1px solid #e5e7eb'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowEditModal(false);
-                        setEditingPart(null);
-                        resetForm();
-                      }}
-                      style={{
-                        padding: '12px 24px',
-                        background: '#f3f4f6',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#374151',
-                        cursor: 'pointer',
-                        fontWeight: '500',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = '#e5e7eb';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = '#f3f4f6';
-                      }}
-                    >
-                      ยกเลิก
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      style={{
-                        padding: '12px 24px',
-                        background: loading ? '#d1d5db' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: 'white',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        fontWeight: '600',
-                        transition: 'all 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      {loading ? (
-                        <>
-                          <div style={{
-                            width: '16px',
-                            height: '16px',
-                            border: '2px solid rgba(255, 255, 255, 0.3)',
-                            borderTop: '2px solid white',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite'
-                          }}></div>
-                          กำลังบันทึก...
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ fontSize: '1rem' }}>💾</span>
-                          บันทึก
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              </form>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };

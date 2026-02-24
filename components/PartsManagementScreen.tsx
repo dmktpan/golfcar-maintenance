@@ -13,15 +13,15 @@ interface PartsManagementScreenProps {
     golfCourses: GolfCourse[];
 }
 
-function PartsManagementScreen({ 
-    partsUsageLog, 
+function PartsManagementScreen({
+    partsUsageLog,
     setView,
     vehicles,
-    golfCourses 
+    golfCourses
 }: PartsManagementScreenProps) {
     console.log('🔍 PartsManagementScreen rendered with partsUsageLog:', partsUsageLog);
     console.log('📊 PartsUsageLog count:', partsUsageLog.length);
-    
+
     const [selectedSerial, setSelectedSerial] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -32,15 +32,18 @@ function PartsManagementScreen({
         dateFrom: '',
         dateTo: ''
     });
-    
+
     const [sortBy, setSortBy] = useState<'serial' | 'vehicle' | 'golfCourse' | 'partsCount' | 'lastUpdate'>('lastUpdate');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-    
+
     // State สำหรับ Export Options
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportType, setExportType] = useState<'all' | 'serial' | 'golfCourse'>('all');
     const [selectedExportSerial, setSelectedExportSerial] = useState('');
     const [selectedExportGolfCourse, setSelectedExportGolfCourse] = useState('');
+
+    // View Mode: 'list' | 'summary'
+    const [viewMode, setViewMode] = useState<'list' | 'summary'>('list');
 
     // ดึง Serial Numbers ที่มีประวัติการใช้อะไหล่
     const serialsWithHistory = useMemo(() => {
@@ -70,25 +73,25 @@ function PartsManagementScreen({
         const filtered = serialsWithHistory.filter(serial => {
             const vehicle = getVehicleBySerial(serial);
             const golfCourseName = getGolfCourseNameByVehicle(vehicle);
-            
+
             // ค้นหาทั่วไป
-            const matchesSearch = !searchTerm || 
+            const matchesSearch = !searchTerm ||
                 serial.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (vehicle?.vehicle_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 golfCourseName.toLowerCase().includes(searchTerm.toLowerCase());
-            
+
             // กรองตามสนาม
-            const matchesGolfCourse = !filters.golfCourse || 
+            const matchesGolfCourse = !filters.golfCourse ||
                 golfCourseName === filters.golfCourse;
-            
+
             // กรองตามหมายเลขรถ
-            const matchesVehicleNumber = !filters.vehicleNumber || 
+            const matchesVehicleNumber = !filters.vehicleNumber ||
                 (vehicle?.vehicle_number || '').toLowerCase().includes(filters.vehicleNumber.toLowerCase());
-            
+
             // กรองตาม Serial Number
-            const matchesSerialNumber = !filters.serialNumber || 
+            const matchesSerialNumber = !filters.serialNumber ||
                 serial.toLowerCase().includes(filters.serialNumber.toLowerCase());
-            
+
             // กรองตามวันที่
             let matchesDateRange = true;
             if (filters.dateFrom || filters.dateTo) {
@@ -96,7 +99,7 @@ function PartsManagementScreen({
                 if (serialLogs.length > 0) {
                     const latestDate = new Date(Math.max(...serialLogs.map(log => new Date(log.usedDate).getTime())));
                     const earliestDate = new Date(Math.min(...serialLogs.map(log => new Date(log.usedDate).getTime())));
-                    
+
                     if (filters.dateFrom) {
                         matchesDateRange = matchesDateRange && latestDate >= new Date(filters.dateFrom);
                     }
@@ -105,15 +108,15 @@ function PartsManagementScreen({
                     }
                 }
             }
-            
-            return matchesSearch && matchesGolfCourse && matchesVehicleNumber && 
-                   matchesSerialNumber && matchesDateRange;
+
+            return matchesSearch && matchesGolfCourse && matchesVehicleNumber &&
+                matchesSerialNumber && matchesDateRange;
         });
 
         // เรียงลำดับ
         filtered.sort((a, b) => {
             let aValue, bValue;
-            
+
             switch (sortBy) {
                 case 'serial':
                     aValue = a;
@@ -144,18 +147,66 @@ function PartsManagementScreen({
                 default:
                     return 0;
             }
-            
+
             if (typeof aValue === 'string' && typeof bValue === 'string') {
                 return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             } else {
-                return sortOrder === 'asc' ? 
-                    (aValue as number) - (bValue as number) : 
+                return sortOrder === 'asc' ?
+                    (aValue as number) - (bValue as number) :
                     (bValue as number) - (aValue as number);
             }
         });
 
         return filtered;
     }, [serialsWithHistory, searchTerm, filters, sortBy, sortOrder, partsUsageLog, getGolfCourseNameByVehicle, getPartsCountBySerial, getVehicleBySerial]);
+
+    // ฟังก์ชันสำหรับแสดง Modal
+    const handleShowHistory = (serialNumber: string) => {
+        setSelectedSerial(serialNumber);
+        setShowModal(true);
+    };
+
+    // Filter Logs for Summary View
+    const filteredLogs = useMemo(() => {
+        return partsUsageLog.filter(log => {
+            const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
+            const golfCourseName = golfCourses.find(gc => gc.id === vehicle?.golf_course_id)?.name || 'ไม่ระบุ';
+
+            // Reuse similar filter logic as serials logic if possible, or duplicate for clarity
+            // Note: The existing logic filters 'serials', not logs directly.
+            // We need log-level filtering for Summary.
+
+            const matchesSearch = !searchTerm ||
+                log.partName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                log.vehicleSerial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                golfCourseName.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesGolfCourse = !filters.golfCourse || golfCourseName === filters.golfCourse;
+            const matchesVehicleNumber = !filters.vehicleNumber || (vehicle?.vehicle_number || '').includes(filters.vehicleNumber);
+            const matchesSerialNumber = !filters.serialNumber || log.vehicleSerial.includes(filters.serialNumber);
+
+            let matchesDateRange = true;
+            if (filters.dateFrom || filters.dateTo) {
+                const logDate = new Date(log.usedDate).getTime();
+                if (filters.dateFrom && logDate < new Date(filters.dateFrom).getTime()) matchesDateRange = false;
+                if (filters.dateTo && logDate > new Date(filters.dateTo + 'T23:59:59').getTime()) matchesDateRange = false;
+            }
+
+            return matchesSearch && matchesGolfCourse && matchesVehicleNumber && matchesSerialNumber && matchesDateRange;
+        });
+    }, [partsUsageLog, searchTerm, filters, vehicles, golfCourses]);
+
+    // Aggregate Data
+    const summaryData = useMemo(() => {
+        const map = new Map<string, { partName: string, quantity: number, count: number }>();
+        filteredLogs.forEach(log => {
+            const current = map.get(log.partName) || { partName: log.partName, quantity: 0, count: 0 };
+            current.quantity += log.quantityUsed;
+            current.count += 1;
+            map.set(log.partName, current);
+        });
+        return Array.from(map.values()).sort((a, b) => b.quantity - a.quantity);
+    }, [filteredLogs]);
 
     // ดึงรายการสนามกอล์ฟที่ไม่ซ้ำ
     const uniqueGolfCourses = useMemo(() => {
@@ -165,12 +216,6 @@ function PartsManagementScreen({
         });
         return Array.from(new Set(courses)).sort();
     }, [serialsWithHistory, getGolfCourseNameByVehicle, getVehicleBySerial]);
-
-    // ฟังก์ชันสำหรับแสดง Modal
-    const handleShowHistory = (serialNumber: string) => {
-        setSelectedSerial(serialNumber);
-        setShowModal(true);
-    };
 
     // ฟังก์ชันสำหรับปิด Modal
     const handleCloseModal = () => {
@@ -182,14 +227,14 @@ function PartsManagementScreen({
     const exportToExcel = () => {
         let dataToExport: any[] = [];
         let fileName = '';
-        
+
         // กรองข้อมูลตามประเภทการ Export
         if (exportType === 'all') {
             // Export ทั้งหมด
             dataToExport = partsUsageLog.map(log => {
                 const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
                 const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
-                
+
                 return {
                     'ID': log.id,
                     'Serial Number': log.vehicleSerial,
@@ -203,7 +248,7 @@ function PartsManagementScreen({
                 };
             });
             fileName = `ประวัติอะไหล่_ทั้งหมด_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
-            
+
         } else if (exportType === 'serial') {
             // Export ตาม Serial Number
             dataToExport = partsUsageLog
@@ -211,7 +256,7 @@ function PartsManagementScreen({
                 .map(log => {
                     const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
                     const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
-                    
+
                     return {
                         'ID': log.id,
                         'Serial Number': log.vehicleSerial,
@@ -225,7 +270,7 @@ function PartsManagementScreen({
                     };
                 });
             fileName = `ประวัติอะไหล่_${selectedExportSerial}_${new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }).replace(/\//g, '-')}.xlsx`;
-            
+
         } else if (exportType === 'golfCourse') {
             // Export ตามสนามกอล์ฟ
             const golfCourseVehicles = vehicles.filter(v => {
@@ -233,13 +278,13 @@ function PartsManagementScreen({
                 return golfCourse?.name === selectedExportGolfCourse;
             });
             const golfCourseSerials = golfCourseVehicles.map(v => v.serial_number);
-            
+
             dataToExport = partsUsageLog
                 .filter(log => golfCourseSerials.includes(log.vehicleSerial))
                 .map(log => {
                     const vehicle = vehicles.find(v => v.serial_number === log.vehicleSerial);
                     const golfCourse = golfCourses.find(gc => gc.id === vehicle?.golf_course_id);
-                    
+
                     return {
                         'ID': log.id,
                         'Serial Number': log.vehicleSerial,
@@ -264,7 +309,7 @@ function PartsManagementScreen({
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'ประวัติอะไหล่');
-        
+
         // ตั้งค่าความกว้างของคอลัมน์
         const colWidths = [
             { wch: 8 },  // ID
@@ -278,7 +323,7 @@ function PartsManagementScreen({
             { wch: 15 }  // โดย
         ];
         ws['!cols'] = colWidths;
-        
+
         // Export file
         XLSX.writeFile(wb, fileName);
         setShowExportModal(false);
@@ -286,9 +331,9 @@ function PartsManagementScreen({
 
     const formatDateForExcel = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('th-TH', { 
-            year: 'numeric', 
-            month: '2-digit', 
+        return date.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
@@ -320,7 +365,7 @@ function PartsManagementScreen({
                     </button>
                 </div>
             </div>
-            
+
             <div className="serial-selection-section">
                 <div className="selection-header">
                     <h3>🏷️ ประวัติการใช้อะไหล่ตาม Serial Number</h3>
@@ -349,7 +394,7 @@ function PartsManagementScreen({
                             <label>🏌️ สนามกอล์ฟ</label>
                             <select
                                 value={filters.golfCourse}
-                                onChange={(e) => setFilters({...filters, golfCourse: e.target.value})}
+                                onChange={(e) => setFilters({ ...filters, golfCourse: e.target.value })}
                                 className="filter-select"
                             >
                                 <option value="">ทุกสนาม</option>
@@ -365,7 +410,7 @@ function PartsManagementScreen({
                                 type="text"
                                 placeholder="เช่น A01, B02..."
                                 value={filters.vehicleNumber}
-                                onChange={(e) => setFilters({...filters, vehicleNumber: e.target.value})}
+                                onChange={(e) => setFilters({ ...filters, vehicleNumber: e.target.value })}
                                 className="filter-input"
                             />
                         </div>
@@ -376,7 +421,7 @@ function PartsManagementScreen({
                                 type="text"
                                 placeholder="เช่น KT-20220601..."
                                 value={filters.serialNumber}
-                                onChange={(e) => setFilters({...filters, serialNumber: e.target.value})}
+                                onChange={(e) => setFilters({ ...filters, serialNumber: e.target.value })}
                                 className="filter-input"
                             />
                         </div>
@@ -388,7 +433,7 @@ function PartsManagementScreen({
                             <input
                                 type="date"
                                 value={filters.dateFrom}
-                                onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
                                 className="filter-input"
                             />
                         </div>
@@ -398,7 +443,7 @@ function PartsManagementScreen({
                             <input
                                 type="date"
                                 value={filters.dateTo}
-                                onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                                 className="filter-input"
                             />
                         </div>
@@ -453,78 +498,163 @@ function PartsManagementScreen({
                         </div>
                     </div>
                 </div>
-                
-                <div className="serial-grid">
-                    {filteredAndSortedSerials.length === 0 ? (
-                        <div className="no-data">
-                            <div className="no-data-icon">
-                                {serialsWithHistory.length === 0 ? '📦' : '🔍'}
-                            </div>
-                            <h3>
-                                {serialsWithHistory.length === 0 
-                                    ? 'ยังไม่มีประวัติการใช้อะไหล่' 
-                                    : 'ไม่พบข้อมูลที่ตรงกับการค้นหา'
-                                }
-                            </h3>
-                            <p>
-                                {serialsWithHistory.length === 0 
-                                    ? 'ยังไม่มีข้อมูลการใช้อะไหล่ในระบบ'
-                                    : 'ลองปรับเปลี่ยนเงื่อนไขการค้นหาหรือล้างตัวกรอง'
-                                }
-                            </p>
-                        </div>
-                    ) : (
-                        filteredAndSortedSerials.map(serial => {
-                            const vehicle = getVehicleBySerial(serial);
-                            const golfCourseName = getGolfCourseNameByVehicle(vehicle);
-                            const partsCount = getPartsCountBySerial(serial);
-                            const latestLog = partsUsageLog
-                                .filter(log => log.vehicleSerial === serial)
-                                .sort((a, b) => new Date(b.usedDate).getTime() - new Date(a.usedDate).getTime())[0];
 
-                            return (
-                                <div key={serial} className="serial-card">
-                                    <div className="serial-card-header">
-                                        <div className="serial-info">
-                                            <h4 className="serial-number">🏷️ {serial}</h4>
-                                            <p className="vehicle-number">🚗 {vehicle?.vehicle_number || 'ไม่ระบุ'}</p>
-                                        </div>
-                                        <div className="parts-count-badge">
-                                            {partsCount} รายการ
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="serial-card-body">
-                                        <div className="info-row">
-                                            <span className="info-label">🏌️ สนาม:</span>
-                                            <span className="info-value">{golfCourseName}</span>
-                                        </div>
-                                        <div className="info-row">
-                                            <span className="info-label">📅 วันที่บันทึก:</span>
-                                            <span className="info-value">
-                                                {latestLog ? formatDate(latestLog.usedDate) : 'ไม่มีข้อมูล'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="serial-card-footer">
-                                        <button 
-                                            className="btn-view-history"
-                                            onClick={() => handleShowHistory(serial)}
-                                        >
-                                            📋 ดูประวัติอะไหล่
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
+                {/* View Toggle */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                    <div style={{ background: '#f3f4f6', padding: '4px', borderRadius: '12px', display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            style={{
+                                padding: '8px 24px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                background: viewMode === 'list' ? 'white' : 'transparent',
+                                color: viewMode === 'list' ? '#3b82f6' : '#6b7280',
+                                boxShadow: viewMode === 'list' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            รายการ (List)
+                        </button>
+                        <button
+                            onClick={() => setViewMode('summary')}
+                            style={{
+                                padding: '8px 24px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                background: viewMode === 'summary' ? 'white' : 'transparent',
+                                color: viewMode === 'summary' ? '#3b82f6' : '#6b7280',
+                                boxShadow: viewMode === 'summary' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            สรุปยอด (Summary)
+                        </button>
+                    </div>
                 </div>
+
+                {viewMode === 'list' ? (
+                    <div className="serial-grid">
+                        {filteredAndSortedSerials.length === 0 ? (
+                            <div className="no-data">
+                                <div className="no-data-icon">
+                                    {serialsWithHistory.length === 0 ? '📦' : '🔍'}
+                                </div>
+                                <h3>
+                                    {serialsWithHistory.length === 0
+                                        ? 'ยังไม่มีประวัติการใช้อะไหล่'
+                                        : 'ไม่พบข้อมูลที่ตรงกับการค้นหา'
+                                    }
+                                </h3>
+                                <p>
+                                    {serialsWithHistory.length === 0
+                                        ? 'ยังไม่มีข้อมูลการใช้อะไหล่ในระบบ'
+                                        : 'ลองปรับเปลี่ยนเงื่อนไขการค้นหาหรือล้างตัวกรอง'
+                                    }
+                                </p>
+                            </div>
+                        ) : (
+                            filteredAndSortedSerials.map(serial => {
+                                const vehicle = getVehicleBySerial(serial);
+                                const golfCourseName = getGolfCourseNameByVehicle(vehicle);
+                                const partsCount = getPartsCountBySerial(serial);
+                                const latestLog = partsUsageLog
+                                    .filter(log => log.vehicleSerial === serial)
+                                    .sort((a, b) => new Date(b.usedDate).getTime() - new Date(a.usedDate).getTime())[0];
+
+                                return (
+                                    <div key={serial} className="serial-card">
+                                        <div className="serial-card-header">
+                                            <div className="serial-info">
+                                                <h4 className="serial-number">🏷️ {serial}</h4>
+                                                <p className="vehicle-number">🚗 {vehicle?.vehicle_number || 'ไม่ระบุ'}</p>
+                                            </div>
+                                            <div className="parts-count-badge">
+                                                {partsCount} รายการ
+                                            </div>
+                                        </div>
+
+                                        <div className="serial-card-body">
+                                            <div className="info-row">
+                                                <span className="info-label">🏌️ สนาม:</span>
+                                                <span className="info-value">{golfCourseName}</span>
+                                            </div>
+                                            <div className="info-row">
+                                                <span className="info-label">📅 วันที่บันทึก:</span>
+                                                <span className="info-value">
+                                                    {latestLog ? formatDate(latestLog.usedDate) : 'ไม่มีข้อมูล'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="serial-card-footer">
+                                            <button
+                                                className="btn-view-history"
+                                                onClick={() => handleShowHistory(serial)}
+                                            >
+                                                📋 ดูประวัติอะไหล่
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                ) : (
+                    <div className="summary-table-container " style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
+                        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937' }}>สรุปยอดการใช้อะไหล่</h3>
+                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                ทั้งหมด {summaryData.length} รายการ
+                            </div>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#374151' }}>ชื่ออะไหล่</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#374151' }}>จำนวนครั้งที่ใช้</th>
+                                        <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#374151' }}>จำนวนรวม (ชิ้น)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {summaryData.length > 0 ? (
+                                        summaryData.map((item, index) => (
+                                            <tr key={index} style={{ borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.1s' }}>
+                                                <td style={{ padding: '12px 16px', color: '#111827', fontWeight: '500' }}>{item.partName}</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'center', color: '#4b5563' }}>{item.count}</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', color: '#059669', fontWeight: '600' }}>{item.quantity.toLocaleString()}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                                {summaryData.length > 0 && (
+                                    <tfoot>
+                                        <tr style={{ background: '#f3f4f6', borderTop: '2px solid #d1d5db' }}>
+                                            <td style={{ padding: '12px 16px', fontWeight: '700', color: '#1f2937' }}>รวมทั้งหมด</td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: '#1f2937' }}>{summaryData.reduce((sum, item) => sum + item.count, 0)}</td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '700', color: '#059669' }}>{summaryData.reduce((sum, item) => sum + item.quantity, 0).toLocaleString()}</td>
+                                        </tr>
+                                    </tfoot>
+                                )}
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modal สำหรับแสดงประวัติอะไหล่ */}
             {showModal && selectedSerial && (
-                <PartsHistoryModal 
+                <PartsHistoryModal
                     serialNumber={selectedSerial}
                     partsUsageLog={partsUsageLog}
                     onClose={handleCloseModal}
@@ -537,14 +667,14 @@ function PartsManagementScreen({
                     <div className="export-modal">
                         <div className="export-modal-header">
                             <h3>📊 Export ประวัติอะไหล่เป็น Excel</h3>
-                            <button 
+                            <button
                                 className="close-button"
                                 onClick={() => setShowExportModal(false)}
                             >
                                 ✕
                             </button>
                         </div>
-                        
+
                         <div className="export-modal-body">
                             <div className="export-option">
                                 <label className="export-radio-label">
@@ -615,15 +745,15 @@ function PartsManagementScreen({
                                 )}
                             </div>
                         </div>
-                        
+
                         <div className="export-modal-footer">
-                            <button 
+                            <button
                                 className="btn-cancel"
                                 onClick={() => setShowExportModal(false)}
                             >
                                 ยกเลิก
                             </button>
-                            <button 
+                            <button
                                 className="btn-export"
                                 onClick={exportToExcel}
                                 disabled={

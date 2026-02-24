@@ -25,18 +25,22 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showInactive, setShowInactive] = useState(true);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50); // เริ่มต้นที่ 50 รายการต่อหน้า
-  
+
   // Sort states
   const [sortBy] = useState<'date' | 'serial' | 'action'>('date');
-    const [sortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Modal states
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Battery Serial Modal state
+  const [selectedBatterySerial, setSelectedBatterySerial] = useState<string | null>(null);
+  const [isBatteryModalOpen, setIsBatteryModalOpen] = useState(false);
 
   // Helper functions
   const formatDate = (dateInput: string | Date | undefined | null) => {
@@ -47,7 +51,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
       }
 
       let date: Date;
-      
+
       // ถ้าเป็น Date object อยู่แล้ว
       if (dateInput instanceof Date) {
         date = dateInput;
@@ -58,7 +62,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         if (dateInput.trim() === '') {
           return 'ไม่ระบุวันที่';
         }
-        
+
         // ถ้าเป็น timestamp (number string)
         if (/^\d+$/.test(dateInput)) {
           date = new Date(parseInt(dateInput));
@@ -102,7 +106,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const getSystemDisplayName = (system: string) => {
     const systemNames: Record<string, string> = {
       'brake': 'เบรก/เพื่อห้าม',
-      'steering': 'พวงมาลัย', 
+      'steering': 'พวงมาลัย',
       'motor': 'มอเตอร์/เพื่อขับ',
       'electric': 'ไฟฟ้า',
       'general': 'ทั่วไป',
@@ -129,7 +133,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const translateDetailsToThai = (details: string): string => {
     // แปลงสถานะในรายละเอียดจากภาษาอังกฤษเป็นภาษาไทย
     let translatedDetails = details;
-    
+
     // แปลงรูปแบบ "สถานะ: active → ready" เป็น "สถานะ: ใช้งาน → พร้อมใช้"
     const statusChangePattern = /สถานะ:\s*(\w+)\s*→\s*(\w+)/g;
     translatedDetails = translatedDetails.replace(statusChangePattern, (match, oldStatus, newStatus) => {
@@ -185,11 +189,11 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     if (userName === null || userName === undefined) {
       return 'ไม่ระบุ';
     }
-    
+
     if (typeof userName === 'string') {
       return userName.trim() || 'ไม่ระบุ';
     }
-    
+
     if (typeof userName === 'object') {
       // ลองดึงค่าจาก object properties ต่างๆ
       const possibleNames = [
@@ -199,17 +203,17 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         userName.fullName,
         userName.user_name
       ];
-      
+
       for (const name of possibleNames) {
         if (typeof name === 'string' && name.trim()) {
           return name.trim();
         }
       }
-      
+
       // ถ้าไม่มี property ที่เป็น string ให้แปลงทั้ง object เป็น string
       return JSON.stringify(userName);
     }
-    
+
     // สำหรับ type อื่นๆ ให้แปลงเป็น string
     return String(userName);
   };
@@ -217,7 +221,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   // สร้าง Serial History Entries จากงานที่มีในระบบ
   const generateSerialHistoryFromJobs = useMemo(() => {
     const generatedEntries: SerialHistoryEntry[] = [];
-    
+
     jobs.forEach(job => {
       const vehicle = vehicles.find(v => v.id === job.vehicle_id);
       if (!vehicle) return;
@@ -267,11 +271,11 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     );
 
     const combinedHistory = [...serialHistory, ...uniqueGeneratedEntries];
-    
+
     // ตรวจสอบการซ้ำกันเพิ่มเติมด้วย unique key (serial + date + action)
     const uniqueEntries = combinedHistory.filter((entry, index, array) => {
       const uniqueKey = `${entry.serial_number}-${entry.action_date}-${entry.action_type}-${entry.details}`;
-      return array.findIndex(e => 
+      return array.findIndex(e =>
         `${e.serial_number}-${e.action_date}-${e.action_type}-${e.details}` === uniqueKey
       ) === index;
     });
@@ -307,14 +311,14 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     // กรองข้อมูลตาม user access ก่อน
     const accessibleHistory = allSerialHistory.filter(entry => {
       let hasAccess = false;
-      
+
       if (user.role === 'admin') {
         hasAccess = true;
       } else if (user.role === 'supervisor' && user.managed_golf_courses) {
         // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
         const totalGolfCourses = golfCourses.length;
         const managedCoursesCount = user.managed_golf_courses.length;
-        
+
         if (managedCoursesCount === totalGolfCourses) {
           hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
         } else {
@@ -341,7 +345,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           name: apiCourse.name
         };
       }
-      
+
       // Fallback to name from history data
       const historyEntry = accessibleHistory.find(entry => String(entry.golf_course_id) === String(courseId));
       return {
@@ -349,10 +353,10 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         name: historyEntry?.golf_course_name || `สนาม ${courseId}`
       };
     });
-    
+
     // Sort by name
     const sortedCourses = coursesWithData.sort((a, b) => a.name.localeCompare(b.name));
-    
+
     return sortedCourses;
   }, [allSerialHistory, golfCourses, user]);
 
@@ -360,14 +364,14 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const filteredEntries = useMemo(() => {
     const filtered = allSerialHistory.filter(entry => {
       let hasAccess = false;
-      
+
       if (user.role === 'admin') {
         hasAccess = true;
       } else if (user.role === 'supervisor' && user.managed_golf_courses) {
         // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
         const totalGolfCourses = golfCourses.length;
         const managedCoursesCount = user.managed_golf_courses.length;
-        
+
         if (managedCoursesCount === totalGolfCourses) {
           hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
         } else {
@@ -392,14 +396,14 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
       }
 
       if (filterGolfCourse && filterGolfCourse !== '') {
-          // แปลงทั้งสองค่าเป็น string เพื่อเปรียบเทียบ
-          const entryGolfCourseId = String(entry.golf_course_id);
-          const selectedGolfCourseId = String(filterGolfCourse);
-          
-          if (entryGolfCourseId !== selectedGolfCourseId) {
-            return false;
-          }
+        // แปลงทั้งสองค่าเป็น string เพื่อเปรียบเทียบ
+        const entryGolfCourseId = String(entry.golf_course_id);
+        const selectedGolfCourseId = String(filterGolfCourse);
+
+        if (entryGolfCourseId !== selectedGolfCourseId) {
+          return false;
         }
+      }
 
       if (filterDateFrom) {
         const entryDate = new Date(entry.action_date);
@@ -424,7 +428,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     // Sort
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'date':
           comparison = new Date(a.action_date).getTime() - new Date(b.action_date).getTime();
@@ -488,6 +492,16 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
     setCurrentPage(1); // Reset pagination
   };
 
+  const handleViewBatterySerial = (serial: string) => {
+    setSelectedBatterySerial(serial);
+    setIsBatteryModalOpen(true);
+  };
+
+  const handleCloseBatteryModal = () => {
+    setIsBatteryModalOpen(false);
+    setSelectedBatterySerial(null);
+  };
+
   // Calculate summary statistics
   const totalSerials = new Set(filteredEntries.map(e => e.serial_number)).size;
   const totalMaintenanceJobs = filteredEntries.filter(e => e.action_type === 'maintenance').length;
@@ -506,7 +520,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
             </div>
           </div>
           <div className="header-actions">
-            <button 
+            <button
               onClick={handleViewPartsHistory}
               className="btn-parts-history"
             >
@@ -557,7 +571,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
             <span>🗑️</span> ล้างตัวกรอง
           </button>
         </div>
-        
+
         <div className="filter-grid">
           <div className="filter-group">
             <label>🔍 ค้นหาซีเรียล:</label>
@@ -720,9 +734,21 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                       <span className="vehicle-badge">{String(entry.vehicle_number || '-')}</span>
                     </td>
                     <td className="battery-col">
-                      <span className="battery-badge">
-                        {String(entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-')}
-                      </span>
+                      {(() => {
+                        const batterySerial = String(entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-');
+                        if (batterySerial === '-' || !batterySerial) {
+                          return <span className="text-gray-400">-</span>;
+                        }
+                        return (
+                          <button
+                            onClick={() => handleViewBatterySerial(batterySerial)}
+                            className="battery-view-btn"
+                            title={batterySerial}
+                          >
+                            <span className="battery-icon">🔋</span> ดูซีเรียล
+                          </button>
+                        );
+                      })()}
                     </td>
                     <td className="action-col">
                       <span className={`action-badge ${getActionTypeColorClass(entry.action_type)}`}>
@@ -744,7 +770,7 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
                         )}
                         {entry.system && (
                           <div className="system-info">
-                            <span className="info-label">⚙️ ระบบ:</span> 
+                            <span className="info-label">⚙️ ระบบ:</span>
                             <span className="system-name">{getSystemDisplayName(String(entry.system))}</span>
                           </div>
                         )}
@@ -805,6 +831,23 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           partsUsageLog={partsUsageLog}
           onClose={handleCloseModal}
         />
+      )}
+
+      {/* Battery Serial Modal */}
+      {isBatteryModalOpen && selectedBatterySerial && (
+        <div className="modal-overlay" onClick={handleCloseBatteryModal}>
+          <div className="modal-content battery-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🔋 ซีเรียลแบตเตอรี่</h3>
+              <button className="close-btn" onClick={handleCloseBatteryModal}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <div className="battery-serial-display">
+                {selectedBatterySerial}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx>{`
@@ -1113,6 +1156,17 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           border-bottom: 1px solid #e2e8f0;
         }
 
+        .serial-col, .action-col, .vehicle-col, .status-col {
+          white-space: nowrap;
+        }
+
+        .battery-col {
+          white-space: nowrap;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
         .date-display {
           font-weight: 500;
           color: #4a5568;
@@ -1171,14 +1225,30 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
           box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
         }
 
-        .battery-badge {
+        .battery-view-btn {
           background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
           color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
+          border: none;
+          padding: 6px 12px;
+          border-radius: 12px;
           font-weight: 600;
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          box-shadow: 0 2px 6px rgba(159, 122, 234, 0.3);
+          white-space: nowrap;
+        }
+
+        .battery-view-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(159, 122, 234, 0.4);
+        }
+
+        .battery-icon {
           font-size: 0.9rem;
-          box-shadow: 0 2px 8px rgba(159, 122, 234, 0.3);
         }
 
         .action-badge {
@@ -1202,7 +1272,8 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
         .action-default { background: linear-gradient(135deg, #a0aec0 0%, #718096 100%); color: white; }
 
         .details-content {
-          max-width: 350px;
+          min-width: 350px;
+          max-width: 600px;
         }
 
         .details-text {
@@ -1381,6 +1452,87 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
 
           .details-content {
             max-width: 250px;
+          }
+        }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(4px);
+        }
+
+        .modal-content.battery-modal {
+          background: white;
+          padding: 24px;
+          border-radius: 16px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+          width: 90%;
+          max-width: 400px;
+          animation: slideUp 0.3s ease-out;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          font-size: 1.25rem;
+          color: #2d3748;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: #a0aec0;
+          cursor: pointer;
+          transition: color 0.2s;
+          padding: 0;
+          line-height: 1;
+        }
+
+        .close-btn:hover {
+          color: #4a5568;
+        }
+
+        .battery-serial-display {
+          background: #f7fafc;
+          padding: 20px;
+          border-radius: 12px;
+          border: 2px dashed #cbd5e0;
+          text-align: center;
+          font-size: 1.2rem;
+          font-weight: 600;
+          color: #4a5568;
+          word-break: break-all;
+          font-family: monospace;
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
       `}</style>

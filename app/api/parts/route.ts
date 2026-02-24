@@ -6,26 +6,38 @@ export async function GET() {
   try {
     // ใช้ raw MongoDB operations เพื่อหลีกเลี่ยงปัญหา createdAt null
     let parts: any[] = [];
-    
+
     try {
       // ลองใช้ Prisma findMany ก่อน
       parts = await prisma.part.findMany({
+        include: {
+          inventory: {
+            include: {
+              golfCourse: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        },
         orderBy: {
           createdAt: 'desc'
         }
       });
     } catch (prismaError) {
       console.warn('Prisma findMany failed, using raw MongoDB:', prismaError);
-      
+
       // Fallback ใช้ raw MongoDB operations
       try {
         const result = await prisma.$runCommandRaw({
           find: 'parts',
           sort: { createdAt: -1 }
         }) as { cursor?: { firstBatch?: any[] } };
-        
+
         parts = result?.cursor?.firstBatch || [];
-        
+
         // แปลง _id เป็น id สำหรับ compatibility
         parts = parts.map(part => ({
           ...part,

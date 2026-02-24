@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
+import { generateMWRCode } from '@/lib/utils/mwr-generator';
+import { approvePartRequest, consumeStockForJob, StockError } from '@/lib/stock';
 
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
@@ -42,7 +44,7 @@ async function sendSerialHistoryToExternalAPI(serialHistoryData: any) {
     // ไม่ throw error เพื่อไม่ให้กระทบต่อการสร้าง job หลัก
   }
 }
-import { isValidObjectId } from '@/lib/utils/validation';
+
 
 // GET - ดึงข้อมูลงานทั้งหมด
 export async function GET() {
@@ -100,17 +102,23 @@ export async function POST(request: Request) {
     } = body;
 
     // Validation
-    if (!type || !status || !vehicle_id || !vehicle_number || !golf_course_id || !user_id || !userName) {
+    // สำหรับ Part Request (MWR) ไม่จำเป็นต้องมี vehicle_id, vehicle_number
+    const isPartRequest = type === 'PART_REQUEST';
+
+    if (!type || !status ||
+      (!isPartRequest && !vehicle_id) ||
+      (!isPartRequest && !vehicle_number) ||
+      !golf_course_id || !user_id || !userName) {
       return NextResponse.json({
         success: false,
         message: 'Type, status, vehicle_id, vehicle_number, golf_course_id, user_id, and userName are required'
       }, { status: 400 });
     }
 
-    if (!['PM', 'BM', 'Recondition'].includes(type)) {
+    if (!['PM', 'BM', 'Recondition', 'PART_REQUEST'].includes(type)) {
       return NextResponse.json({
         success: false,
-        message: 'Type must be PM, BM, or Recondition'
+        message: 'Type must be PM, BM, Recondition, or PART_REQUEST'
       }, { status: 400 });
     }
 
@@ -147,6 +155,11 @@ export async function POST(request: Request) {
       images: images || []
     };
 
+    // Generate MWR Code if type is PART_REQUEST
+    if (type === 'PART_REQUEST') {
+      jobData.mwr_code = await generateMWRCode();
+    }
+
     // เพิ่ม parts relation ถ้ามีข้อมูล
     if (parts && Array.isArray(parts) && parts.length > 0) {
       jobData.parts = {
@@ -168,10 +181,13 @@ export async function POST(request: Request) {
         }
       });
 
-      // ดึงข้อมูลรถเพื่อใช้ใน Serial History
-      const vehicle = await tx.vehicle.findUnique({
-        where: { id: vehicle_id }
-      });
+      // ดึงข้อมูลรถเพื่อใช้ใน Serial History (ถ้ามี vehicle_id)
+      let vehicle = null;
+      if (vehicle_id) {
+        vehicle = await tx.vehicle.findUnique({
+          where: { id: vehicle_id }
+        });
+      }
 
       if (vehicle) {
         // เตรียมข้อมูลอะไหล่สำหรับ Serial History
@@ -180,7 +196,7 @@ export async function POST(request: Request) {
           : [];
 
         // บันทึก Serial History เฉพาะการเปิดจ๊อบใหม่เท่านั้น
-        const serialHistoryEntry = await tx.serialHistoryEntry.create({
+        await tx.serialHistoryEntry.create({
           data: {
             serial_number: vehicle.serial_number,
             vehicle_number: vehicle_number || vehicle.vehicle_number || '',
@@ -222,6 +238,42 @@ export async function POST(request: Request) {
 
       return newJob;
     });
+
+    // --- Notification Logic ---
+    // Find supervisors for this golf course
+    try {
+      const supervisors = await prisma.user.findMany({
+        where: {
+          role: 'supervisor',
+          managed_golf_courses: {
+            has: golf_course_id
+          }
+        }
+      });
+
+      // Also notify Admins/Central if needed, or specific roles.
+      // For now, focusing on Supervisors as requested.
+
+      if (supervisors.length > 0) {
+        const notificationPromises = supervisors.map(supervisor =>
+          prisma.notification.create({
+            data: {
+              userId: supervisor.id,
+              title: 'งานใหม่ถูกสร้าง',
+              message: `มีการสร้างงาน ${type} ที่สนาม ${jobData.golf_course_name || 'ไม่ระบุ'} โดย ${userName} (${vehicle_number})`,
+              type: 'info',
+              link: '', // Could link to specific job view if available
+              isRead: false
+            }
+          })
+        );
+        await Promise.all(notificationPromises);
+      }
+    } catch (notifyError) {
+      console.error('Failed to send notifications:', notifyError);
+      // Don't fail the request if notification fails
+    }
+    // --------------------------
 
     return NextResponse.json({
       success: true,
@@ -329,6 +381,44 @@ export async function PUT(request: Request) {
         throw new Error('Job not found');
       }
 
+      // Check for Approval & execute Stock Logic
+      if (status === 'approved' && existingJob.status !== 'approved') {
+        if ((existingJob.type as string) === 'PART_REQUEST') {
+          // 1. MWR Approval -> Standard Stock Transfer (Central -> Site)
+          // We use the existing job ID. Logic inside approvePartRequest will check items
+          await approvePartRequest(id, user_id || existingJob.user_id, tx);
+        } else {
+          // 2. Regular Job Approval -> Consume Stock (Site -> Used)
+          // Use updated parts if provided, otherwise existing parts
+          // BUT, waiting: updateData hasn't been applied yet.
+          // If we use existingJob.parts, we miss any parts updates in this PUT.
+          // If parts is in body, use it.
+
+          let partsToConsume: any[] = existingJob.parts;
+
+          if (parts && Array.isArray(parts)) {
+            // If parts update is provided, we must use the NEW list.
+            // But the job hasn't been updated yet in DB!
+            // So we pass the request body parts.
+            partsToConsume = parts.map((p: any) => ({
+              partId: p.part_id,
+              quantity: p.quantity_used || 1,
+              // mock keys for logic check
+              partName: p.part_name || ''
+            }));
+          } else {
+            // Adapt existing parts to required format
+            partsToConsume = existingJob.parts.map(p => ({
+              partId: p.part_id,
+              quantity: p.quantity_used,
+              partName: p.part_name
+            }));
+          }
+
+          await consumeStockForJob(id, partsToConsume, golf_course_id || existingJob.golf_course_id, user_id || existingJob.user_id, tx);
+        }
+      }
+
       // อัพเดทงาน
       const updatedJob = await tx.job.update({
         where: { id: id },
@@ -338,9 +428,12 @@ export async function PUT(request: Request) {
 
       // บันทึก Serial History เฉพาะสถานะสำคัญ: assigned (ส่งงาน) และ approved (อนุมัติ) เท่านั้น
       if (status && status !== existingJob.status && (status === 'assigned' || status === 'approved')) {
-        const vehicle = await tx.vehicle.findUnique({
-          where: { id: updatedJob.vehicle_id }
-        });
+        let vehicle = null;
+        if (updatedJob.vehicle_id) {
+          vehicle = await tx.vehicle.findUnique({
+            where: { id: updatedJob.vehicle_id }
+          });
+        }
 
         if (vehicle) {
           // เตรียมข้อมูลอะไหล่สำหรับ Serial History (เฉพาะเมื่อ approved)
@@ -352,7 +445,7 @@ export async function PUT(request: Request) {
 
           const actionDescription = status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
 
-          const serialHistoryEntry = await tx.serialHistoryEntry.create({
+          await tx.serialHistoryEntry.create({
             data: {
               serial_number: vehicle.serial_number,
               vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number || '',
@@ -404,10 +497,29 @@ export async function PUT(request: Request) {
 
   } catch (error: unknown) {
     console.error('Error updating job:', error);
+
+    // Handle Stock Error specifically
+    if (error instanceof StockError) {
+      return NextResponse.json({
+        success: false,
+        message: error.message
+      }, { status: 400 });
+    }
+
     let errorMessage = 'An unknown error occurred.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
+
+    // Handle Stock Errors gracefully
+    if (errorMessage.includes('Insufficient stock') || errorMessage.includes('StockError')) {
+      return NextResponse.json({
+        success: false,
+        message: errorMessage, // Send specific stock error to UI
+        error: errorMessage
+      }, { status: 400 });
+    }
+
     return NextResponse.json({
       success: false,
       message: 'Failed to update job',

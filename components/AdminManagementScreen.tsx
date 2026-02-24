@@ -41,6 +41,7 @@ const ACTION_PERMISSIONS: Permission[] = [
     { id: 'golf_course:edit', name: 'แก้ไขข้อมูลสนามและซีเรียล', description: 'เพิ่ม แก้ไข ลบข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock'], category: 'action', relatedTo: 'golf_course:view' },
     { id: 'users:edit', name: 'แก้ไขผู้ใช้งาน', description: 'เพิ่ม แก้ไข และลบผู้ใช้งาน', roles: ['admin', 'supervisor', 'manager'], category: 'action', relatedTo: 'users:view' },
     { id: 'system:manage', name: 'จัดการระบบ', description: 'ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง', roles: ['admin'], category: 'action' },
+    { id: 'part_request:approve', name: 'อนุมัติใบเบิกอะไหล่', description: 'สามารถอนุมัติหรือปฏิเสธใบเบิกอะไหล่ (MWR)', roles: ['admin', 'supervisor', 'stock'], category: 'action', relatedTo: 'stock:view' },
     { id: 'stock:edit', name: 'แก้ไขระบบสต็อก', description: 'เพิ่ม แก้ไข ลบอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'stock'], category: 'action', relatedTo: 'stock:view' },
 ];
 

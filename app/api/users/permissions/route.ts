@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
 // PUT - อัปเดต permissions ของ user

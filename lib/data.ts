@@ -19,8 +19,9 @@ export type View =
   | 'assigned_job_form'
   | 'view_assigned_jobs'
   | 'supervisor_pending_jobs'
+  | 'create_part_request'
   | 'profile';
-export type JobType = 'PM' | 'BM' | 'Recondition';
+export type JobType = 'PM' | 'BM' | 'Recondition' | 'PART_REQUEST';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
 
@@ -63,6 +64,17 @@ export interface Vehicle {
   transfer_date?: string; // เพิ่มฟิลด์สำหรับวันที่ย้าย
 }
 
+export interface Inventory {
+  id: string;
+  part_id: string;
+  golf_course_id: string | null;
+  quantity: number;
+  golfCourse?: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Part {
   id: string;
   name: string;
@@ -79,14 +91,15 @@ export interface Part {
   created_at?: string;
   createdAt?: string;
   updatedAt?: string;
+  inventory?: Inventory[]; // Break down by location
 }
 
 export interface Job {
   id: string;
   user_id: string;
   userName: string;
-  vehicle_id: string;
-  vehicle_number: string;
+  vehicle_id?: string;
+  vehicle_number?: string;
   golf_course_id: string;
   type: JobType;
   status: JobStatus;
@@ -103,6 +116,7 @@ export interface Job {
   assigned_to?: string;
   bmCause?: BMCause;
   images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
+  mwr_code?: string; // รหัสใบเบิกอะไหล่ (สำหรับ PART_REQUEST)
   prrNumber?: string; // เลขที่ใบเบิกอะไหล่
   // ข้อมูลการอนุมัติ
   approved_by_id?: string;
@@ -192,7 +206,7 @@ export interface SerialHistoryEntry {
   golf_course_name: string;
   is_active: boolean;
   related_job_id?: string;
-  job_type?: 'PM' | 'BM' | 'Recondition';
+  job_type?: JobType;
   system?: string;
   parts_used?: string[];
   status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned';
@@ -224,6 +238,17 @@ export interface PartsUsageLog {
   system: string;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  isRead: boolean;
+  link?: string;
+  createdAt: string;
 }
 
 // ฟังก์ชันสำหรับเพิ่มประวัตการเปลี่ยนแปลง

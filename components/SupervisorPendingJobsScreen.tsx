@@ -30,17 +30,27 @@ function SupervisorPendingJobsScreen({
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
     const [selectedJobType, setSelectedJobType] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<'maintenance' | 'part_request'>('maintenance');
 
     // ตรวจสอบสิทธิ์อนุมัติงาน
     const hasApprovePermission = (): boolean => {
         // admin มีสิทธิ์ทั้งหมด
         if (user.role === 'admin') return true;
-        // ตรวจสอบจาก permissions array (ใช้ ID ใหม่ pending_jobs:approve)
-        if (user.permissions && Array.isArray(user.permissions)) {
-            return user.permissions.includes('pending_jobs:approve') || user.permissions.includes('approve_jobs');
+
+        // ตรวจสอบตาม Tab
+        if (activeTab === 'part_request') {
+            if (user.permissions && Array.isArray(user.permissions)) {
+                return user.permissions.includes('part_request:approve');
+            }
+            // Fallback for role-based if permissions not set (Stock, Supervisor, Manager)
+            return user.role === 'stock' || user.role === 'supervisor' || user.role === 'manager';
+        } else {
+            if (user.permissions && Array.isArray(user.permissions)) {
+                return user.permissions.includes('pending_jobs:approve') || user.permissions.includes('approve_jobs');
+            }
+            // Fallback for role-based
+            return user.role === 'supervisor' || user.role === 'manager';
         }
-        // ถ้าไม่มี permissions array ให้อนุญาตตาม role เดิม (supervisor และ manager มีสิทธิ์)
-        return user.role === 'supervisor' || user.role === 'manager';
     };
 
     // Calculate assigned jobs count (assigned + in_progress status)
@@ -65,15 +75,17 @@ function SupervisorPendingJobsScreen({
 
     // Filter jobs based on user permissions and selected course
     useEffect(() => {
-        console.log('🔍 SupervisorPendingJobsScreen: Filtering jobs...');
-        console.log('📊 Total jobs received:', jobs.length);
-        console.log('📋 Jobs by status:', jobs.reduce((acc, job) => {
-            acc[job.status] = (acc[job.status] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>));
+        let filtered = [];
 
-        let filtered = jobs.filter(job => job.status === 'pending');
-        console.log('⏳ Jobs with pending status:', filtered.length);
+        if (activeTab === 'maintenance') {
+            // Filter exclude PART_REQUEST
+            filtered = jobs.filter(job => job.status === 'pending' && job.type !== 'PART_REQUEST');
+        } else {
+            // Filter ONLY PART_REQUEST
+            filtered = jobs.filter(job => job.status === 'pending' && job.type === 'PART_REQUEST');
+        }
+
+        console.log(`⏳ Jobs with pending status (Tab: ${activeTab}):`, filtered.length);
 
         // Filter by golf course if user is not admin
         if (user.role !== 'admin') {
@@ -91,14 +103,13 @@ function SupervisorPendingJobsScreen({
             filtered = filtered.filter(job => String(job.golf_course_id) === selectedCourseId);
         }
 
-        // Apply job type filter if selected
-        if (selectedJobType) {
+        // Apply job type filter if selected (Only for maintenance tab)
+        if (activeTab === 'maintenance' && selectedJobType) {
             filtered = filtered.filter(job => job.type === selectedJobType);
         }
 
-        console.log('✅ Final filtered jobs:', filtered.length);
         setFilteredJobs(filtered);
-    }, [jobs, user, selectedCourseId, selectedJobType]);
+    }, [jobs, user, selectedCourseId, selectedJobType, activeTab]);
 
     // Get available golf courses for filter
     const getAvailableGolfCourses = () => {
@@ -179,7 +190,8 @@ function SupervisorPendingJobsScreen({
         }
     };
 
-    const getVehicleInfo = (vehicleId: string) => {
+    const getVehicleInfo = (vehicleId: string | undefined | null) => {
+        if (!vehicleId) return undefined;
         return vehicles.find(v => v.id === vehicleId);
     };
 
@@ -220,7 +232,14 @@ function SupervisorPendingJobsScreen({
             return;
         }
 
-        if (confirm('ยืนยันการอนุมัติงานนี้?')) {
+        let confirmMessage = 'ยืนยันการอนุมัติงานนี้?';
+        if (jobToApprove.type === 'PART_REQUEST') {
+            confirmMessage = `ยืนยันการอนุมัติใบเบิกอะไหล่ (MWR) นี้?\n(ระบบจะตัดสต็อกส่วนกลางไปยังสต็อกสนามโดยอัตโนมัติ)`;
+        } else {
+            confirmMessage = `ยืนยันการอนุมัติงานซ่อมนี้?\n(ระบบจะตัดสต็อกสนามโดยอัตโนมัติ)`;
+        }
+
+        if (confirm(confirmMessage)) {
             try {
                 console.log('✅ User confirmed approval, calling onUpdateStatus...');
 
@@ -362,6 +381,47 @@ function SupervisorPendingJobsScreen({
                 </div>
             </div>
 
+            {/* Tabs */}
+            <div className={styles.tabsContainer} style={{
+                display: 'flex',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+                borderBottom: '1px solid #e2e8f0'
+            }}>
+                <button
+                    onClick={() => setActiveTab('maintenance')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        border: 'none',
+                        background: 'none',
+                        borderBottom: activeTab === 'maintenance' ? '3px solid #3b82f6' : '3px solid transparent',
+                        color: activeTab === 'maintenance' ? '#1d4ed8' : '#64748b',
+                        fontWeight: activeTab === 'maintenance' ? 600 : 400,
+                        cursor: 'pointer',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    🔧 อนุมัติงานซ่อม
+                </button>
+                <button
+                    onClick={() => setActiveTab('part_request')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        border: 'none',
+                        background: 'none',
+                        borderBottom: activeTab === 'part_request' ? '3px solid #3b82f6' : '3px solid transparent',
+                        color: activeTab === 'part_request' ? '#1d4ed8' : '#64748b',
+                        fontWeight: activeTab === 'part_request' ? 600 : 400,
+                        cursor: 'pointer',
+                        fontSize: '1rem',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    📦 อนุมัติการเบิกอะไหล่
+                </button>
+            </div>
+
             {/* Filter Controls */}
             <div className={styles.filtersSection}>
                 <div className={styles.filtersGrid}>
@@ -380,19 +440,22 @@ function SupervisorPendingJobsScreen({
                             ))}
                         </select>
                     </div>
-                    <div className={styles.filterGroup}>
-                        <label className={styles.filterLabel}>กรองตามประเภทงาน:</label>
-                        <select
-                            value={selectedJobType}
-                            onChange={(e) => setSelectedJobType(e.target.value)}
-                            className={styles.filterSelect}
-                        >
-                            <option value="">ทุกประเภท</option>
-                            <option value="PM">PM (Preventive Maintenance)</option>
-                            <option value="BM">BM (Breakdown Maintenance)</option>
-                            <option value="Recondition">Recondition</option>
-                        </select>
-                    </div>
+                    {/* Show Job Type filter only for Maintenance tab */}
+                    {activeTab === 'maintenance' && (
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>กรองตามประเภทงาน:</label>
+                            <select
+                                value={selectedJobType}
+                                onChange={(e) => setSelectedJobType(e.target.value)}
+                                className={styles.filterSelect}
+                            >
+                                <option value="">ทุกประเภท</option>
+                                <option value="PM">PM (Preventive Maintenance)</option>
+                                <option value="BM">BM (Breakdown Maintenance)</option>
+                                <option value="Recondition">Recondition</option>
+                            </select>
+                        </div>
+                    )}
                     <div className={styles.filterGroup}>
                         <button
                             className={styles.btnReset}
@@ -411,22 +474,35 @@ function SupervisorPendingJobsScreen({
             <div className={styles.jobsList}>
                 {filteredJobs.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <div className={styles.emptyIcon}>📋</div>
-                        <h3>ไม่มีงานรออนุมัติ</h3>
-                        <p>ขณะนี้ไม่มีงานที่รออนุมัติจากคุณ</p>
+                        <div className={styles.emptyIcon}>
+                            {activeTab === 'part_request' ? '📦' : '📋'}
+                        </div>
+                        <h3>
+                            {activeTab === 'part_request' ? 'ไม่มีใบเบิกที่รออนุมัติ' : 'ไม่มีงานรออนุมัติ'}
+                        </h3>
+                        <p>ขณะนี้ไม่มี{activeTab === 'part_request' ? 'รายการเบิก' : 'งาน'}ที่รออนุมัติจากคุณ</p>
                     </div>
                 ) : (
                     filteredJobs.map(job => {
                         const vehicleInfo = getVehicleInfo(job.vehicle_id);
+                        const isMWR = job.type === 'PART_REQUEST';
+
+                        // MWR Custom Style overrides
+                        const cardStyle = isMWR ? { borderLeft: '4px solid #3b82f6' } : {};
+                        const titleStyle = isMWR ? { color: '#1d4ed8' } : {};
+                        const typeBadgeStyle = isMWR ? { background: '#dbeafe', color: '#1e40af' } : {};
+
                         return (
-                            <div key={job.id} className={styles.jobCardEnhanced}>
+                            <div key={job.id} className={styles.jobCardEnhanced} style={cardStyle}>
                                 <div className={styles.jobCardHeader}>
                                     <div className={styles.jobHeaderLeft}>
-                                        <h3 className={styles.vehicleNumber}>
-                                            รถเบอร์ {job.vehicle_number}
+                                        <h3 className={styles.vehicleNumber} style={titleStyle}>
+                                            {isMWR
+                                                ? `MWR: ${job.mwr_code || 'รอสร้างรหัส'}`
+                                                : `รถเบอร์ ${job.vehicle_number}`}
                                         </h3>
-                                        <span className={styles.jobTypeLabel}>
-                                            {job.type}
+                                        <span className={styles.jobTypeLabel} style={typeBadgeStyle}>
+                                            {isMWR ? 'เบิกอะไหล่' : job.type}
                                         </span>
                                         <StatusBadge status={job.status} />
                                     </div>
@@ -446,23 +522,39 @@ function SupervisorPendingJobsScreen({
                                             </span>
                                         </div>
                                         <div className={styles.detailItem}>
-                                            <span className={styles.detailLabel}>ผู้แจ้ง:</span>
+                                            <span className={styles.detailLabel}>{isMWR ? 'ผู้เบิก:' : 'ผู้แจ้ง:'}</span>
                                             <span className={styles.detailValue}>
                                                 {getUserName(job.user_id)}
                                             </span>
                                         </div>
-                                        <div className={styles.detailItem}>
-                                            <span className={styles.detailLabel}>ซีเรียลแบต:</span>
-                                            <span className={styles.detailValue}>
-                                                {job.battery_serial || vehicleInfo?.battery_serial || '-'}
-                                            </span>
-                                        </div>
-                                        <div className={styles.detailItem}>
-                                            <span className={styles.detailLabel}>ระบบ:</span>
-                                            <span className={styles.detailValue}>
-                                                {job.system ? getSystemDisplayName(job.system) : '-'}
-                                            </span>
-                                        </div>
+
+                                        {!isMWR && (
+                                            <>
+                                                <div className={styles.detailItem}>
+                                                    <span className={styles.detailLabel}>ซีเรียลแบต:</span>
+                                                    <span className={styles.detailValue}>
+                                                        {job.battery_serial || vehicleInfo?.battery_serial || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className={styles.detailItem}>
+                                                    <span className={styles.detailLabel}>ระบบ:</span>
+                                                    <span className={styles.detailValue}>
+                                                        {job.system ? getSystemDisplayName(job.system) : '-'}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {isMWR && (
+                                            <div className={styles.detailItem}>
+                                                <span className={styles.detailLabel}>ความเร่งด่วน:</span>
+                                                <span className={styles.detailValue}>
+                                                    {job.remarks?.includes('เร่งด่วนมาก') ? '🚨 เร่งด่วนมาก' :
+                                                        job.remarks?.includes('เร่งด่วน') ? '⚠️ เร่งด่วน' : 'ปกติ'}
+                                                </span>
+                                            </div>
+                                        )}
+
                                         {job.type === 'BM' && job.bmCause && (
                                             <div className={styles.detailItem}>
                                                 <span className={styles.detailLabel}>สาเหตุ:</span>
@@ -471,15 +563,33 @@ function SupervisorPendingJobsScreen({
                                                 </span>
                                             </div>
                                         )}
-                                        {job.remarks && (
-                                            <div className={styles.detailItem}>
-                                                <span className={styles.detailLabel}>หมายเหตุ:</span>
-                                                <span className={styles.detailValue}>
-                                                    {job.remarks}
-                                                </span>
-                                            </div>
-                                        )}
                                     </div>
+
+                                    {/* MWR Parts Preview */}
+                                    {isMWR && job.parts && job.parts.length > 0 && (
+                                        <div className={styles.detailsSection} style={{ marginTop: '0.75rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.25rem' }}>รายการอะไหล่ ({job.parts.length})</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                                {job.parts.slice(0, 3).map((p: any, idx: number) => (
+                                                    <span key={idx} style={{ fontSize: '0.8rem', background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', color: '#334155' }}>
+                                                        {p.part_name} x{p.quantity_used}
+                                                    </span>
+                                                ))}
+                                                {job.parts.length > 3 && (
+                                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>+{job.parts.length - 3}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {job.remarks && (
+                                        <div className={styles.detailItem} style={{ marginTop: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
+                                            <span className={styles.detailLabel}>หมายเหตุ:</span>
+                                            <span className={styles.detailValue}>
+                                                {job.remarks}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className={styles.actionButtons}>
@@ -513,245 +623,257 @@ function SupervisorPendingJobsScreen({
                         );
                     })
                 )}
-            </div>
+            </div >
 
             {/* Job Details Modal */}
-            {selectedJobForDetails && (
-                <div className={styles.modalOverlay} onClick={closeDetailsModal}>
-                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.modalHeader}>
-                            <h3>รายละเอียดงาน - รถเบอร์ {selectedJobForDetails.vehicle_number}</h3>
-                            <button className={styles.closeButton} onClick={closeDetailsModal}>
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className={styles.modalBody}>
-                            <div className={styles.detailsSection}>
-                                <h4>ข้อมูลทั่วไป</h4>
-                                <div className={styles.detailsGrid}>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>ประเภทงาน:</span>
-                                        <span className={styles.detailValue}>{selectedJobForDetails.type}</span>
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>สถานะ:</span>
-                                        <StatusBadge status={selectedJobForDetails.status} />
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>วันที่สร้าง:</span>
-                                        <span className={styles.detailValue}>{formatDate((selectedJobForDetails as any).createdAt)}</span>
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>สนามกอล์ฟ:</span>
-                                        <span className={styles.detailValue}>{getGolfCourseName(selectedJobForDetails.golf_course_id)}</span>
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>ผู้แจ้ง:</span>
-                                        <span className={styles.detailValue}>{getUserName(selectedJobForDetails.user_id)}</span>
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>รถเบอร์:</span>
-                                        <span className={styles.detailValue}>{selectedJobForDetails.vehicle_number}</span>
-                                    </div>
-                                </div>
+            {
+                selectedJobForDetails && (
+                    <div className={styles.modalOverlay} onClick={closeDetailsModal}>
+                        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                            <div className={styles.modalHeader}>
+                                <h3>
+                                    รายละเอียดงาน - {selectedJobForDetails.type === 'PART_REQUEST'
+                                        ? `MWR Code: ${selectedJobForDetails.mwr_code || 'รอสร้างรหัส'}`
+                                        : `รถเบอร์ ${selectedJobForDetails.vehicle_number}`}
+                                </h3>
+                                <button className={styles.closeButton} onClick={closeDetailsModal}>
+                                    ✕
+                                </button>
                             </div>
 
-                            <div className={styles.detailsSection}>
-                                <h4>ข้อมูลเทคนิค</h4>
-                                <div className={styles.detailsGrid}>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>ซีเรียลแบตเตอรี่:</span>
-                                        <span className={styles.detailValue}>{selectedJobForDetails.battery_serial || '-'}</span>
-                                    </div>
-                                    <div className={styles.detailItem}>
-                                        <span className={styles.detailLabel}>ระบบ:</span>
-                                        <span className={styles.detailValue}>{selectedJobForDetails.system ? getSystemDisplayName(selectedJobForDetails.system) : '-'}</span>
-                                    </div>
-                                    {selectedJobForDetails.type === 'BM' && selectedJobForDetails.bmCause && (
+                            <div className={styles.modalBody}>
+                                <div className={styles.detailsSection}>
+                                    <h4>ข้อมูลทั่วไป</h4>
+                                    <div className={styles.detailsGrid}>
                                         <div className={styles.detailItem}>
-                                            <span className={styles.detailLabel}>สาเหตุ BM:</span>
+                                            <span className={styles.detailLabel}>ประเภทงาน:</span>
+                                            <span className={styles.detailValue}>{selectedJobForDetails.type}</span>
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>สถานะ:</span>
+                                            <StatusBadge status={selectedJobForDetails.status} />
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>วันที่สร้าง:</span>
+                                            <span className={styles.detailValue}>{formatDate((selectedJobForDetails as any).createdAt)}</span>
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>สนามกอล์ฟ:</span>
+                                            <span className={styles.detailValue}>{getGolfCourseName(selectedJobForDetails.golf_course_id)}</span>
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>ผู้แจ้ง:</span>
+                                            <span className={styles.detailValue}>{getUserName(selectedJobForDetails.user_id)}</span>
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>
+                                                {selectedJobForDetails.type === 'PART_REQUEST' ? 'MWR Code:' : 'รถเบอร์:'}
+                                            </span>
                                             <span className={styles.detailValue}>
-                                                {selectedJobForDetails.bmCause === 'breakdown' ? 'เสีย' :
-                                                    selectedJobForDetails.bmCause === 'accident' ? 'อุบัติเหตุ' :
-                                                        selectedJobForDetails.bmCause === 'wear' ? 'สึกหรอ' : 'อื่นๆ'}
+                                                {selectedJobForDetails.type === 'PART_REQUEST'
+                                                    ? (selectedJobForDetails.mwr_code || 'รอสร้างรหัส')
+                                                    : selectedJobForDetails.vehicle_number}
                                             </span>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
+
+                                <div className={styles.detailsSection}>
+                                    <h4>ข้อมูลเทคนิค</h4>
+                                    <div className={styles.detailsGrid}>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>ซีเรียลแบตเตอรี่:</span>
+                                            <span className={styles.detailValue}>{selectedJobForDetails.battery_serial || '-'}</span>
+                                        </div>
+                                        <div className={styles.detailItem}>
+                                            <span className={styles.detailLabel}>ระบบ:</span>
+                                            <span className={styles.detailValue}>{selectedJobForDetails.system ? getSystemDisplayName(selectedJobForDetails.system) : '-'}</span>
+                                        </div>
+                                        {selectedJobForDetails.type === 'BM' && selectedJobForDetails.bmCause && (
+                                            <div className={styles.detailItem}>
+                                                <span className={styles.detailLabel}>สาเหตุ BM:</span>
+                                                <span className={styles.detailValue}>
+                                                    {selectedJobForDetails.bmCause === 'breakdown' ? 'เสีย' :
+                                                        selectedJobForDetails.bmCause === 'accident' ? 'อุบัติเหตุ' :
+                                                            selectedJobForDetails.bmCause === 'wear' ? 'สึกหรอ' : 'อื่นๆ'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {selectedJobForDetails.subTasks && selectedJobForDetails.subTasks.length > 0 && (
+                                    <div className={styles.detailsSection}>
+                                        <h4>งานย่อย</h4>
+                                        <ul className={styles.tasksList}>
+                                            {selectedJobForDetails.subTasks.map((task, index) => (
+                                                <li key={`task-${index}-${task.slice(0, 10)}`} className={styles.taskItem}>{task}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {(() => {
+                                    // สำหรับงาน pending: ใช้ข้อมูลอะไหล่จาก job.parts (ที่เลือกตอนสร้างงาน)
+                                    let partsToDisplay = [];
+
+                                    // Debug: แสดงข้อมูลที่ได้รับ
+                                    console.log('SupervisorPendingJobsScreen - Job parts data:', {
+                                        jobId: selectedJobForDetails.id,
+                                        parts: selectedJobForDetails.parts,
+                                        parts_used: (selectedJobForDetails as any).parts_used,
+                                        partsNotes: selectedJobForDetails.partsNotes
+                                    });
+
+                                    // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
+                                    // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
+                                    // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
+                                    if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
+                                        partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
+                                            part_name: part.part_name,
+                                            quantity_used: part.quantity_used,
+                                            id: part.part_id,
+                                            source: 'parts'
+                                        }));
+                                    } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
+                                        // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
+                                        partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
+                                            part_name: partString,
+                                            quantity_used: 1,
+                                            id: `parts_used-${index}`,
+                                            source: 'parts_used'
+                                        }));
+                                    }
+
+                                    return partsToDisplay.length > 0 ? (
+                                        <div className={styles.detailsSection}>
+                                            <h4>อะไหล่ที่ใช้</h4>
+                                            <div className={styles.partsList}>
+                                                {partsToDisplay.map((part: any, index: number) => (
+                                                    <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
+                                                        <span className={styles.partName}>{part.part_name}</span>
+                                                        <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
+                                                        {part.source && (
+                                                            <span className={styles.partSource}>({part.source})</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {selectedJobForDetails.partsNotes && (
+                                                <div className={styles.partsNotes}>
+                                                    <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className={styles.detailsSection}>
+                                            <h4>อะไหล่ที่ใช้</h4>
+                                            <div className={styles.noPartsMessage}>
+                                                ไม่มีข้อมูลอะไหล่ที่เลือก
+                                                <br />
+                                                <small>
+                                                    Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ,
+                                                    parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
+                                                </small>
+                                            </div>
+                                            {selectedJobForDetails.partsNotes && (
+                                                <div className={styles.partsNotes}>
+                                                    <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {selectedJobForDetails.remarks && (
+                                    <div className={styles.detailsSection}>
+                                        <h4>หมายเหตุ</h4>
+                                        <div className={styles.remarksText}>
+                                            {selectedJobForDetails.remarks}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedJobForDetails.images && selectedJobForDetails.images.length > 0 && (
+                                    <div className={styles.detailsSection}>
+                                        <h4>รูปภาพ</h4>
+                                        <div className={styles.imagesGrid}>
+                                            {selectedJobForDetails.images.map((image, index) => {
+                                                // ตรวจสอบและสร้าง URL ที่ถูกต้อง
+                                                let displaySrc = image;
+
+                                                // ถ้าเป็น URL ภายนอกที่เริ่มด้วย http
+                                                if (image.startsWith('http')) {
+                                                    displaySrc = image;
+                                                }
+                                                // ถ้าเป็น path ที่เริ่มด้วย /api/uploads/maintenance/ แล้ว
+                                                else if (image.startsWith('/api/uploads/maintenance/')) {
+                                                    displaySrc = image;
+                                                }
+                                                // ถ้าเป็นแค่ชื่อไฟล์
+                                                else {
+                                                    displaySrc = `/api/uploads/maintenance/${image}`;
+                                                }
+
+                                                return (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img
+                                                        key={`image-${index}-${image.slice(-10)}`}
+                                                        src={displaySrc}
+                                                        alt={`รูปภาพงาน ${index + 1}`}
+                                                        className={styles.jobImage}
+                                                        onClick={() => window.open(displaySrc, '_blank')}
+                                                        onError={(e) => {
+                                                            // Fallback ถ้าโหลดรูปไม่ได้
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = '/placeholder-image.svg';
+                                                            console.error('Failed to load image:', displaySrc);
+                                                        }}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
-                            {selectedJobForDetails.subTasks && selectedJobForDetails.subTasks.length > 0 && (
-                                <div className={styles.detailsSection}>
-                                    <h4>งานย่อย</h4>
-                                    <ul className={styles.tasksList}>
-                                        {selectedJobForDetails.subTasks.map((task, index) => (
-                                            <li key={`task-${index}-${task.slice(0, 10)}`} className={styles.taskItem}>{task}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {(() => {
-                                // สำหรับงาน pending: ใช้ข้อมูลอะไหล่จาก job.parts (ที่เลือกตอนสร้างงาน)
-                                let partsToDisplay = [];
-
-                                // Debug: แสดงข้อมูลที่ได้รับ
-                                console.log('SupervisorPendingJobsScreen - Job parts data:', {
-                                    jobId: selectedJobForDetails.id,
-                                    parts: selectedJobForDetails.parts,
-                                    parts_used: (selectedJobForDetails as any).parts_used,
-                                    partsNotes: selectedJobForDetails.partsNotes
-                                });
-
-                                // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
-                                // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
-                                // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
-                                if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
-                                    partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
-                                        part_name: part.part_name,
-                                        quantity_used: part.quantity_used,
-                                        id: part.part_id,
-                                        source: 'parts'
-                                    }));
-                                } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
-                                    // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
-                                    partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
-                                        part_name: partString,
-                                        quantity_used: 1,
-                                        id: `parts_used-${index}`,
-                                        source: 'parts_used'
-                                    }));
-                                }
-
-                                return partsToDisplay.length > 0 ? (
-                                    <div className={styles.detailsSection}>
-                                        <h4>อะไหล่ที่ใช้</h4>
-                                        <div className={styles.partsList}>
-                                            {partsToDisplay.map((part: any, index: number) => (
-                                                <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
-                                                    <span className={styles.partName}>{part.part_name}</span>
-                                                    <span className={styles.partQuantity}>จำนวน: {part.quantity_used}</span>
-                                                    {part.source && (
-                                                        <span className={styles.partSource}>({part.source})</span>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {selectedJobForDetails.partsNotes && (
-                                            <div className={styles.partsNotes}>
-                                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className={styles.detailsSection}>
-                                        <h4>อะไหล่ที่ใช้</h4>
-                                        <div className={styles.noPartsMessage}>
-                                            ไม่มีข้อมูลอะไหล่ที่เลือก
-                                            <br />
-                                            <small>
-                                                Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ,
-                                                parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
-                                            </small>
-                                        </div>
-                                        {selectedJobForDetails.partsNotes && (
-                                            <div className={styles.partsNotes}>
-                                                <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })()}
-
-                            {selectedJobForDetails.remarks && (
-                                <div className={styles.detailsSection}>
-                                    <h4>หมายเหตุ</h4>
-                                    <div className={styles.remarksText}>
-                                        {selectedJobForDetails.remarks}
-                                    </div>
-                                </div>
-                            )}
-
-                            {selectedJobForDetails.images && selectedJobForDetails.images.length > 0 && (
-                                <div className={styles.detailsSection}>
-                                    <h4>รูปภาพ</h4>
-                                    <div className={styles.imagesGrid}>
-                                        {selectedJobForDetails.images.map((image, index) => {
-                                            // ตรวจสอบและสร้าง URL ที่ถูกต้อง
-                                            let displaySrc = image;
-
-                                            // ถ้าเป็น URL ภายนอกที่เริ่มด้วย http
-                                            if (image.startsWith('http')) {
-                                                displaySrc = image;
-                                            }
-                                            // ถ้าเป็น path ที่เริ่มด้วย /api/uploads/maintenance/ แล้ว
-                                            else if (image.startsWith('/api/uploads/maintenance/')) {
-                                                displaySrc = image;
-                                            }
-                                            // ถ้าเป็นแค่ชื่อไฟล์
-                                            else {
-                                                displaySrc = `/api/uploads/maintenance/${image}`;
-                                            }
-
-                                            return (
-                                                /* eslint-disable-next-line @next/next/no-img-element */
-                                                <img
-                                                    key={`image-${index}-${image.slice(-10)}`}
-                                                    src={displaySrc}
-                                                    alt={`รูปภาพงาน ${index + 1}`}
-                                                    className={styles.jobImage}
-                                                    onClick={() => window.open(displaySrc, '_blank')}
-                                                    onError={(e) => {
-                                                        // Fallback ถ้าโหลดรูปไม่ได้
-                                                        const target = e.target as HTMLImageElement;
-                                                        target.src = '/placeholder-image.svg';
-                                                        console.error('Failed to load image:', displaySrc);
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.modalFooter}>
-                            {hasApprovePermission() && (
-                                <>
-                                    <button
-                                        className={`${styles.actionButton} ${styles.approveButton}`}
-                                        onClick={() => {
-                                            handleApprove(selectedJobForDetails.id);
-                                            closeDetailsModal();
-                                        }}
-                                    >
-                                        <span className={styles.buttonIcon}>✓</span>
-                                        อนุมัติ
-                                    </button>
-                                    <button
-                                        className={`${styles.actionButton} ${styles.rejectButton}`}
-                                        onClick={() => {
-                                            handleReject(selectedJobForDetails.id);
-                                            closeDetailsModal();
-                                        }}
-                                    >
-                                        <span className={styles.buttonIcon}>✕</span>
-                                        ไม่อนุมัติ
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                className={`${styles.actionButton} ${styles.cancelButton}`}
-                                onClick={closeDetailsModal}
-                            >
-                                ปิด
-                            </button>
+                            <div className={styles.modalFooter}>
+                                {hasApprovePermission() && (
+                                    <>
+                                        <button
+                                            className={`${styles.actionButton} ${styles.approveButton}`}
+                                            onClick={() => {
+                                                handleApprove(selectedJobForDetails.id);
+                                                closeDetailsModal();
+                                            }}
+                                        >
+                                            <span className={styles.buttonIcon}>✓</span>
+                                            อนุมัติ
+                                        </button>
+                                        <button
+                                            className={`${styles.actionButton} ${styles.rejectButton}`}
+                                            onClick={() => {
+                                                handleReject(selectedJobForDetails.id);
+                                                closeDetailsModal();
+                                            }}
+                                        >
+                                            <span className={styles.buttonIcon}>✕</span>
+                                            ไม่อนุมัติ
+                                        </button>
+                                    </>
+                                )}
+                                <button
+                                    className={`${styles.actionButton} ${styles.cancelButton}`}
+                                    onClick={closeDetailsModal}
+                                >
+                                    ปิด
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 

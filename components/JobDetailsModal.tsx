@@ -164,7 +164,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
     return vehicles.find(v => v.id === vehicleId);
   };
 
-  const vehicleInfo = getVehicleInfo(job.vehicle_id);
+  const vehicleInfo = job.vehicle_id ? getVehicleInfo(job.vehicle_id) : undefined;
 
   const formatDate = (dateInput: string | Date | undefined | null) => {
     try {

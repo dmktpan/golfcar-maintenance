@@ -143,12 +143,12 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         const filtered = historyJobs.filter(job => {
             // Search term filter (search in vehicle number, username, or remarks)
             const searchMatch = searchTerm === '' ||
-                job.vehicle_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (job.vehicle_number?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
                 job.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (job.remarks?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
 
             // Vehicle filter
-            const vehicleMatch = filterVehicle === '' || job.vehicle_id.toString() === filterVehicle;
+            const vehicleMatch = filterVehicle === '' || (job.vehicle_id ? job.vehicle_id.toString() === filterVehicle : false);
 
             // Status filter
             const statusMatch = filterStatus === '' || job.status === filterStatus;
@@ -296,7 +296,9 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
             'general': 'ทั่วไป',
-            'suspension': 'ช่วงล่างและพวงมาลัย'
+            'suspension': 'ช่วงล่างและพวงมาลัย',
+            'job': 'งานทั่วไป', // Map 'job' to 'General Job'
+            'Test System': 'ทดสอบระบบ'
         };
         return systemNames[system] || system;
     };
@@ -407,8 +409,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 return {
                     'วันที่': formatDateForExcel((job as any).createdAt || job.created_at),
                     'เบอร์รถ': job.vehicle_number,
-                    'Serial รถ': getVehicleSerial(job.vehicle_id),
-                    'Serial แบต': job.battery_serial || getVehicleSerial(job.vehicle_id),
+                    'Serial รถ': job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-',
+                    'Serial แบต': job.battery_serial || (job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'),
                     'สนาม': getGolfCourseName(job.golf_course_id),
                     'ประเภทงาน': job.type,
                     'ระบบ': job.system ? getSystemDisplayName(job.system) : '-',
@@ -735,7 +737,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                         </td>
                                         <td>{formatDate((job as any).createdAt || job.created_at)}</td>
                                         <td className="vehicle-number">{job.vehicle_number}</td>
-                                        <td>{getVehicleSerial(job.vehicle_id)}</td>
+                                        <td>{job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'}</td>
                                         <td>{getGolfCourseName(job.golf_course_id)}</td>
                                         <td>
                                             <span className={`job-type ${job.type.toLowerCase()}`}>
@@ -787,7 +789,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                         <div className="detail-section">
                                                             <h4>รายละเอียดงาน</h4>
                                                             <div className="detail-item">
-                                                                <strong>Serial แบต:</strong> {job.battery_serial || getVehicleSerial(job.vehicle_id)}
+                                                                <strong>Serial แบต:</strong> {job.battery_serial || (job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-')}
                                                             </div>
                                                             {job.subTasks && job.subTasks.length > 0 && (
                                                                 <div className="detail-item">

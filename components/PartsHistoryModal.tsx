@@ -55,7 +55,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
     // Sort the filtered results
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'date':
           comparison = new Date(a.usedDate).getTime() - new Date(b.usedDate).getTime();
@@ -77,7 +77,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
   // Group logs by date for better visualization
   const groupedLogs = useMemo(() => {
     const groups: { [date: string]: PartsUsageLog[] } = {};
-    
+
     filteredLogs.forEach(log => {
       const dateKey = new Date(log.usedDate).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' });
       if (!groups[dateKey]) {
@@ -96,12 +96,12 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      
+
       // ตรวจสอบว่าเป็น valid date หรือไม่
       if (isNaN(date.getTime())) {
         return 'วันที่ไม่ถูกต้อง';
       }
-      
+
       return date.toLocaleDateString('th-TH', {
         year: 'numeric',
         month: 'short',
@@ -215,7 +215,7 @@ const PartsHistoryModal = ({ serialNumber, partsUsageLog, onClose }: PartsHistor
                 🗑️ ล้างตัวกรอง
               </button>
             </div>
-            
+
             <div className="filter-grid">
               <div className="filter-group">
                 <label>🔍 ชื่ออะไหล่:</label>

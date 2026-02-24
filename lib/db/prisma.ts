@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 
+// PrismaClient instance definition
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
@@ -7,8 +9,8 @@ const globalForPrisma = globalThis as unknown as {
 // สร้าง PrismaClient พร้อม configuration ที่เหมาะสม
 const createPrismaClient = () => {
   return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
+    log: process.env.NODE_ENV === 'development'
+      ? ['query', 'error', 'warn']
       : ['error'],
     datasources: {
       db: {

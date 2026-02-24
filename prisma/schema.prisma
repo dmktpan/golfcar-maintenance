@@ -23,6 +23,8 @@ model GolfCourse {
   vehicles  Vehicle[]
   jobs      Job[]
   parts     Part[]
+  
+  inventory Inventory[]
 }
 
 model User {
@@ -50,6 +52,13 @@ model User {
   assignedJobs Job[]      @relation("AssignedTo")
   approvedJobs Job[]      @relation("ApprovedBy")
   historyLogs  SerialHistoryEntry[] @relation("PerformedByUser")
+
+  // Stock Relations
+  stockTransactions StockTransaction[]
+  requestedTransfers StockTransfer[] @relation("TransferRequester")
+  approvedTransfers  StockTransfer[] @relation("TransferApprover")
+
+  notifications      Notification[]
 
   @@map("users") // Map to users collection instead of User
 }
@@ -88,6 +97,7 @@ model Job {
   bmCause            BMCause?
   battery_serial     String?
   partsNotes         String?
+  mwr_code           String?   // @unique removed to allow nulls in legacy data. App logic will enforce uniqueness.
   prrNumber          String?   // ลบ @unique เนื่องจากมี null values หลายตัว
   parts              JobPart[]
   images             String[]
@@ -102,8 +112,8 @@ model Job {
   golfCourse         GolfCourse @relation(fields: [golf_course_id], references: [id])
   golf_course_id     String     @db.ObjectId
 
-  vehicle            Vehicle   @relation(fields: [vehicle_id], references: [id])
-  vehicle_id         String    @db.ObjectId
+  vehicle            Vehicle?  @relation(fields: [vehicle_id], references: [id])
+  vehicle_id         String?   @db.ObjectId
 
   author             User      @relation("CreatedBy", fields: [user_id], references: [id])
   user_id            String    @db.ObjectId
@@ -136,6 +146,10 @@ model Part {
   // Relations
   golfCourse     GolfCourse? @relation(fields: [golf_course_id], references: [id])
   golf_course_id String?     @db.ObjectId
+  
+  inventory      Inventory[]
+  transactions   StockTransaction[]
+  transferItems  StockTransferItem[]
 }
 
 model JobPart {
@@ -196,6 +210,7 @@ model SerialHistoryEntry {
 }
 
 
+
 // --- Enums ---
 
 enum UserRole {
@@ -214,6 +229,7 @@ enum JobType {
   PM
   BM
   Recondition
+  PART_REQUEST // For MWR (Restocking/Transfer Request)
 }
 
 enum JobStatus {
@@ -226,13 +242,13 @@ enum JobStatus {
 }
 
 enum VehicleStatus {
-  active      // ใช้งาน
-  ready       // พร้อมใช้
-  maintenance // รอซ่อม
-  retired     // เสื่อมแล้ว
-  parked      // จอดไว้ (เก่า - เก็บไว้เพื่อ backward compatibility)
-  spare       // อะไหล่ (เก่า - เก็บไว้เพื่อ backward compatibility)
-  inactive    // ไม่ใช้งาน (เก่า - เก็บไว้เพื่อ backward compatibility)
+  active
+  ready
+  maintenance
+  retired
+  parked
+  spare
+  inactive
 }
 
 enum BMCause {
@@ -253,4 +269,114 @@ enum ActionType {
   data_delete
   bulk_transfer
   bulk_upload
+}
+
+enum TransactionType {
+  IN     // Receive / Purchase
+  OUT    // Usage / Withdraw
+  ADJUST // Correction
+  TRANSFER // Move between locations
+}
+
+enum StockTransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model Inventory {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  part           Part        @relation(fields: [part_id], references: [id])
+  part_id        String      @db.ObjectId
+  
+  golfCourse     GolfCourse? @relation(fields: [golf_course_id], references: [id])
+  golf_course_id String?     @db.ObjectId // Null = Central Warehouse
+  
+  quantity       Int         @default(0)
+  min_qty        Int         @default(0)
+  max_qty        Int         @default(100) // Reorder point?
+  location       String?     // Shelf location, bin number, etc.
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([part_id, golf_course_id])
+}
+
+model StockTransaction {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  type             TransactionType
+  quantity         Int
+  previous_balance Int
+  new_balance      Int
+  
+  part             Part            @relation(fields: [part_id], references: [id])
+  part_id          String          @db.ObjectId
+  
+  // Location Context
+  location_id      String?         @db.ObjectId // Where the transaction happened
+  location_name    String?         // Denormalized name (Central or Site Name)
+  
+  // For Transfers
+  to_location_id   String?         @db.ObjectId
+  
+  // References
+  ref_type         String          // JOB, MWR, TRANSFER, ADJUST, PURCHASE
+  ref_id           String?         @db.ObjectId // ID of the Job or Transfer
+  ref_document     String?         // Display ID (e.g., MWR-2402-001)
+  
+  user             User            @relation(fields: [user_id], references: [id])
+  user_id          String          @db.ObjectId
+  user_name        String?         // Denormalized
+  
+  notes            String?
+  createdAt        DateTime        @default(now())
+}
+
+model StockTransfer {
+  id               String              @id @default(auto()) @map("_id") @db.ObjectId
+  mwr_code         String?             // Linked MWR (if initiated by MWR)
+  
+  from_course_id   String?             @db.ObjectId // Null = Central
+  to_course_id     String              @db.ObjectId // Destination Site
+  
+  status           StockTransferStatus @default(PENDING)
+  
+  items            StockTransferItem[]
+  
+  requested_by     User                @relation("TransferRequester", fields: [requested_by_id], references: [id])
+  requested_by_id  String              @db.ObjectId
+  
+  approved_by      User?               @relation("TransferApprover", fields: [approved_by_id], references: [id])
+  approved_by_id   String?             @db.ObjectId
+  approved_at      DateTime?
+  
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model StockTransferItem {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  transfer       StockTransfer @relation(fields: [transfer_id], references: [id], onDelete: Cascade)
+  transfer_id    String        @db.ObjectId
+  
+  part           Part          @relation(fields: [part_id], references: [id])
+  part_id        String        @db.ObjectId
+  
+  quantity       Int
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  title     String
+  message   String
+  type      String   @default("info") // info, warning, success, error
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
 }

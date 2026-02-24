@@ -34,7 +34,7 @@ async function apiCall<T>(
         timestamp: new Date().toISOString(),
         hasBody: !!options.body
       });
-      
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         signal: controller.signal,
@@ -45,7 +45,7 @@ async function apiCall<T>(
       });
 
       clearTimeout(timeoutId);
-      
+
       console.log('📡 API Response received:', {
         url: `${API_BASE_URL}${endpoint}`,
         status: response.status,
@@ -53,7 +53,7 @@ async function apiCall<T>(
         ok: response.ok,
         timestamp: new Date().toISOString()
       });
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -73,7 +73,7 @@ async function apiCall<T>(
           });
           errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
-        
+
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -89,7 +89,7 @@ async function apiCall<T>(
 
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           console.error('⏰ API call timed out:', {
@@ -98,11 +98,11 @@ async function apiCall<T>(
             attempt,
             timestamp: new Date().toISOString()
           });
-          
+
           if (attempt <= retries) {
-            console.log('🔄 Retrying API call due to timeout:', { 
-              url: `${API_BASE_URL}${endpoint}`, 
-              retriesLeft: retries - attempt + 1 
+            console.log('🔄 Retrying API call due to timeout:', {
+              url: `${API_BASE_URL}${endpoint}`,
+              retriesLeft: retries - attempt + 1
             });
             const delay = Math.min(2000, Math.pow(2, attempt) * 1000);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -110,29 +110,29 @@ async function apiCall<T>(
           }
           throw new Error(`Request timeout after ${timeout}ms`);
         }
-        
+
         console.error('❌ API call failed:', {
           url: `${API_BASE_URL}${endpoint}`,
           error: error.message,
           attempt,
           timestamp: new Date().toISOString()
         });
-        
+
         // Retry logic - ลดจำนวน retry และไม่ retry ถ้า timeout
         if (attempt <= retries && !error.message.includes('timeout')) {
           const delay = Math.min(2000, Math.pow(2, attempt) * 1000); // จำกัด delay สูงสุด 2 วินาที
-          console.log('🔄 Retrying API call:', { 
-            url: `${API_BASE_URL}${endpoint}`, 
+          console.log('🔄 Retrying API call:', {
+            url: `${API_BASE_URL}${endpoint}`,
             retriesLeft: retries - attempt + 1,
             delay: `${delay}ms`
           });
           await new Promise(resolve => setTimeout(resolve, delay));
           return makeRequest(attempt + 1);
         }
-        
+
         throw error;
       }
-      
+
       throw new Error('Unknown error occurred');
     }
   };
@@ -257,7 +257,7 @@ export const jobsApi = {
       dataKeys: Object.keys(data),
       timestamp: new Date().toISOString()
     });
-    
+
     return apiCall<Job>(`/jobs/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -275,6 +275,14 @@ export const partsUsageLogsApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+};
+
+// Local Reports API (Internal)
+export const localReportsApi = {
+  getUsage: async () => {
+    const response = await fetch('/api/reports/usage');
+    return await response.json();
+  }
 };
 
 // Serial History API

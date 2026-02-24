@@ -90,7 +90,8 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
         return systemNames[system] || system;
     };
 
-    const getVehicleSerial = (vehicleId: string) => {
+    const getVehicleSerial = (vehicleId: string | undefined) => {
+        if (!vehicleId) return '-';
         const vehicle = vehicles.find(v => v.id === vehicleId);
         return vehicle ? vehicle.serial_number : '-';
     };

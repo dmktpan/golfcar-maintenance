@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
 import { isValidObjectId } from '@/lib/utils/validation';
+import { approvePartRequest, consumeStockForJob, StockError } from '@/lib/stock';
 
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
@@ -236,7 +237,70 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         throw new Error('Missing critical fields: type, status, or vehicle_id');
       }
 
-      // อัปเดตงานก่อน
+      // --- STOCK MANAGEMENT LOGIC ---
+      // ตรวจสอบการอนุมัติงาน และตัด/ย้ายสต็อก
+      if (oldJob.status !== 'approved' && finalData.status === 'approved') {
+        console.log('⚡ Job is being APPROVED. Executing Stock Logic...', {
+          jobId: id,
+          type: finalData.type,
+          golfCourseId: finalData.golf_course_id
+        });
+
+        try {
+          if (finalData.type === 'PART_REQUEST') {
+            // MWR: ย้ายของจากส่วนกลาง -> สนาม
+            // Approve Part Request Logic
+            await approvePartRequest(id, user_id || 'system', tx);
+          } else if (['PM', 'BM', 'Recondition'].includes(finalData.type)) {
+            // งานซ่อม: ตัดของจากสนาม
+            console.log('📉 Consuming stock for Maintenance Job... id:', id);
+
+            // เตรียมรายการอะไหล่
+            let partsToConsume: { partId: string; quantity: number }[] = [];
+
+            // กรณี 1: มีการส่ง parts มาใน request (แก้ไขอะไหล่พร้อมอนุมัติ)
+            if (parts && Array.isArray(parts) && parts.length > 0) {
+              partsToConsume = parts.map((p: any) => ({
+                partId: p.part_id,
+                quantity: p.quantity_used || 1
+              }));
+            }
+            // กรณี 2: ไม่ได้ส่ง parts มา (ใช้อะไหล่เดิมใน DB)
+            else if (oldJob.parts && oldJob.parts.length > 0) {
+              partsToConsume = oldJob.parts.map(p => ({
+                partId: p.part_id,
+                quantity: p.quantity_used
+              }));
+            }
+
+            if (partsToConsume.length > 0) {
+              // เรียกใช้ consumeStockForJob
+              // user_id ที่อนุมัติ (approved_by_id) หรือ user_id ของ request (คนกดอนุมัติ)
+              const actorId = approved_by_id || user_id || oldJob.user_id;
+
+              // ใช้ location ที่ส่งมา หรือจาก oldJob
+              // แต่ถ้าเป็น PM/BM ต้องมาจาก site stock
+              // golf_course_id คือ site ที่งานนี้อยู่
+
+              await consumeStockForJob(
+                id,
+                partsToConsume,
+                finalData.golf_course_id || oldJob.golf_course_id!,
+                actorId,
+                tx
+              );
+            } else {
+              console.log('ℹ️ No parts to consume for this job.');
+            }
+          }
+        } catch (stockError: any) {
+          console.error('❌ Stock Logic Error:', stockError);
+          // แปลง error เป็น bad request message เพื่อให้ client แสดง alert
+          throw new Error(stockError.message || 'Stock management error');
+        }
+      }
+
+      // อัปเดตงาน
       const updatedJob = await tx.job.update({
         where: { id },
         data: finalData
@@ -268,47 +332,52 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
       if (isImportantStatusChange) {
         // ดึงข้อมูลรถเพื่อใช้ใน Serial History
-        const vehicle = await tx.vehicle.findUnique({
-          where: { id: updatedJob.vehicle_id }
-        });
-
-        if (vehicle) {
-          const actionDescription = updatedJob.status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
-
-          const serialHistoryEntry = await tx.serialHistoryEntry.create({
-            data: {
-              serial_number: vehicle.serial_number,
-              vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number,
-              action_type: 'status_change',
-              action_date: new Date(),
-              details: `${actionDescription} ${updatedJob.type}${updatedJob.assigned_to ? ` - ผู้รับผิดชอบ: ${updatedJob.assigned_to}` : ''}`,
-              is_active: true,
-              status: updatedJob.status,
-              job_type: updatedJob.type,
-              golf_course_name: vehicle.golf_course_name,
-              vehicle_id: vehicle.id,
-              performed_by_id: '68885b9f2853f6353e4b2145', // admin000 ObjectID
-              related_job_id: updatedJob.id
-            }
+        if (updatedJob.vehicle_id) {
+          const vehicle = await tx.vehicle.findUnique({
+            where: { id: updatedJob.vehicle_id }
           });
 
-          // ส่งข้อมูล Serial History ไปยัง External API (ไม่รอผลลัพธ์)
-          setImmediate(() => {
-            sendSerialHistoryToExternalAPI({
-              serial_number: vehicle.serial_number,
-              vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number,
-              action_type: 'status_change',
-              action_date: new Date().toISOString(),
-              details: `${actionDescription} ${updatedJob.type}${updatedJob.assigned_to ? ` - ผู้รับผิดชอบ: ${updatedJob.assigned_to}` : ''}`,
-              is_active: true,
-              status: updatedJob.status,
-              job_type: updatedJob.type,
-              golf_course_name: vehicle.golf_course_name,
-              vehicle_id: vehicle.id,
-              performed_by_id: '68885b9f2853f6353e4b2145', // admin000 ObjectID
-              related_job_id: updatedJob.id
+          // ... rest of logic moved inside or checked
+
+
+          if (vehicle) {
+            const actionDescription = updatedJob.status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
+
+            const serialHistoryEntry = await tx.serialHistoryEntry.create({
+              data: {
+                serial_number: vehicle.serial_number,
+                vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number,
+                action_type: 'status_change',
+                action_date: new Date(),
+                details: `${actionDescription} ${updatedJob.type}${updatedJob.assigned_to ? ` - ผู้รับผิดชอบ: ${updatedJob.assigned_to}` : ''}`,
+                is_active: true,
+                status: updatedJob.status,
+                job_type: updatedJob.type,
+                golf_course_name: vehicle.golf_course_name,
+                vehicle_id: vehicle.id,
+                performed_by_id: '68885b9f2853f6353e4b2145', // admin000 ObjectID
+                related_job_id: updatedJob.id
+              }
             });
-          });
+
+            // ส่งข้อมูล Serial History ไปยัง External API (ไม่รอผลลัพธ์)
+            setImmediate(() => {
+              sendSerialHistoryToExternalAPI({
+                serial_number: vehicle.serial_number,
+                vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number,
+                action_type: 'status_change',
+                action_date: new Date().toISOString(),
+                details: `${actionDescription} ${updatedJob.type}${updatedJob.assigned_to ? ` - ผู้รับผิดชอบ: ${updatedJob.assigned_to}` : ''}`,
+                is_active: true,
+                status: updatedJob.status,
+                job_type: updatedJob.type,
+                golf_course_name: vehicle.golf_course_name,
+                vehicle_id: vehicle.id,
+                performed_by_id: '68885b9f2853f6353e4b2145', // admin000 ObjectID
+                related_job_id: updatedJob.id
+              });
+            });
+          }
         }
       }
 

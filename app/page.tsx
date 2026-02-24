@@ -1,10 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, Job, Part, GolfCourse, Vehicle, PartsUsageLog, SerialHistoryEntry, View, JobStatus } from '@/lib/data';
-import { golfCoursesApi, vehiclesApi, partsApi, jobsApi, usersApi, localUsersApi, partsUsageLogsApi, serialHistoryApi } from '@/lib/api';
+import { golfCoursesApi, vehiclesApi, partsApi, jobsApi, usersApi, localUsersApi, partsUsageLogsApi, serialHistoryApi, localReportsApi } from '@/lib/api';
 import LoginScreen from '@/components/LoginScreen';
+import CreatePartRequestModal from '@/components/CreatePartRequestModal';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import CreateJobScreen from '@/components/CreateJobScreen';
@@ -22,7 +23,9 @@ import GolfCourseManagementScreen from '@/components/GolfCourseManagementScreen'
 import AssignedJobFormScreen from '@/components/AssignedJobFormScreen';
 import ViewAssignedJobsScreen from '@/components/ViewAssignedJobsScreen';
 import SupervisorPendingJobsScreen from '@/components/SupervisorPendingJobsScreen';
+
 import EmployeeHistoryScreen from '@/components/EmployeeHistoryScreen';
+import ProfileScreen from '@/components/ProfileScreen';
 
 // เพิ่มอินเตอร์เฟซสำหรับสิทธิ์ของผู้ใช้
 export interface UserPermission {
@@ -45,6 +48,7 @@ export default function HomePage() {
   const [view, setView] = useState<View>('dashboard');
   const [showWelcome, setShowWelcome] = useState(false);
   const [selectedJobForForm, setSelectedJobForForm] = useState<Job | null>(null);
+  const [isPartRequestModalOpen, setIsPartRequestModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
@@ -98,7 +102,7 @@ export default function HomePage() {
           { name: 'vehicles', call: vehiclesApi.getAll() },
           { name: 'parts', call: partsApi.getAll() },
           { name: 'jobs', call: jobsApi.getAll() },
-          { name: 'partsUsageLog', call: partsUsageLogsApi.getAll() },
+          { name: 'partsUsageLog', call: localReportsApi.getUsage() },
           { name: 'serialHistory', call: serialHistoryApi.getAll() }
         ];
 
@@ -464,37 +468,45 @@ export default function HomePage() {
   const handleCreateJob = async (newJob: Job) => {
     try {
       // ตรวจสอบข้อมูลที่จำเป็นก่อนส่ง
-      if (!newJob.type || !newJob.status || !newJob.vehicle_id ||
-        !newJob.vehicle_number || !newJob.golf_course_id ||
+      // สำหรับ Part Request (MWR) ไม่จำเป็นต้องมี vehicle_id
+      const isPartRequest = newJob.type === 'PART_REQUEST';
+
+      if (!newJob.type || !newJob.status ||
+        (!isPartRequest && !newJob.vehicle_id) || // Check vehicle_id only if not Part Request
+        (!isPartRequest && !newJob.vehicle_number) ||
+        !newJob.golf_course_id ||
         !newJob.user_id || !newJob.userName) {
+
+        console.error('Validation failed:', {
+          type: newJob.type,
+          status: newJob.status,
+          vehicle_id: newJob.vehicle_id,
+          vehicle_number: newJob.vehicle_number,
+          golf_course_id: newJob.golf_course_id,
+          user_id: newJob.user_id,
+          userName: newJob.userName
+        });
+
         alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบข้อมูลอีกครั้ง');
         return;
       }
 
-      // สร้างงานใหม่ผ่าน API (Serial History จะถูกบันทึกใน API โดยอัตโนมัติ)
-      const result = await jobsApi.create(newJob);
+      // สร้างงานใหม่ผ่าน API (ใช้ Local API เพื่อรองรับ MWR logic)
+      const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newJob),
+      });
+
+      const result = await response.json();
+
       if (result.success) {
         const createdJob = result.data as Job;
         setJobs(prev => [createdJob, ...prev]);
 
-        // อัปเดต stock ของอะไหล่ถ้ามี
-        if (createdJob.parts && createdJob.parts.length > 0) {
-          for (const part of createdJob.parts) {
-            try {
-              const currentPart = parts.find(p => p.id === part.part_id);
-              if (currentPart) {
-                const currentStock = currentPart.stock_qty !== undefined ? currentPart.stock_qty : currentPart.stock_quantity;
-                if (currentStock !== undefined) {
-                  const updatedPart = { ...currentPart, stock_qty: currentStock - part.quantity_used };
-                  await partsApi.update(part.part_id, updatedPart);
-                  setParts(prev => prev.map(p => p.id === part.part_id ? updatedPart : p));
-                }
-              }
-            } catch (error) {
-              console.error('Error updating part stock:', error);
-            }
-          }
-        }
+        // ไม่ต้องตัดสต็อกที่นี่แล้ว ระบบจะตัดตอนอนุมัติ (Phase 3 Logic)
 
         alert('สร้างงานเรียบร้อยแล้ว');
         const targetView = user?.role === 'staff' ? 'dashboard' : 'admin_dashboard';
@@ -560,7 +572,17 @@ export default function HomePage() {
       }
 
       // อัปเดตงานผ่าน API (Serial History จะถูกบันทึกใน API โดยอัตโนมัติ)
-      const result = await jobsApi.update(updatedJob.id, updatedJob);
+      // ใช้ Local API เพื่อให้ Logic ที่แก้ใขใน route.ts ทำงาน
+      const response = await fetch('/api/jobs', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedJob),
+      });
+
+      const result = await response.json();
+
       if (result.success) {
         const updated = result.data as Job;
 
@@ -643,7 +665,7 @@ export default function HomePage() {
         return;
       }
 
-      const vehicle = vehicles.find(v => v.id.toString() === job.vehicle_id.toString());
+      const vehicle = job.vehicle_id ? vehicles.find(v => v.id.toString() === job.vehicle_id!.toString()) : undefined;
       const golfCourse = golfCourses.find(gc => gc.id.toString() === job.golf_course_id.toString());
       const user = users.find(u => u.id.toString() === job.user_id.toString());
 
@@ -784,15 +806,15 @@ export default function HomePage() {
       }
 
       console.log('📤 Sending API request to update job status...', {
-        url: `/api/proxy/jobs/${currentJob.id}`, // ใช้ currentJob.id แทน jobId
+        url: `/api/jobs`, // Use local API for stock logic
         method: 'PUT',
         dataKeys: Object.keys(updateData),
         statusChange: `${currentJob.status} → ${status}`,
         jobId: currentJob.id
       });
 
-      // เรียก API เพื่อบันทึกการเปลี่ยนแปลงลงฐานข้อมูล
-      const response = await fetch(`/api/proxy/jobs/${currentJob.id}`, {
+      // เรียก API เพื่อบันทึกการเปลี่ยนแปลงลงฐานข้อมูล (ใช้ Local API เพื่อให้ Stock Logic ทำงาน)
+      const response = await fetch(`/api/jobs`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -860,14 +882,8 @@ export default function HomePage() {
             hasParts: currentJob.parts && currentJob.parts.length > 0
           });
 
-          try {
-            // เพิ่ม Parts Usage Log
-            await addPartsUsageLog(jobId, currentJob.partsNotes, { ...currentJob, status });
-            console.log('✅ Parts usage log added successfully');
-          } catch (logError) {
-            console.error('❌ Error adding parts usage log:', logError);
-            // ไม่ต้อง alert เพราะงานอนุมัติสำเร็จแล้ว แค่ log ไม่สำเร็จ
-          }
+          // Parts Usage Log และ Serial History ถูกจัดการโดย API แล้ว
+          console.log('✅ Job approved. Stock logic handled by API.');
 
           // Serial History จะถูกสร้างโดยอัตโนมัติใน API แล้ว ไม่ต้องสร้างซ้ำที่นี่
         }
@@ -1242,6 +1258,8 @@ export default function HomePage() {
     );
   }
 
+
+
   // แสดง login screen ถ้ายังไม่ได้ล็อกอิน
   if (!user) {
     return <LoginScreen onLogin={handleLogin} error={loginError} />;
@@ -1265,6 +1283,11 @@ export default function HomePage() {
             golfCourses={golfCourses}
             users={users}
             partsUsageLog={partsUsageLog}
+            parts={parts}
+            onOpenPartRequest={() => {
+              console.log('🔓 Opening Part Request Modal');
+              setIsPartRequestModalOpen(true);
+            }}
           />
         )}
         {view === 'create_job' && (
@@ -1277,6 +1300,7 @@ export default function HomePage() {
             jobs={jobs}
           />
         )}
+
         {view === 'central_create_job' && (user.role === 'central' || user.role === 'admin' || user.role === 'supervisor') && (
           <CentralCreateJobScreen
             user={user}
@@ -1295,10 +1319,15 @@ export default function HomePage() {
             golfCourses={golfCourses}
           />
         )}
+        {/* หน้าจัดการสต็อกอะไหล่ */}
         {view === 'stock_management' && (
           <StockManagementScreen
             parts={parts}
-            onPartsUpdate={forceRefreshAllData}
+            golfCourses={golfCourses}
+            partsUsageLog={partsUsageLog}
+            jobs={jobs}
+            onPartsUpdate={() => forceRefreshAllData()}
+            user={user}
           />
         )}
         {view === 'admin_dashboard' && (
@@ -1412,7 +1441,22 @@ export default function HomePage() {
             setView={setView}
           />
         )}
+
+        {view === 'profile' && (
+          <ProfileScreen
+            user={user}
+          />
+        )}
+
       </main>
+
+      <CreatePartRequestModal
+        isOpen={isPartRequestModalOpen}
+        onClose={() => setIsPartRequestModalOpen(false)}
+        user={user}
+        onJobCreate={handleCreateJob}
+        golfCourses={golfCourses}
+      />
     </div>
   );
 }

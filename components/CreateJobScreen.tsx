@@ -21,11 +21,12 @@ interface CreateJobScreenProps {
     vehicles: Vehicle[];
     golfCourses: GolfCourse[];
     jobs: Job[];
+    initialJobType?: JobType;
 }
 
-const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jobs }: CreateJobScreenProps) => {
+const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jobs, initialJobType }: CreateJobScreenProps) => {
     const [vehicleId, setVehicleId] = useState('');
-    const [jobType, setJobType] = useState<JobType>('PM');
+    const [jobType, setJobType] = useState<JobType>(initialJobType || 'PM');
     const [system, setSystem] = useState('');
     const [subTasks, setSubTasks] = useState<string[]>([]);
     const [partsNotes, setPartsNotes] = useState('');
@@ -165,15 +166,17 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             return;
         }
 
+
+
         // ตรวจสอบว่ามีงานซ้ำหรือไม่
         const duplicateJob = jobs.find(job =>
-            job.vehicle_id === selectedVehicle.id &&
+            job.vehicle_id === (selectedVehicle?.id || '') &&
             job.status === 'pending' &&
             job.type === jobType
         );
 
         if (duplicateJob) {
-            const confirmCreate = confirm(`มีงาน ${jobType} สำหรับรถ ${selectedVehicle.vehicle_number} อยู่แล้ว\nต้องการสร้างงานใหม่หรือไม่?`);
+            const confirmCreate = confirm(`มีงาน ${jobType} สำหรับรถ ${selectedVehicle?.vehicle_number} อยู่แล้ว\nต้องการสร้างงานใหม่หรือไม่?`);
             if (!confirmCreate) return;
         }
 
@@ -183,9 +186,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             const newJob: Omit<Job, 'id' | 'created_at' | 'updated_at'> = {
                 user_id: user.id.toString(),
                 userName: user.name,
-                vehicle_id: selectedVehicle.id,
-                vehicle_number: selectedVehicle.vehicle_number,
-                golf_course_id: selectedVehicle.golf_course_id,
+                vehicle_id: selectedVehicle?.id,
+                vehicle_number: selectedVehicle?.vehicle_number,
+                golf_course_id: user.golf_course_id, // Default to user's course (Destination)
                 type: jobType,
                 status: 'pending',
                 parts: selectedParts.map(part => ({
@@ -266,7 +269,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             </div>
 
             <div className="info-box">
-                <h4>ข้อมูลงานที่ได้รับมอบหมาย:</h4>
+                <h4>ข้อมูลงาน:</h4>
                 <p><strong>สนาม:</strong> {jobInfo.courseName}</p>
                 <p><strong>Serial Number:</strong> {jobInfo.serialNumber}</p>
                 <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
@@ -276,9 +279,11 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             <form onSubmit={handleSubmit}>
                 <div className="form-grid">
                     <div className="form-group">
-                        <label htmlFor="golf-course">ชื่อสนาม *</label>
+                        <label htmlFor="golf-course">ชื่อสนาม (ปลายทาง) *</label>
                         <input id="golf-course" type="text" value={jobInfo.courseName} disabled />
                     </div>
+
+
                     <div className="form-group">
                         <label htmlFor="serial-number">หมายเลขซีเรียล *</label>
                         <select id="serial-number" value={vehicleId} onChange={e => setVehicleId(e.target.value)} required>
@@ -317,9 +322,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 <div className="form-group">
                     <label htmlFor="job-type">ประเภการบำรุงรักษา *</label>
                     <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)}>
-                        <option value="PM">บำรุงรักษาเชิงป้องกัน</option>
-                        <option value="BM">ซ่อมด่วน</option>
-                        <option value="Recondition">ปรับสภาพ</option>
+                        <option value="PM">บำรุงรักษาเชิงป้องกัน (PM)</option>
+                        <option value="BM">ซ่อมด่วน (BM)</option>
+                        <option value="Recondition">ปรับสภาพ (Recondition)</option>
                     </select>
                 </div>
 
@@ -551,7 +556,11 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                     <h3>สรุปข้อมูลงาน</h3>
                     <div className="summary-box">
                         <div className="summary-item">
-                            <strong>ประเภการบำรุงรักษา:</strong> {jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' : jobType === 'BM' ? 'ซ่อมด่วน' : 'ปรับสภาพ'}
+                            <strong>ประเภท:</strong> {
+                                jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' :
+                                    jobType === 'BM' ? 'ซ่อมด่วน' :
+                                        'ปรับสภาพ'
+                            }
                         </div>
                         {jobType === 'BM' && bmCause && (
                             <div className="summary-item">

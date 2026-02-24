@@ -53,13 +53,13 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
     };
 
     const handleInputChange = (id: number, field: keyof AssignmentItem, value: any) => {
-        setAssignments(prev => prev.map(item => 
+        setAssignments(prev => prev.map(item =>
             item.id === id ? { ...item, [field]: value } : item
         ));
     };
 
     const handleGolfCourseChange = (id: number, golfCourseId: string | number) => {
-        setAssignments(prev => prev.map(item => 
+        setAssignments(prev => prev.map(item =>
             item.id === id ? {
                 ...item,
                 golfCourseId,
@@ -74,12 +74,12 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
     const handleSerialNumberChange = (id: number, serialNumber: string) => {
         const assignment = assignments.find(a => a.id === id);
         if (!assignment) return;
-        
+
         const filteredVehicles = getFilteredVehicles(assignment.golfCourseId);
         const selectedVehicle = filteredVehicles.find(v => v.serial_number === serialNumber);
-        
+
         if (selectedVehicle) {
-            setAssignments(prev => prev.map(item => 
+            setAssignments(prev => prev.map(item =>
                 item.id === id ? {
                     ...item,
                     vehicleId: String(selectedVehicle.id),
@@ -88,7 +88,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                 } : item
             ));
         } else {
-            setAssignments(prev => prev.map(item => 
+            setAssignments(prev => prev.map(item =>
                 item.id === id ? {
                     ...item,
                     serialNumber,
@@ -102,12 +102,12 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
     const handleVehicleNumberChange = (id: number, vehicleNumber: string) => {
         const assignment = assignments.find(a => a.id === id);
         if (!assignment) return;
-        
+
         const filteredVehicles = getFilteredVehicles(assignment.golfCourseId);
         const selectedVehicle = filteredVehicles.find(v => v.vehicle_number === vehicleNumber);
-        
+
         if (selectedVehicle) {
-            setAssignments(prev => prev.map(item => 
+            setAssignments(prev => prev.map(item =>
                 item.id === id ? {
                     ...item,
                     vehicleId: String(selectedVehicle.id),
@@ -116,7 +116,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                 } : item
             ));
         } else {
-            setAssignments(prev => prev.map(item => 
+            setAssignments(prev => prev.map(item =>
                 item.id === id ? {
                     ...item,
                     vehicleNumber,
@@ -150,20 +150,20 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Validate all assignments
-        const isValid = assignments.every(assignment => 
-            assignment.golfCourseId !== '' && 
-            assignment.vehicleId !== '' && 
-            assignment.userId !== '' && 
+        const isValid = assignments.every(assignment =>
+            assignment.golfCourseId !== '' &&
+            assignment.vehicleId !== '' &&
+            assignment.userId !== '' &&
             (assignment.jobType !== 'PM' || assignment.system !== '')
         );
-        
+
         if (!isValid) {
             alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วนในทุกรายการ');
             return;
         }
-        
+
         // Show confirmation modal instead of directly submitting
         setShowConfirmModal(true);
     };
@@ -172,12 +172,12 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
         // Create new jobs from assignments using API
         try {
             const jobPromises = assignments.map(async (assignment) => {
-                const vehicle = vehicles.find(v => 
+                const vehicle = vehicles.find(v =>
                     (v.serial_number === assignment.serialNumber || v.vehicle_number === assignment.vehicleNumber) &&
                     String(v.golf_course_id) === String(assignment.golfCourseId)
                 );
                 const assignedUser = users.find(u => u.id === assignment.userId);
-                
+
                 const newJobData = {
                     user_id: String(assignment.userId),
                     userName: assignedUser?.name || '',
@@ -193,7 +193,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                     remarks: assignment.remarks,
                     assigned_to: String(assignment.userId)
                 };
-                
+
                 const result = await jobsApi.create(newJobData);
                 if (result.success) {
                     return result.data as Job;
@@ -201,16 +201,16 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                     throw new Error(`Failed to create job: ${result.message}`);
                 }
             });
-            
+
             const createdJobs = await Promise.all(jobPromises);
-            
+
             // Add created jobs to the jobs list
             setJobs(prevJobs => [...prevJobs, ...createdJobs]);
-            
+
             // Hide modal and show success message
             setShowConfirmModal(false);
             setSuccessMessage(`มอบหมายงานสำเร็จ ${assignments.length} รายการ`);
-            
+
             // Reset form after 3 seconds
             setTimeout(() => {
                 setSuccessMessage('');
@@ -256,7 +256,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                     </button>
                 </div>
             </div>
-            
+
             {successMessage && (
                 <div className="success-message">
                     {successMessage}
@@ -269,8 +269,8 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                     <div className="modal-content">
                         <div className="modal-header">
                             <h3>สรุปรายการมอบหมายงาน</h3>
-                            <button 
-                                className="modal-close" 
+                            <button
+                                className="modal-close"
                                 onClick={handleCancelAssignment}
                                 aria-label="ปิด"
                             >
@@ -283,10 +283,10 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                 {assignments.map((assignment, index) => {
                                     const golfCourse = golfCourses.find(gc => String(gc.id) === String(assignment.golfCourseId));
                                     const assignedUser = users.find(u => String(u.id) === String(assignment.userId));
-                                    const systemName = assignment.jobType === 'PM' ? 
-                                        MOCK_SYSTEMS.find(s => s.id === assignment.system)?.name || assignment.system : 
+                                    const systemName = assignment.jobType === 'PM' ?
+                                        MOCK_SYSTEMS.find(s => s.id === assignment.system)?.name || assignment.system :
                                         '-';
-                                    
+
                                     return (
                                         <div key={assignment.id} className="summary-item">
                                             <h4>รายการที่ {index + 1}</h4>
@@ -326,14 +326,14 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button 
-                                className="btn-secondary" 
+                            <button
+                                className="btn-secondary"
                                 onClick={handleCancelAssignment}
                             >
                                 ยกเลิก
                             </button>
-                            <button 
-                                className="btn-success" 
+                            <button
+                                className="btn-success"
                                 onClick={handleConfirmAssignment}
                             >
                                 ยืนยันการมอบหมายงาน
@@ -342,16 +342,16 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                     </div>
                 </div>
             )}
-            
+
             <form onSubmit={handleSubmit}>
                 {assignments.map((assignment, index) => (
                     <div key={assignment.id} className="assignment-item">
                         <div className="assignment-header">
                             <h3>รายการที่ {index + 1}</h3>
                             {assignments.length > 1 && (
-                                <button 
-                                    type="button" 
-                                    className="btn-danger btn-sm" 
+                                <button
+                                    type="button"
+                                    className="btn-danger btn-sm"
                                     onClick={() => removeAssignment(assignment.id)}
                                     title="ลบรายการนี้"
                                 >
@@ -363,7 +363,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                             {/* ขั้นตอนที่ 1: เลือกสนาม */}
                             <div className="form-group">
                                 <label htmlFor={`golfCourse-${assignment.id}`}>สนาม *</label>
-                                <select 
+                                <select
                                     id={`golfCourse-${assignment.id}`}
                                     value={assignment.golfCourseId}
                                     onChange={(e) => handleGolfCourseChange(assignment.id, e.target.value || '')}
@@ -381,7 +381,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                             {/* ขั้นตอนที่ 2: เลือก Serial หรือ เลขรถ */}
                             <div className="form-group">
                                 <label htmlFor={`serialNumber-${assignment.id}`}>หมายเลขซีเรียล *</label>
-                                <input 
+                                <input
                                     type="text"
                                     id={`serialNumber-${assignment.id}`}
                                     list={`serialList-${assignment.id}`}
@@ -400,7 +400,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
 
                             <div className="form-group">
                                 <label htmlFor={`vehicleNumber-${assignment.id}`}>เลขรถ *</label>
-                                <input 
+                                <input
                                     type="text"
                                     id={`vehicleNumber-${assignment.id}`}
                                     list={`vehicleList-${assignment.id}`}
@@ -416,11 +416,11 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                     ))}
                                 </datalist>
                             </div>
-                            
+
                             {/* ขั้นตอนที่ 3: เลือกชื่อพนักงาน */}
                             <div className="form-group">
                                 <label htmlFor={`user-${assignment.id}`}>ชื่อพนักงาน *</label>
-                                <select 
+                                <select
                                     id={`user-${assignment.id}`}
                                     value={assignment.userId}
                                     onChange={(e) => handleInputChange(assignment.id, 'userId', e.target.value)}
@@ -433,11 +433,11 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                     ))}
                                 </select>
                             </div>
-                            
+
                             {/* ขั้นตอนที่ 4: เลือกประเภทงาน */}
                             <div className="form-group">
                                 <label htmlFor={`jobType-${assignment.id}`}>ประเภทงาน *</label>
-                                <select 
+                                <select
                                     id={`jobType-${assignment.id}`}
                                     value={assignment.jobType}
                                     onChange={(e) => handleInputChange(assignment.id, 'jobType', e.target.value as JobType)}
@@ -448,12 +448,12 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                     <option value="Recondition">ปรับสภาพ</option>
                                 </select>
                             </div>
-                            
+
                             {/* ขั้นตอนที่ 4.1: เลือกระบบที่ต้องการบำรุงรักษา (เฉพาะ PM) */}
                             {assignment.jobType === 'PM' && (
                                 <div className="form-group">
                                     <label htmlFor={`system-${assignment.id}`}>ระบบที่ต้องการบำรุงรักษา *</label>
-                                    <select 
+                                    <select
                                         id={`system-${assignment.id}`}
                                         value={assignment.system}
                                         onChange={(e) => handleInputChange(assignment.id, 'system', e.target.value)}
@@ -466,11 +466,11 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                                     </select>
                                 </div>
                             )}
-                            
+
                             {/* ขั้นตอนที่ 5: หมายเหตุ */}
                             <div className="form-group full-width">
                                 <label htmlFor={`remarks-${assignment.id}`}>หมายเหตุ</label>
-                                <textarea 
+                                <textarea
                                     id={`remarks-${assignment.id}`}
                                     value={assignment.remarks}
                                     onChange={(e) => handleInputChange(assignment.id, 'remarks', e.target.value)}
@@ -480,7 +480,7 @@ const MultiAssignScreen = ({ setView, user, setJobs, users, vehicles, golfCourse
                         </div>
                     </div>
                 ))}
-                
+
                 <div className="form-actions">
                     <button type="button" className="btn-secondary" onClick={addAssignment}>
                         + เพิ่มรายการ
