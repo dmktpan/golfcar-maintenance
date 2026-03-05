@@ -3,18 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    X,
-    Package,
-    ArrowDownRight,
-    ArrowUpRight,
-    ArrowRightLeft,
-    Calendar,
-    User as UserIcon,
-    FileText,
-    MapPin,
-    RefreshCcw,
-    Loader2
-} from 'lucide-react';
+    XMarkIcon,
+    ArrowDownTrayIcon,
+    ArrowUpTrayIcon,
+    ArrowsRightLeftIcon,
+    CalendarIcon,
+    UserIcon,
+    DocumentTextIcon,
+    MapPinIcon,
+    ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 import { Part } from '@/lib/data';
 
 interface StockTransaction {
@@ -43,13 +41,11 @@ export default function StockHistoryModal({ part, onClose, golfCourses }: StockH
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
+    const [filterType, setFilterType] = useState<string>('ALL');
 
     useEffect(() => {
         setMounted(true);
     }, []);
-
-    // Filters
-    const [filterType, setFilterType] = useState<string>('ALL');
 
     useEffect(() => {
         if (!part) return;
@@ -80,12 +76,36 @@ export default function StockHistoryModal({ part, onClose, golfCourses }: StockH
         return course ? `⛳ ${course.name}` : `Location ID: ${id}`;
     };
 
-    const getTransactionLabel = (type: string) => {
+    const getTransactionStyle = (type: string) => {
         switch (type) {
-            case 'IN': return { label: 'รับเข้า', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-200 dark:border-emerald-500/20', icon: <ArrowDownRight size={16} /> };
-            case 'OUT': return { label: 'เบิกออก', color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-200 dark:border-rose-500/20', icon: <ArrowUpRight size={16} /> };
-            case 'TRANSFER': return { label: 'โยกย้าย', color: 'text-indigo-700 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-500/10', border: 'border-indigo-200 dark:border-indigo-500/20', icon: <ArrowRightLeft size={16} /> };
-            default: return { label: type, color: 'text-zinc-700 dark:text-zinc-400', bg: 'bg-zinc-100 dark:bg-zinc-800', border: 'border-zinc-200 dark:border-zinc-700', icon: <RefreshCcw size={16} /> };
+            case 'IN': return {
+                label: 'รับเข้า',
+                color: '#059669',
+                bg: '#ecfdf5',
+                border: '#a7f3d0',
+                Icon: ArrowDownTrayIcon,
+            };
+            case 'OUT': return {
+                label: 'เบิกออก',
+                color: '#dc2626',
+                bg: '#fef2f2',
+                border: '#fecaca',
+                Icon: ArrowUpTrayIcon,
+            };
+            case 'TRANSFER': return {
+                label: 'โยกย้าย',
+                color: '#4f46e5',
+                bg: '#eef2ff',
+                border: '#c7d2fe',
+                Icon: ArrowsRightLeftIcon,
+            };
+            default: return {
+                label: type,
+                color: '#6b7280',
+                bg: '#f3f4f6',
+                border: '#d1d5db',
+                Icon: ArrowPathIcon,
+            };
         }
     };
 
@@ -94,113 +114,286 @@ export default function StockHistoryModal({ part, onClose, golfCourses }: StockH
         return true;
     });
 
+    const filterButtons = [
+        { key: 'ALL', label: 'ทั้งหมด' },
+        { key: 'IN', label: 'รับเข้า' },
+        { key: 'OUT', label: 'เบิกออก' },
+        { key: 'TRANSFER', label: 'โยกย้าย' },
+    ];
+
     if (!mounted) return null;
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-md transition-all sm:p-6"
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.6)',
+                backdropFilter: 'blur(8px)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 99999,
+                padding: '1.5rem',
+            }}
             onClick={onClose}
         >
             <div
-                className="flex w-full max-w-6xl flex-col max-h-[90vh] overflow-hidden rounded-2xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800/50 dark:bg-zinc-900"
+                style={{
+                    background: '#fff',
+                    borderRadius: '20px',
+                    width: '100%',
+                    maxWidth: '1100px',
+                    maxHeight: '90vh',
+                    boxShadow: '0 25px 80px rgba(0, 0, 0, 0.2)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* === Header === */}
-                <div className="flex flex-shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-                    <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                            <Package size={24} strokeWidth={1.5} />
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '1.5rem 2rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                    color: '#fff',
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            background: 'rgba(255,255,255,0.2)',
+                            borderRadius: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <ClockIconSvg />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">ประวัติความเคลื่อนไหวสต็อก</h2>
-                            <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                <span className="font-medium text-zinc-700 dark:text-zinc-300">{part.name}</span>
-                                {part.part_number && <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800">#{part.part_number}</span>}
+                            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                                ประวัติความเคลื่อนไหวสต็อก
+                            </h2>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.875rem', opacity: 0.9 }}>
+                                {part.name}
+                                {part.part_number && (
+                                    <span style={{
+                                        marginLeft: '8px',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        padding: '2px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.75rem',
+                                    }}>
+                                        #{part.part_number}
+                                    </span>
+                                )}
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded-lg p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:scale-95 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                        style={{
+                            background: 'rgba(255,255,255,0.15)',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            color: '#fff',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
                     >
-                        <X size={20} />
+                        <XMarkIcon style={{ width: '22px', height: '22px' }} />
                     </button>
                 </div>
 
                 {/* === Filters === */}
-                <div className="flex flex-shrink-0 items-center justify-between border-b border-zinc-100 bg-zinc-50/50 px-6 py-3 dark:border-zinc-800 dark:bg-zinc-900/20">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">แสดงผล:</span>
-                        <div className="flex gap-1">
-                            {['ALL', 'IN', 'OUT', 'TRANSFER'].map((type) => (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 2rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280' }}>แสดงผล:</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            {filterButtons.map(({ key, label }) => (
                                 <button
-                                    key={type}
-                                    onClick={() => setFilterType(type)}
-                                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${filterType === type
-                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-indigo-400 dark:ring-zinc-700'
-                                        : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200'
-                                        }`}
+                                    key={key}
+                                    onClick={() => setFilterType(key)}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        border: filterType === key ? '1px solid #c7d2fe' : '1px solid transparent',
+                                        background: filterType === key ? '#fff' : 'transparent',
+                                        color: filterType === key ? '#4f46e5' : '#6b7280',
+                                        fontWeight: filterType === key ? 600 : 500,
+                                        fontSize: '0.8125rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: filterType === key ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (filterType !== key) {
+                                            e.currentTarget.style.background = '#f1f5f9';
+                                            e.currentTarget.style.color = '#1f2937';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (filterType !== key) {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = '#6b7280';
+                                        }
+                                    }}
                                 >
-                                    {type === 'ALL' ? 'ทั้งหมด' : getTransactionLabel(type).label}
+                                    {label}
                                 </button>
                             ))}
                         </div>
                     </div>
-                    <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                    <span style={{ fontSize: '0.8125rem', color: '#9ca3af', fontWeight: 500 }}>
                         พบ {filteredLogs.length} รายการ
-                    </div>
+                    </span>
                 </div>
 
                 {/* === Body Content === */}
-                <div className="flex-1 overflow-auto bg-white p-6 dark:bg-zinc-950">
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 2rem', background: '#fff' }}>
                     {loading ? (
-                        <div className="flex h-64 flex-col items-center justify-center gap-3 space-y-4 text-zinc-500 dark:text-zinc-400">
-                            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 dark:text-indigo-400" />
-                            <p className="text-sm font-medium">กำลังโหลดประวัติ...</p>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '250px',
+                            gap: '16px',
+                        }}>
+                            <div style={{
+                                width: '36px',
+                                height: '36px',
+                                border: '3px solid #e5e7eb',
+                                borderTop: '3px solid #4f46e5',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                            }} />
+                            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6b7280', margin: 0 }}>
+                                กำลังโหลดประวัติ...
+                            </p>
+                            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                         </div>
                     ) : error ? (
-                        <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-900/50 dark:bg-rose-950/30">
-                            <div className="text-rose-600 dark:text-rose-400"><X size={32} /></div>
-                            <p className="text-sm font-medium text-rose-800 dark:text-rose-300">{error}</p>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '250px',
+                            gap: '12px',
+                            background: '#fef2f2',
+                            borderRadius: '16px',
+                            border: '1px solid #fecaca',
+                            padding: '2rem',
+                        }}>
+                            <XMarkIcon style={{ width: '32px', height: '32px', color: '#dc2626' }} />
+                            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#991b1b', margin: 0 }}>{error}</p>
                         </div>
                     ) : filteredLogs.length === 0 ? (
-                        <div className="flex h-64 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-center dark:border-zinc-800 dark:bg-zinc-900/50">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-800">
-                                <FileText size={24} />
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '250px',
+                            gap: '16px',
+                            background: '#f9fafb',
+                            borderRadius: '16px',
+                            border: '1px dashed #d1d5db',
+                            padding: '2rem',
+                        }}>
+                            <div style={{
+                                width: '56px',
+                                height: '56px',
+                                background: '#f1f5f9',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                <DocumentTextIcon style={{ width: '28px', height: '28px', color: '#9ca3af' }} />
                             </div>
-                            <div>
-                                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">ไม่พบประวัติการทำรายการ</h3>
-                                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">ยังไม่มีการเคลื่อนไหวของสต็อกสำหรับอะไหล่ชิ้นนี้ หรือไม่พบข้อมูลตามตัวกรอง</p>
+                            <div style={{ textAlign: 'center' }}>
+                                <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#1f2937' }}>
+                                    ไม่พบประวัติการทำรายการ
+                                </h3>
+                                <p style={{ margin: '6px 0 0', fontSize: '0.8125rem', color: '#6b7280' }}>
+                                    ยังไม่มีการเคลื่อนไหวของสต็อกสำหรับอะไหล่ชิ้นนี้ หรือไม่พบข้อมูลตามตัวกรอง
+                                </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="w-full overflow-x-auto rounded-xl border border-zinc-200/50 bg-white dark:border-zinc-800/50 dark:bg-zinc-950 shadow-sm">
-                            <table className="w-full text-left text-sm text-zinc-600 dark:text-zinc-400">
-                                <thead className="bg-zinc-50/80 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:bg-zinc-900/80 dark:text-zinc-400">
-                                    <tr className="border-b border-zinc-200/50 dark:border-zinc-800/50">
-                                        <th className="whitespace-nowrap px-6 py-4">วันที่-เวลา</th>
-                                        <th className="whitespace-nowrap px-6 py-4">ประเภท</th>
-                                        <th className="whitespace-nowrap px-6 py-4">สถานที่</th>
-                                        <th className="whitespace-nowrap px-6 py-4 text-right">ยอดก่อนหน้า</th>
-                                        <th className="whitespace-nowrap px-6 py-4 text-right">จำนวน</th>
-                                        <th className="whitespace-nowrap px-6 py-4 text-right">ยอดคงเหลือ</th>
-                                        <th className="whitespace-nowrap px-6 py-4">ผู้ทำรายการ</th>
-                                        <th className="whitespace-nowrap px-6 py-4">อ้างอิง/หมายเหตุ</th>
+                        <div style={{
+                            width: '100%',
+                            overflowX: 'auto',
+                            borderRadius: '14px',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                        }}>
+                            <table style={{
+                                width: '100%',
+                                borderCollapse: 'collapse',
+                                fontSize: '0.8125rem',
+                                color: '#4b5563',
+                            }}>
+                                <thead>
+                                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+                                        {['วันที่-เวลา', 'ประเภท', 'สถานที่', 'ยอดก่อนหน้า', 'จำนวน', 'ยอดคงเหลือ', 'ผู้ทำรายการ', 'อ้างอิง/หมายเหตุ'].map((header, idx) => (
+                                            <th key={idx} style={{
+                                                padding: '14px 16px',
+                                                fontWeight: 600,
+                                                fontSize: '0.75rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.04em',
+                                                color: '#6b7280',
+                                                whiteSpace: 'nowrap',
+                                                textAlign: [3, 4, 5].includes(idx) ? 'right' : 'left',
+                                            }}>
+                                                {header}
+                                            </th>
+                                        ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-zinc-100 bg-white dark:divide-zinc-800/50 dark:bg-zinc-950">
-                                    {filteredLogs.map((log) => {
-                                        const typeStyle = getTransactionLabel(log.type);
-                                        const qtyColor = log.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' : log.type === 'OUT' ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400';
+                                <tbody>
+                                    {filteredLogs.map((log, idx) => {
+                                        const typeStyle = getTransactionStyle(log.type);
+                                        const TypeIcon = typeStyle.Icon;
+                                        const qtyColor = log.type === 'IN' ? '#059669' : log.type === 'OUT' ? '#dc2626' : '#4f46e5';
                                         const qtySign = log.type === 'IN' ? '+' : log.type === 'OUT' ? '-' : '';
 
                                         return (
-                                            <tr key={log.id} className="transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-900/30">
+                                            <tr key={log.id} style={{
+                                                borderBottom: '1px solid #f1f5f9',
+                                                background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                                                transition: 'background 0.15s',
+                                            }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f4ff'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafbfc'; }}
+                                            >
                                                 {/* Date */}
-                                                <td className="px-5 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar size={14} className="text-zinc-400" />
-                                                        <span>
+                                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <CalendarIcon style={{ width: '14px', height: '14px', color: '#9ca3af', flexShrink: 0 }} />
+                                                        <span style={{ fontSize: '0.8125rem' }}>
                                                             {new Date(log.createdAt).toLocaleDateString('th-TH', {
                                                                 day: '2-digit', month: 'short', year: 'numeric',
                                                                 hour: '2-digit', minute: '2-digit'
@@ -210,68 +403,141 @@ export default function StockHistoryModal({ part, onClose, golfCourses }: StockH
                                                 </td>
 
                                                 {/* Type */}
-                                                <td className="whitespace-nowrap px-6 py-4">
-                                                    <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ${typeStyle.bg} ${typeStyle.color} ${typeStyle.border}`}>
-                                                        {typeStyle.icon}
+                                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '4px 12px',
+                                                        borderRadius: '20px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        background: typeStyle.bg,
+                                                        color: typeStyle.color,
+                                                        border: `1px solid ${typeStyle.border}`,
+                                                    }}>
+                                                        <TypeIcon style={{ width: '14px', height: '14px' }} />
                                                         {typeStyle.label}
-                                                    </div>
+                                                    </span>
                                                 </td>
 
                                                 {/* Location */}
-                                                <td className="whitespace-nowrap px-6 py-4">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <div className="flex items-center gap-2">
-                                                            <MapPin size={14} className="flex-shrink-0 text-zinc-400" />
-                                                            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-200">
+                                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <MapPinIcon style={{ width: '14px', height: '14px', color: '#9ca3af', flexShrink: 0 }} />
+                                                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1f2937' }}>
                                                                 {getLocationName(log.location_id)}
                                                             </span>
                                                         </div>
                                                         {log.type === 'TRANSFER' && log.to_location_id && (
-                                                            <div className="flex items-center gap-2 ml-1 pl-4 border-l-2 border-zinc-200 dark:border-zinc-800">
-                                                                <ArrowRightLeft size={12} className="text-zinc-400" />
-                                                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                                                    ไปที่: <span className="font-medium text-zinc-700 dark:text-zinc-300">{getLocationName(log.to_location_id)}</span>
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '6px',
+                                                                marginLeft: '6px',
+                                                                paddingLeft: '14px',
+                                                                borderLeft: '2px solid #e5e7eb',
+                                                            }}>
+                                                                <ArrowsRightLeftIcon style={{ width: '12px', height: '12px', color: '#9ca3af' }} />
+                                                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                                    ไปที่: <span style={{ fontWeight: 600, color: '#374151' }}>{getLocationName(log.to_location_id)}</span>
                                                                 </span>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
 
-                                                {/* Numbers */}
-                                                <td className="whitespace-nowrap px-6 py-4 text-right tabular-nums text-zinc-500 dark:text-zinc-400">
+                                                {/* Previous Balance */}
+                                                <td style={{
+                                                    padding: '12px 16px',
+                                                    whiteSpace: 'nowrap',
+                                                    textAlign: 'right',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    color: '#6b7280',
+                                                }}>
                                                     {log.previous_balance.toLocaleString()}
                                                 </td>
-                                                <td className={`whitespace-nowrap px-6 py-4 text-right tabular-nums font-bold ${qtyColor}`}>
+
+                                                {/* Quantity */}
+                                                <td style={{
+                                                    padding: '12px 16px',
+                                                    whiteSpace: 'nowrap',
+                                                    textAlign: 'right',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    fontWeight: 700,
+                                                    color: qtyColor,
+                                                    fontSize: '0.875rem',
+                                                }}>
                                                     {qtySign}{log.quantity.toLocaleString()}
                                                 </td>
-                                                <td className="whitespace-nowrap px-6 py-4 text-right tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
+
+                                                {/* New Balance */}
+                                                <td style={{
+                                                    padding: '12px 16px',
+                                                    whiteSpace: 'nowrap',
+                                                    textAlign: 'right',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    fontWeight: 700,
+                                                    color: '#1f2937',
+                                                    fontSize: '0.875rem',
+                                                }}>
                                                     {log.new_balance.toLocaleString()}
                                                 </td>
 
                                                 {/* User */}
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                                                            <UserIcon size={12} className="text-zinc-500 dark:text-zinc-400" />
+                                                <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{
+                                                            width: '26px',
+                                                            height: '26px',
+                                                            background: '#f1f5f9',
+                                                            borderRadius: '50%',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}>
+                                                            <UserIcon style={{ width: '13px', height: '13px', color: '#6b7280' }} />
                                                         </div>
-                                                        <span className="font-medium text-zinc-700 dark:text-zinc-300">{log.user?.name || 'SYSTEM'}</span>
+                                                        <span style={{ fontWeight: 600, color: '#374151', fontSize: '0.8125rem' }}>
+                                                            {log.user?.name || 'SYSTEM'}
+                                                        </span>
                                                     </div>
                                                 </td>
 
                                                 {/* Ref/Notes */}
-                                                <td className="whitespace-nowrap px-6 py-4 max-w-[250px] overflow-hidden text-ellipsis">
-                                                    <div className="flex flex-col gap-1">
+                                                <td style={{ padding: '12px 16px', maxWidth: '220px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                         {log.ref_document && (
-                                                            <span className="inline-flex w-fit items-center rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                                            <span style={{
+                                                                display: 'inline-flex',
+                                                                width: 'fit-content',
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px',
+                                                                border: '1px solid #e5e7eb',
+                                                                background: '#f8fafc',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600,
+                                                                color: '#374151',
+                                                            }}>
                                                                 {log.ref_document}
                                                             </span>
                                                         )}
                                                         {log.notes && (
-                                                            <span className="text-xs text-zinc-500 truncate dark:text-zinc-400" title={log.notes}>
+                                                            <span style={{
+                                                                fontSize: '0.75rem',
+                                                                color: '#6b7280',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis',
+                                                                whiteSpace: 'nowrap',
+                                                                maxWidth: '200px',
+                                                            }} title={log.notes}>
                                                                 {log.notes}
                                                             </span>
                                                         )}
-                                                        {!log.ref_document && !log.notes && <span className="text-xs text-zinc-400">-</span>}
+                                                        {!log.ref_document && !log.notes && (
+                                                            <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>—</span>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -282,8 +548,47 @@ export default function StockHistoryModal({ part, onClose, golfCourses }: StockH
                         </div>
                     )}
                 </div>
+
+                {/* === Footer === */}
+                <div style={{
+                    padding: '1rem 2rem',
+                    borderTop: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    flexShrink: 0,
+                }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '10px 24px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '10px',
+                            background: '#fff',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            color: '#374151',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                    >
+                        ปิด
+                    </button>
+                </div>
             </div>
         </div>,
         document.body
+    );
+}
+
+/* Simple clock icon since heroicons doesn't have a matching one for the header */
+function ClockIconSvg() {
+    return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+        </svg>
     );
 }
