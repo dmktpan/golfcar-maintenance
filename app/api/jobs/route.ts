@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import { generateMWRCode } from '@/lib/utils/mwr-generator';
 import { approvePartRequest, consumeStockForJob, StockError } from '@/lib/stock';
 
+export const dynamic = 'force-dynamic';
+
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
 // ฟังก์ชันสำหรับส่งข้อมูล Serial History ไปยัง External API

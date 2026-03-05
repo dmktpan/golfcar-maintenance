@@ -8,31 +8,31 @@ import styles from './JobCard.module.css';
 import { getSystemDisplayName } from '../lib/systemUtils';
 
 interface JobCardProps {
-  job: Job;
-  user: User;
-  vehicles: Vehicle[];
-  golfCourses: GolfCourse[];
-  users: User[];
-  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
-  onUpdateStatus: (jobId: string, status: JobStatus) => void;
-  onFillJobForm?: (job: Job) => void;
-  onDeleteJob?: (jobId: string) => void; // เพิ่ม callback สำหรับลบงาน
-  isHistory?: boolean;
+    job: Job;
+    user: User;
+    vehicles: Vehicle[];
+    golfCourses: GolfCourse[];
+    users: User[];
+    partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
+    onUpdateStatus: (jobId: string, status: JobStatus) => void;
+    onFillJobForm?: (job: Job) => void;
+    onDeleteJob?: (jobId: string) => void; // เพิ่ม callback สำหรับลบงาน
+    isHistory?: boolean;
 }
 
 const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], onUpdateStatus, onFillJobForm, onDeleteJob }: JobCardProps) => {
     const [showDetails, setShowDetails] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    
+
     // ดึงข้อมูลรถจาก vehicles prop แทน MOCK_VEHICLES
     const vehicleInfo = vehicles.find(v => v.id === job.vehicle_id);
-    
+
     // ฟังก์ชันสำหรับดึงชื่อสนามกอล์ฟ
     const getGolfCourseName = (courseId: string) => {
         const course = golfCourses.find(c => c.id === courseId);
         return course ? course.name : 'ไม่ระบุ';
     };
-    
+
     // แปลงวันที่ให้อยู่ในรูปแบบที่อ่านง่าย
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -55,8 +55,8 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
     };
 
     // ตรวจสอบสิทธิ์ในการลบงาน (เฉพาะหัวหน้างานและผู้ดูแลระบบ)
-    const canDeleteJob = (user.role === 'supervisor' || user.role === 'admin') && 
-                        (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed');
+    const canDeleteJob = (user.role === 'supervisor' || user.role === 'admin') &&
+        (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed');
 
     // ฟังก์ชันสำหรับแสดงปุ่มตามสถานะและบทบาท
     const renderActionButtons = () => {
@@ -64,9 +64,9 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
 
         // ปุ่มดูรายละเอียด (แสดงเสมอ)
         buttons.push(
-            <button 
+            <button
                 key="details"
-                className={`${styles.actionButton} ${styles.info}`} 
+                className={`${styles.actionButton} ${styles.info}`}
                 onClick={() => setShowDetails(true)}
             >
                 <span className="btn-icon">👁️</span> ดูรายละเอียด
@@ -76,9 +76,9 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
         // ปุ่มสำหรับพนักงานที่ได้รับงานมอบหมาย
         if (user.role === 'staff' && job.status === 'assigned' && job.assigned_to === user.id.toString() && onFillJobForm) {
             buttons.push(
-                <button 
+                <button
                     key="fill-form"
-                    className={`${styles.actionButton} ${styles.primary}`} 
+                    className={`${styles.actionButton} ${styles.primary}`}
                     onClick={() => onFillJobForm(job)}
                 >
                     <span className="btn-icon">📝</span> เริ่มปฏิบัติงาน
@@ -87,15 +87,15 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
         }
 
         // ปุ่มแก้ไขสำหรับงานที่พนักงานสร้างเอง
-        if (user.role === 'staff' && 
-            job.status === 'pending' && 
-            job.user_id === user.id.toString() && 
-            !job.assigned_by && 
+        if (user.role === 'staff' &&
+            job.status === 'pending' &&
+            job.user_id === user.id.toString() &&
+            !job.assigned_by &&
             onFillJobForm) {
             buttons.push(
-                <button 
+                <button
                     key="edit"
-                    className={`${styles.actionButton} ${styles.secondary}`} 
+                    className={`${styles.actionButton} ${styles.secondary}`}
                     onClick={() => onFillJobForm(job)}
                 >
                     <span className="btn-icon">✏️</span> แก้ไข
@@ -106,16 +106,16 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
         // ปุ่มสำหรับหัวหน้างาน
         if (user.role === 'supervisor' && job.status === 'pending') {
             buttons.push(
-                <button 
+                <button
                     key="approve"
-                    className={`${styles.actionButton} ${styles.success}`} 
+                    className={`${styles.actionButton} ${styles.success}`}
                     onClick={() => onUpdateStatus(job.id, 'approved')}
                 >
                     <span className="btn-icon">✓</span> อนุมัติ
                 </button>,
-                <button 
+                <button
                     key="reject"
-                    className={`${styles.actionButton} ${styles.danger}`} 
+                    className={`${styles.actionButton} ${styles.danger}`}
                     onClick={() => onUpdateStatus(job.id, 'rejected')}
                 >
                     <span className="btn-icon">✕</span> ไม่อนุมัติ
@@ -124,13 +124,13 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
         }
 
         // ปุ่มดูและแก้ไขสำหรับหัวหน้างานและผู้ดูแลระบบในงานที่มอบหมายแล้ว
-        if ((user.role === 'supervisor' || user.role === 'admin') && 
-            (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed') && 
+        if ((user.role === 'supervisor' || user.role === 'admin') &&
+            (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed') &&
             onFillJobForm) {
             buttons.push(
-                <button 
+                <button
                     key="view-edit"
-                    className={`${styles.actionButton} ${styles.secondary}`} 
+                    className={`${styles.actionButton} ${styles.secondary}`}
                     onClick={() => onFillJobForm(job)}
                 >
                     <span className="btn-icon">✏️</span> ดู/แก้ไข
@@ -146,7 +146,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
             <div className={`${styles.jobCard} ${styles[`status${job.status.charAt(0).toUpperCase() + job.status.slice(1)}`]}`}>
                 {/* Delete Button - แสดงเฉพาะสำหรับหัวหน้างานและผู้ดูแลระบบ */}
                 {canDeleteJob && onDeleteJob && (
-                    <button 
+                    <button
                         className={styles.deleteButton}
                         onClick={() => setShowDeleteConfirm(true)}
                         title="ลบงานที่มอบหมาย"
@@ -154,7 +154,7 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                         ✕
                     </button>
                 )}
-                
+
                 <div className={styles.jobCardHeader}>
                     <div className={styles.jobHeaderLeft}>
                         <h3 className={styles.vehicleNumber}>รถเบอร์ {job.vehicle_number}</h3>
@@ -175,7 +175,9 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                         </div>
                         <div className={styles.summaryItem}>
                             <span className={styles.summaryLabel}>ระบบ:</span>
-                            <span className={styles.summaryValue}>{job.system ? getSystemDisplayName(job.system) : '-'}</span>
+                            <span className={styles.summaryValue}>
+                                {job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}
+                            </span>
                         </div>
                         {job.type === 'BM' && job.bmCause && (
                             <div className={styles.summaryItem}>
@@ -219,13 +221,13 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
                             <p className={styles.warningText}>การดำเนินการนี้ไม่สามารถยกเลิกได้</p>
                         </div>
                         <div className={styles.confirmFooter}>
-                            <button 
+                            <button
                                 className={styles.cancelButton}
                                 onClick={() => setShowDeleteConfirm(false)}
                             >
                                 ยกเลิก
                             </button>
-                            <button 
+                            <button
                                 className={styles.confirmDeleteButton}
                                 onClick={handleDeleteConfirm}
                             >
@@ -237,13 +239,13 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
             )}
 
             {showDetails && (
-                <JobDetailsModal 
-                    job={job} 
+                <JobDetailsModal
+                    job={job}
                     golfCourses={golfCourses}
                     users={users}
                     vehicles={vehicles}
                     partsUsageLog={partsUsageLog}
-                    onClose={() => setShowDetails(false)} 
+                    onClose={() => setShowDetails(false)}
                 />
             )}
         </>

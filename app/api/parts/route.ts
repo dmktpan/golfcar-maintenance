@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // GET - ดึงข้อมูลอะไหล่ทั้งหมด
 export async function GET() {
   try {

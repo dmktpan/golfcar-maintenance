@@ -539,7 +539,7 @@ function SupervisorPendingJobsScreen({
                                                 <div className={styles.detailItem}>
                                                     <span className={styles.detailLabel}>ระบบ:</span>
                                                     <span className={styles.detailValue}>
-                                                        {job.system ? getSystemDisplayName(job.system) : '-'}
+                                                        {job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}
                                                     </span>
                                                 </div>
                                             </>
@@ -687,7 +687,7 @@ function SupervisorPendingJobsScreen({
                                         </div>
                                         <div className={styles.detailItem}>
                                             <span className={styles.detailLabel}>ระบบ:</span>
-                                            <span className={styles.detailValue}>{selectedJobForDetails.system ? getSystemDisplayName(selectedJobForDetails.system) : '-'}</span>
+                                            <span className={styles.detailValue}>{selectedJobForDetails.type === 'BM' ? 'ซ่อมด่วน' : selectedJobForDetails.type === 'Recondition' ? 'ปรับสภาพ' : selectedJobForDetails.system ? getSystemDisplayName(selectedJobForDetails.system) : '-'}</span>
                                         </div>
                                         {selectedJobForDetails.type === 'BM' && selectedJobForDetails.bmCause && (
                                             <div className={styles.detailItem}>

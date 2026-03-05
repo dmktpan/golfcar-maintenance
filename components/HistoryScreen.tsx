@@ -413,7 +413,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     'Serial แบต': job.battery_serial || (job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'),
                     'สนาม': getGolfCourseName(job.golf_course_id),
                     'ประเภทงาน': job.type,
-                    'ระบบ': job.system ? getSystemDisplayName(job.system) : '-',
+                    'ระบบ': job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-',
                     'อะไหล่ที่ใช้': partsText,
                     'บันทึกอะไหล่': job.partsNotes || '-',
                     'ผู้ดำเนินการ': job.userName,
@@ -744,7 +744,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                 {job.type}
                                             </span>
                                         </td>
-                                        <td>{job.system ? getSystemDisplayName(job.system) : '-'}</td>
+                                        <td>{job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}</td>
                                         <td className="parts-summary">
                                             {(() => {
                                                 const jobParts = partsData.get(job.id) || [];

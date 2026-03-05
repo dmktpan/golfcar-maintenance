@@ -65,7 +65,7 @@ export async function consumeStockForJob(
 
     if (insufficient.length > 0) {
         const details = insufficient.map(i => `${i.partName} (ต้องการ ${i.requested}, มี ${i.available})`).join(', ');
-        throw new StockError(`สต็อกอะไหล่ไม่พอ: ${details}`);
+        throw new StockError(`ในคลังมีของไม่เพียงพอ รบกวนแจ้ง ฝ่ายสต๊อก: ${details}`);
     }
 
     // 2. Execute Deduction Transaction
@@ -195,7 +195,7 @@ export async function executeStockTransfer(transferId: string, userId: string) {
             // But for deduction, it must exist.
 
             // Assumption: Central Inventory IS valid. If row missing, it's 0.
-            const centralInv = await tx.inventory.findFirst({
+            let centralInv = await tx.inventory.findFirst({
                 where: {
                     part_id: item.part_id,
                     golf_course_id: null // findFirst allows searching by null
@@ -204,16 +204,24 @@ export async function executeStockTransfer(transferId: string, userId: string) {
 
             // If we can't search by null in composite unique in Prisma easily:
             if (!centralInv) {
-                // Create it if missing? No, can't deduct from missing.
-                // Or maybe we treat "Part.stock_qty" as legacy central? 
-                // Master Plan said "Migrate Part.stock_qty to Inventory".
-                // Assuming migration is done or we create on fly?
-                // For now, fail if central has no record.
-                throw new StockError(`Central inventory record missing for part ${item.part_id}`);
+                // If central inventory is missing, create it using the base Part's min/max info.
+                // We fetch the Part first to see if it has stock_qty legacy to fallback on
+                const partInfo = await tx.part.findUnique({ where: { id: item.part_id } });
+                if (!partInfo) {
+                    throw new StockError(`Part ${item.part_id} not found in database`);
+                }
+
+                centralInv = await tx.inventory.create({
+                    data: {
+                        part_id: item.part_id,
+                        golf_course_id: null,
+                        quantity: partInfo.stock_qty || 0,
+                    }
+                });
             }
 
             if (centralInv.quantity < item.quantity) {
-                throw new StockError(`Insufficient Central Stock for part ${item.part_id} (Available: ${centralInv.quantity})`);
+                throw new StockError(`ในคลังมีของไม่เพียงพอ รบกวนแจ้ง ฝ่ายสต๊อก: อะไหล่ ID ${item.part_id} (ต้องการ ${item.quantity}, มี ${centralInv.quantity})`);
             }
 
             // Deduct Central
@@ -325,7 +333,7 @@ export async function approvePartRequest(jobId: string, userId: string, tx?: any
         // 2. Process Items (Central -> Site)
         for (const item of job.parts) {
             // --- DEDUCT FROM CENTRAL ---
-            const centralInv = await client.inventory.findFirst({
+            let centralInv = await client.inventory.findFirst({
                 where: {
                     part_id: item.part_id,
                     golf_course_id: null
@@ -335,11 +343,23 @@ export async function approvePartRequest(jobId: string, userId: string, tx?: any
             const qty = item.quantity_used;
 
             if (!centralInv) {
-                throw new StockError(`Central inventory record missing for part ${item.part_name}`);
+                // Fallback to creating central inventory from Part base stock if missing
+                const partInfo = await client.part.findUnique({ where: { id: item.part_id } });
+                if (!partInfo) {
+                    throw new StockError(`Part ${item.part_name} not found in database`);
+                }
+
+                centralInv = await client.inventory.create({
+                    data: {
+                        part_id: item.part_id,
+                        golf_course_id: null,
+                        quantity: partInfo.stock_qty || 0,
+                    }
+                });
             }
 
             if (centralInv.quantity < qty) {
-                throw new StockError(`Insufficient Central Stock for ${item.part_name} (Has: ${centralInv.quantity}, Need: ${qty})`);
+                throw new StockError(`ในคลังมีของไม่เพียงพอ รบกวนแจ้ง ฝ่ายสต๊อก: ${item.part_name} (ต้องการ ${qty}, มี ${centralInv.quantity})`);
             }
 
             // Deduct Central

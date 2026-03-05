@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Job, JobStatus, User, View, Vehicle, GolfCourse } from '@/lib/data';
 import JobCard from './JobCard';
+import MWRDetailsModal from './MWRDetailsModal';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {
@@ -25,6 +26,7 @@ interface DashboardProps {
 const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [], parts = [], setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus, onOpenPartRequest }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history' | 'parts_stock'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('assigned');
+    const [selectedMWR, setSelectedMWR] = useState<Job | null>(null);
 
     // ใช้ useMemo เพื่อลด re-calculation
     const filteredJobs = useMemo(() => {
@@ -114,7 +116,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
         return parts.map(part => {
             // Find inventory for this site
             const inventory = part.inventory ? part.inventory.find((inv: any) =>
-                inv.golf_course_id.toString() === user.golf_course_id?.toString()
+                inv.golf_course_id && user.golf_course_id && inv.golf_course_id.toString() === user.golf_course_id.toString()
             ) : null;
 
             return {
@@ -269,7 +271,10 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                                     <tbody>
                                         {myMWRRequests.map(job => (
                                             <tr key={job.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td style={{ padding: '0.75rem', fontWeight: 'bold', color: '#2563eb' }}>
+                                                <td
+                                                    style={{ padding: '0.75rem', fontWeight: 'bold', color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
+                                                    onClick={() => setSelectedMWR(job)}
+                                                >
                                                     {job.mwr_code || 'N/A'}
                                                 </td>
                                                 <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#64748b' }}>
@@ -384,6 +389,14 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                     </div>
                 )
             )}
+
+            {/* MWR Details Modal */}
+            <MWRDetailsModal
+                isOpen={!!selectedMWR}
+                onClose={() => setSelectedMWR(null)}
+                job={selectedMWR}
+                golfCourses={golfCourses}
+            />
         </div>
     );
 }

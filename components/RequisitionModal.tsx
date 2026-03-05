@@ -346,7 +346,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
                                     <div className="info-icon">🔧</div>
                                     <div className="info-content">
                                         <span className="info-label">ประเภทงาน</span>
-                                        <span className="info-value">{job.type} - {getSystemDisplayName(job.system || '')}</span>
+                                        <span className="info-value">{job.type} - {job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : getSystemDisplayName(job.system || '') || '-'}</span>
                                     </div>
                                 </div>
                             </div>

@@ -860,10 +860,11 @@ export default function HomePage() {
         // แสดงข้อความ error ที่เข้าใจง่าย
         if (response.status === 404) {
           alert('ไม่พบงานที่ต้องการอัปเดตในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
-        } else if (response.status >= 500) {
+        } else if (response.status >= 500 && !result.error && !errorMessage) {
           alert('เซิร์ฟเวอร์ขัดข้อง กรุณาลองใหม่อีกครั้ง');
         } else {
-          alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${errorMessage}`);
+          // If there's an error from the backend (like StockError), display it!
+          alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${result.error || errorMessage || 'ไม่ทราบสาเหตุ'}`);
         }
         return;
       } else {
@@ -1284,6 +1285,7 @@ export default function HomePage() {
             users={users}
             partsUsageLog={partsUsageLog}
             parts={parts}
+            onUpdateStatus={onUpdateStatus}
             onOpenPartRequest={() => {
               console.log('🔓 Opening Part Request Modal');
               setIsPartRequestModalOpen(true);

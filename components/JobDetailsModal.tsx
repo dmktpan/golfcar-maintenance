@@ -315,7 +315,7 @@ const JobDetailsModal = ({ job, golfCourses, users, vehicles, partsUsageLog = []
                   <span className={styles['label-icon']}>{getSystemIcon(job.system || '')}</span>
                   ระบบที่ซ่อม:
                 </label>
-                <span>{getSystemDisplayName(job.system || '')}</span>
+                <span>{job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : getSystemDisplayName(job.system || '') || '-'}</span>
               </div>
               {job.type === 'BM' && job.bmCause && (
                 <div className={styles['info-item']}>
