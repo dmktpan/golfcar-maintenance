@@ -195,15 +195,10 @@ export async function executeStockTransfer(transferId: string, userId: string) {
             // But for deduction, it must exist.
 
             // Assumption: Central Inventory IS valid. If row missing, it's 0.
-            const centralInv = await tx.inventory.findUnique({
+            const centralInv = await tx.inventory.findFirst({
                 where: {
-                    part_id_golf_course_id: {
-                        part_id: item.part_id,
-                        golf_course_id: null as any // Prisma workaround for composite unique with null?
-                        // Actually, in Mongo unique index on null works. But Prisma might be tricky.
-                        // If golf_course_id is optional, we search by it being null?
-                        // Let's try explicit query if needed, but unique match is best.
-                    }
+                    part_id: item.part_id,
+                    golf_course_id: null // findFirst allows searching by null
                 }
             });
 
@@ -330,12 +325,10 @@ export async function approvePartRequest(jobId: string, userId: string, tx?: any
         // 2. Process Items (Central -> Site)
         for (const item of job.parts) {
             // --- DEDUCT FROM CENTRAL ---
-            const centralInv = await client.inventory.findUnique({
+            const centralInv = await client.inventory.findFirst({
                 where: {
-                    part_id_golf_course_id: {
-                        part_id: item.part_id,
-                        golf_course_id: null as any
-                    }
+                    part_id: item.part_id,
+                    golf_course_id: null
                 }
             });
 
