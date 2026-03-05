@@ -8,12 +8,18 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const locationId = searchParams.get('locationId');
+        const partId = searchParams.get('partId'); // New parameter
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
         const limit = parseInt(searchParams.get('limit') || '50');
 
         // Build filter conditions
         const where: any = {};
+
+        // Filter by Part
+        if (partId) {
+            where.part_id = partId;
+        }
 
         // Filter by Location
         if (locationId === 'central') {

@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { Part, User, GolfCourse, PartsUsageLog, Job } from '@/lib/data';
+import StockHistoryModal from './StockHistoryModal'; // New Import
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -16,7 +17,8 @@ import {
   ClipboardDocumentListIcon,
   BuildingStorefrontIcon,
   ChartBarIcon,
-  ArrowsRightLeftIcon
+  ArrowsRightLeftIcon,
+  ClockIcon // Added ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface StockManagementScreenProps {
@@ -41,7 +43,8 @@ interface PartFormData {
 const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, golfCourses = [], partsUsageLog = [], jobs = [], onPartsUpdate, user }) => {
   const [stockHubSearch, setStockHubSearch] = useState('');
   const [selectedHubCourse, setSelectedHubCourse] = useState<string | null>(null);
-  const [stockHubTab, setStockHubTab] = useState<'outgoing' | 'incoming'>('outgoing');
+  // New Tabs for Stock Hub
+  const [stockHubTab, setStockHubTab] = useState<'outgoing' | 'incoming' | 'stock'>('outgoing');
   // Permission Check
   const canEditStock = useMemo(() => {
     return user?.permissions?.includes('stock:edit') || false;
@@ -53,8 +56,19 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
   const [showAddMethodModal, setShowAddMethodModal] = useState(false);
   const [showStockHub, setShowStockHub] = useState(false); // New State
   const [showBreakdownModal, setShowBreakdownModal] = useState(false); // New State
-  const [showMoveModal, setShowMoveModal] = useState(false); // New State
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false); // New State
+  const [selectedPartForHistory, setSelectedPartForHistory] = useState<Part | null>(null); // New State
+  const [transferQty, setTransferQty] = useState('');
+  const [transferDestination, setTransferDestination] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false); // New State
   const [selectedPartForAction, setSelectedPartForAction] = useState<Part | null>(null); // New State
+  const [showSiteTransferModal, setShowSiteTransferModal] = useState(false);
+  const [siteTransferPart, setSiteTransferPart] = useState<{ part: Part; quantity: number } | null>(null);
+  const [siteTransferFromCourse, setSiteTransferFromCourse] = useState('');
+  const [siteTransferQty, setSiteTransferQty] = useState('');
+  const [siteTransferToCourse, setSiteTransferToCourse] = useState('');
+  const [isSiteTransferring, setIsSiteTransferring] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTabbedModal, setShowTabbedModal] = useState(false);
@@ -176,7 +190,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
 
         if (partData.name && partData.unit) {
           if (partData.part_number && checkDuplicatePartNumber(partData.part_number)) {
-            duplicates.push(`แถว ${index + 2}: ${partData.part_number}`);
+            duplicates.push(`แถว ${index + 2}: ${partData.part_number} `);
           } else {
             partsToAdd.push(partData);
           }
@@ -185,7 +199,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
 
       if (duplicates.length > 0) {
         setDuplicatePartNumbers(duplicates);
-        alert(`พบรหัสอะไหล่ซ้ำ:\n${duplicates.join('\n')}\n\nกรุณาแก้ไขไฟล์และอัพโหลดใหม่`);
+        alert(`พบรหัสอะไหล่ซ้ำ: \n${duplicates.join('\n')} \n\nกรุณาแก้ไขไฟล์และอัพโหลดใหม่`);
         setLoading(false);
         return;
       }
@@ -302,7 +316,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/parts/${editingPart.id}`, {
+      const response = await fetch(`/ api / parts / ${editingPart.id} `, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -331,14 +345,14 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
 
   // ฟังก์ชันสำหรับลบอะไหล่
   const handleDeletePart = async (partId: string, partName: string) => {
-    if (!confirm(`คุณต้องการลบอะไหล่ "${partName}" หรือไม่?`)) {
+    if (!confirm(`คุณต้องการลบอะไหล่ "${partName}" หรือไม่ ? `)) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/parts/${partId}`, {
+      const response = await fetch(`/ api / parts / ${partId} `, {
         method: 'DELETE',
       });
 
@@ -373,6 +387,63 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     setShowEditModal(true);
   };
 
+  const handleTransferSubmit = async () => {
+    if (!selectedPartForAction || !transferQty || !transferDestination) {
+      alert('กรุณาระบุจำนวนและปลายทางให้ครบถ้วน');
+      return;
+    }
+
+    const qty = parseInt(transferQty);
+    if (isNaN(qty) || qty <= 0) {
+      alert('จำนวนต้องเป็นตัวเลขที่มากกว่า 0');
+      return;
+    }
+
+    if (qty > selectedPartForAction.stock_qty) {
+      alert(`จำนวนสต็อกในส่วนกลางไม่เพียงพอ(คงเหลือ: ${selectedPartForAction.stock_qty})`);
+      return;
+    }
+
+    setIsTransferring(true);
+    try {
+      const response = await fetch('/api/stock/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          part_id: selectedPartForAction.id,
+          from_location_id: null, // Always moving from Central in this view
+          to_location_id: transferDestination,
+          quantity: qty,
+          user_id: user?.id,
+          user_name: user?.name,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'เกิดข้อผิดพลาดในการย้ายอะไหล่');
+      }
+
+      alert('ย้ายสต็อกอะไหล่เสร็จสมบูรณ์');
+      setShowMoveModal(false);
+      setTransferQty('');
+      setTransferDestination('');
+
+      // Refresh parts
+      if (onPartsUpdate) {
+        onPartsUpdate();
+      }
+    } catch (error: any) {
+      console.error('Error transferring part:', error);
+      alert(error.message);
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
   // ฟังก์ชันสำหรับ export ข้อมูล
   const exportToExcel = () => {
     const exportData = filteredParts.map(part => ({
@@ -393,7 +464,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Stock Parts');
-    XLSX.writeFile(wb, `stock-parts-${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `stock - parts - ${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   // ฟังก์ชันสำหรับกำหนดสี stock level
@@ -910,6 +981,17 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                 }}>
                   สถานะ
                 </th>
+                <th style={{
+                  padding: '12px 16px',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151',
+                  borderBottom: '1px solid #e5e7eb',
+                  minWidth: '100px'
+                }}>
+                  กระจายสต๊อก
+                </th>
                 {canEditStock && (
                   <th style={{
                     padding: '12px 16px',
@@ -1027,7 +1109,8 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                       color: part.stock_qty <= part.min_qty ? '#dc2626' :
                         part.stock_qty >= part.max_qty ? '#ea580c' : '#16a34a',
                       border: `1px solid ${part.stock_qty <= part.min_qty ? '#fecaca' :
-                        part.stock_qty >= part.max_qty ? '#fed7aa' : '#bbf7d0'}`
+                        part.stock_qty >= part.max_qty ? '#fed7aa' : '#bbf7d0'
+                        } `
                     }}>
                       {part.stock_qty <= part.min_qty && <span style={{ marginRight: '4px' }}>⚠️</span>}
                       {part.stock_qty > part.min_qty && part.stock_qty < part.max_qty && <span style={{ marginRight: '4px' }}>✅</span>}
@@ -1035,16 +1118,50 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                       {getStockLevelText(part)}
                     </div>
                   </td>
+                  {/* การกระจายสต๊อก */}
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => {
+                        setSelectedPartForAction(part);
+                        setShowBreakdownModal(true);
+                      }}
+                      title="Stock Breakdown"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '8px',
+                        background: '#f3f4f6',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        color: '#4f46e5',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#eef2ff';
+                        e.currentTarget.style.borderColor = '#c7d2fe';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#f3f4f6';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }}
+                    >
+                      <ChartBarIcon style={{ width: '18px', height: '18px' }} />
+                    </button>
+                  </td>
                   {/* การจัดการ */}
                   {canEditStock && (
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
+
                         <button
                           onClick={() => {
-                            setSelectedPartForAction(part);
-                            setShowBreakdownModal(true);
+                            setSelectedPartForHistory(part);
+                            setShowHistoryModal(true);
                           }}
-                          title="Stock Breakdown"
+                          title="Stock History"
                           style={{
                             padding: '8px',
                             background: '#f3f4f6',
@@ -1057,7 +1174,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                           onMouseEnter={(e) => e.currentTarget.style.background = '#e5e7eb'}
                           onMouseLeave={(e) => e.currentTarget.style.background = '#f3f4f6'}
                         >
-                          <ChartBarIcon style={{ width: '16px', height: '16px' }} />
+                          <ClockIcon style={{ width: '16px', height: '16px' }} />
                         </button>
                         <button
                           onClick={() => {
@@ -2241,12 +2358,26 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
           courseMwrMap.get(courseName)!.push(j);
         });
 
+        // 3.5 Aggregate Current Stock
+        const courseInventoryMap = new Map<string, number>();
+        parts.forEach(part => {
+          if (part.inventory) {
+            part.inventory.forEach(inv => {
+              if (inv.golfCourse?.name) {
+                const current = courseInventoryMap.get(inv.golfCourse.name) || 0;
+                courseInventoryMap.set(inv.golfCourse.name, current + inv.quantity);
+              }
+            });
+          }
+        });
+
         // 4. Combine Course Names
         const allCourseNames = Array.from(new Set([
           ...golfCourses.map(gc => gc.name),
           ...Array.from(courseUsageMap.keys()),
-          ...Array.from(courseMwrMap.keys())
-        ])).sort();
+          ...Array.from(courseMwrMap.keys()),
+          ...Array.from(courseInventoryMap.keys())
+        ])).filter(n => n !== 'Unknown Course' && n !== 'ไม่ระบุสนาม').sort();
 
         const filteredCourseNames = stockHubSearch
           ? allCourseNames.filter(n => n.toLowerCase().includes(stockHubSearch.toLowerCase()))
@@ -2292,10 +2423,10 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                     {filteredCourseNames.map(courseName => {
                       const usageLogs = courseUsageMap.get(courseName) || [];
                       const mwrLogs = courseMwrMap.get(courseName) || [];
+                      const currentStock = courseInventoryMap.get(courseName) || 0;
 
                       const totalQty = usageLogs.reduce((s, l) => s + l.quantityUsed, 0);
-                      // const uniqueParts = new Set(usageLogs.map(l => l.partName)).size; // Removed unused
-                      const hasActivity = usageLogs.length > 0 || mwrLogs.length > 0;
+                      const hasActivity = usageLogs.length > 0 || mwrLogs.length > 0 || currentStock > 0;
 
                       return (
                         <div key={courseName} onClick={() => { setSelectedHubCourse(courseName); setStockHubTab('outgoing'); }}
@@ -2320,6 +2451,10 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                                 <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#059669' }}>{mwrLogs.length}</div>
                                 <div style={{ fontSize: '0.625rem', color: '#6b7280' }}>MWR (รับเข้า)</div>
                               </div>
+                              <div style={{ flex: 1, background: '#fff', borderRadius: '10px', padding: '8px 4px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#4f46e5' }}>{currentStock.toLocaleString()}</div>
+                                <div style={{ fontSize: '0.625rem', color: '#6b7280' }}>จำนวนคงเหลือ</div>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -2342,7 +2477,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                     </div>
 
                     {/* Tabs */}
-                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => setStockHubTab('outgoing')}
                         style={{
@@ -2350,7 +2485,8 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                           borderBottom: stockHubTab === 'outgoing' ? '3px solid #7c3aed' : '3px solid transparent',
                           color: stockHubTab === 'outgoing' ? '#7c3aed' : '#6b7280',
                           fontWeight: stockHubTab === 'outgoing' ? 700 : 500,
-                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem'
+                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem',
+                          transition: 'all 0.2s'
                         }}
                       >
                         📤 รายการเบิก (Outgoing)
@@ -2362,10 +2498,24 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                           borderBottom: stockHubTab === 'incoming' ? '3px solid #059669' : '3px solid transparent',
                           color: stockHubTab === 'incoming' ? '#059669' : '#6b7280',
                           fontWeight: stockHubTab === 'incoming' ? 700 : 500,
-                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem'
+                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem',
+                          transition: 'all 0.2s'
                         }}
                       >
                         📥 รับเข้าสต็อก (MWR Incoming)
+                      </button>
+                      <button
+                        onClick={() => setStockHubTab('stock')}
+                        style={{
+                          padding: '10px 16px',
+                          borderBottom: stockHubTab === 'stock' ? '3px solid #4f46e5' : '3px solid transparent',
+                          color: stockHubTab === 'stock' ? '#4f46e5' : '#6b7280',
+                          fontWeight: stockHubTab === 'stock' ? 700 : 500,
+                          background: 'none', cursor: 'pointer', fontSize: '0.9375rem',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        📦 สต็อกคงเหลือ (Stock Breakdown)
                       </button>
                     </div>
 
@@ -2395,7 +2545,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                                       <td style={tdS}><div style={{ fontWeight: 500 }}>{log.partName}</div></td>
                                       <td style={{ ...tdS, textAlign: 'center' }}><span style={{ background: '#ede9fe', color: '#6d28d9', fontWeight: 600, padding: '4px 12px', borderRadius: '20px', fontSize: '0.8125rem' }}>{log.quantityUsed}</span></td>
                                       <td style={tdS}><span style={{ fontWeight: 500 }}>{log.usedBy || '—'}</span></td>
-                                      <td style={tdS}><span style={{ fontFamily: 'monospace', background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8125rem', border: '1px solid #e5e7eb' }}>{relatedJob?.vehicle_number ? `Job: ${relatedJob.vehicle_number}` : (relatedJob?.prrNumber || '—')}</span></td>
+                                      <td style={tdS}><span style={{ fontFamily: 'monospace', background: '#f3f4f6', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8125rem', border: '1px solid #e5e7eb' }}>{relatedJob?.vehicle_number ? `Job: ${relatedJob.vehicle_number} ` : (relatedJob?.prrNumber || '—')}</span></td>
                                       <td style={tdS}><span style={{ color: '#059669', fontWeight: 500 }}>{relatedJob?.approved_by_name || '—'}</span></td>
                                       <td style={tdS}><span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>{log.usedDate ? new Date(log.usedDate).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span></td>
                                     </tr>
@@ -2405,7 +2555,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                             </table>
                           </div>
                         );
-                      } else {
+                      } else if (stockHubTab === 'incoming') {
                         // INCOMING (MWR)
                         const mwrs = courseMwrMap.get(selectedHubCourse) || [];
                         if (mwrs.length === 0) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}><p>ยังไม่มีรายการรับเข้า (MWR) ของสนามนี้</p></div>;
@@ -2451,10 +2601,231 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                             </table>
                           </div>
                         );
+                      } else if (stockHubTab === 'stock') {
+                        // STOCK (CURRENT INVENTORY)
+                        const courseStockParts = parts.reduce((acc, part) => {
+                          const inv = part.inventory?.find(i => i.golfCourse?.name === selectedHubCourse && i.quantity > 0);
+                          if (inv) {
+                            acc.push({ part, quantity: inv.quantity });
+                          }
+                          return acc;
+                        }, [] as { part: Part, quantity: number }[]);
+
+                        if (courseStockParts.length === 0) return <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}><p>ไม่มีอะไหล่คงเหลือในสต็อกของสนามนี้</p></div>;
+
+                        return (
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                              <thead>
+                                <tr style={{ background: '#eef2ff', borderBottom: '2px solid #e0e7ff' }}>
+                                  <th style={thS}>รายการอะไหล่</th>
+                                  <th style={thS}>หมวดหมู่</th>
+                                  <th style={{ ...thS, textAlign: 'center' }}>จำนวนคงเหลือ</th>
+                                  <th style={thS}>หน่วย</th>
+                                  <th style={{ ...thS, textAlign: 'center' }}>โยกย้าย</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {courseStockParts.map((item, idx) => (
+                                  <tr key={item.part.id || idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                                    <td style={tdS}>
+                                      <div style={{ fontWeight: 600, color: '#1f2937' }}>{item.part.name}</div>
+                                      {item.part.part_number && <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>#{item.part.part_number}</div>}
+                                    </td>
+                                    <td style={tdS}><span style={{ color: '#4b5563', fontSize: '0.8125rem' }}>{item.part.category || '—'}</span></td>
+                                    <td style={{ ...tdS, textAlign: 'center' }}>
+                                      <span style={{
+                                        background: item.quantity <= (item.part.min_qty || 0) ? '#fef2f2' : '#eff6ff',
+                                        color: item.quantity <= (item.part.min_qty || 0) ? '#dc2626' : '#4f46e5',
+                                        fontWeight: 700, padding: '4px 12px', borderRadius: '20px', fontSize: '0.875rem',
+                                        border: `1px solid ${item.quantity <= (item.part.min_qty || 0) ? '#fecaca' : '#bfdbfe'} `
+                                      }}>
+                                        {item.quantity.toLocaleString()}
+                                      </span>
+                                    </td>
+                                    <td style={tdS}><span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>{item.part.unit}</span></td>
+                                    <td style={{ ...tdS, textAlign: 'center' }}>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSiteTransferPart(item);
+                                          setSiteTransferFromCourse(selectedHubCourse);
+                                          setSiteTransferQty('');
+                                          setSiteTransferToCourse('');
+                                          setShowSiteTransferModal(true);
+                                        }}
+                                        style={{ padding: '4px 12px', border: '1px solid #c7d2fe', borderRadius: '8px', background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', color: '#4338ca', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, #4f46e5, #4338ca)'; e.currentTarget.style.color = '#fff'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, #eef2ff, #e0e7ff)'; e.currentTarget.style.color = '#4338ca'; }}
+                                      >
+                                        โยกย้าย
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
                       }
                     })()}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* SITE-TO-SITE TRANSFER MODAL                                           */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {showSiteTransferModal && siteTransferPart && (() => {
+        const fromCourseId = golfCourses.find(gc => gc.name === siteTransferFromCourse)?.id;
+        const availableDestinations = golfCourses.filter(gc => gc.name !== siteTransferFromCourse);
+        const maxQty = siteTransferPart.quantity;
+
+        const handleSiteTransfer = async () => {
+          if (!siteTransferToCourse || !siteTransferQty) {
+            alert('กรุณาระบุจำนวนและสนามปลายทางให้ครบถ้วน');
+            return;
+          }
+          const qty = parseInt(siteTransferQty);
+          if (isNaN(qty) || qty <= 0) {
+            alert('จำนวนต้องเป็นตัวเลขที่มากกว่า 0');
+            return;
+          }
+          if (qty > maxQty) {
+            alert(`จำนวนสต็อกไม่เพียงพอ(คงเหลือ: ${maxQty})`);
+            return;
+          }
+
+          setIsSiteTransferring(true);
+          try {
+            const response = await fetch('/api/stock/transfer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                part_id: siteTransferPart.part.id,
+                from_location_id: fromCourseId,
+                to_location_id: siteTransferToCourse,
+                quantity: qty,
+                user_id: user?.id,
+                user_name: user?.name,
+              }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'เกิดข้อผิดพลาดในการโยกย้ายอะไหล่');
+
+            const destName = golfCourses.find(gc => gc.id === siteTransferToCourse)?.name || '';
+            alert(`โยกย้าย ${siteTransferPart.part.name} x ${qty} จาก "${siteTransferFromCourse}" ไป "${destName}" เสร็จสมบูรณ์`);
+            setShowSiteTransferModal(false);
+            setSiteTransferPart(null);
+            if (onPartsUpdate) onPartsUpdate();
+          } catch (error: any) {
+            console.error('Site transfer error:', error);
+            alert(error.message);
+          } finally {
+            setIsSiteTransferring(false);
+          }
+        };
+
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10001, padding: '2rem' }}
+            onClick={() => setShowSiteTransferModal(false)}>
+            <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '520px', boxShadow: '0 25px 80px rgba(0,0,0,0.18)', overflow: 'hidden' }}
+              onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', padding: '1.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '10px', borderRadius: '12px' }}>
+                    <ArrowsRightLeftIcon style={{ width: '24px', height: '24px', color: '#fff' }} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: '#fff' }}>โยกย้ายอะไหล่ระหว่างสนาม</h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)' }}>ย้ายจากสนามหนึ่งไปอีกสนาม</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSiteTransferModal(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '10px', padding: '8px', cursor: 'pointer', color: '#fff' }}>
+                  <XMarkIcon style={{ width: '22px', height: '22px' }} />
+                </button>
+              </div>
+              {/* Body */}
+              <div style={{ padding: '2rem' }}>
+                {/* Part info */}
+                <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: '#1e293b' }}>{siteTransferPart.part.name}</div>
+                      {siteTransferPart.part.part_number && <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>#{siteTransferPart.part.part_number}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4f46e5' }}>{maxQty}</div>
+                      <div style={{ fontSize: '0.6875rem', color: '#6b7280' }}>คงเหลือ ({siteTransferPart.part.unit})</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* From */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>ต้นทาง</label>
+                  <div style={{ padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: '12px', background: '#f9fafb', color: '#6b7280', fontSize: '0.9375rem' }}>
+                    ⛳ {siteTransferFromCourse}
+                  </div>
+                </div>
+
+                {/* To */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>ปลายทาง</label>
+                  <select
+                    value={siteTransferToCourse}
+                    onChange={(e) => setSiteTransferToCourse(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '0.9375rem', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                    onFocus={e => e.currentTarget.style.borderColor = '#4f46e5'}
+                    onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                  >
+                    <option value="">เลือกสนามปลายทาง...</option>
+                    {availableDestinations.map(gc => <option key={gc.id} value={gc.id}>{gc.name}</option>)}
+                  </select>
+                </div>
+
+                {/* Quantity */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>จำนวนที่ต้องการโยกย้าย</label>
+                  <input
+                    type="number"
+                    placeholder="ระบุจำนวน"
+                    min={1}
+                    max={maxQty}
+                    value={siteTransferQty}
+                    onChange={(e) => setSiteTransferQty(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none' }}
+                    onFocus={e => e.currentTarget.style.borderColor = '#4f46e5'}
+                    onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                  />
+                </div>
+              </div>
+              {/* Footer */}
+              <div style={{ padding: '1rem 2rem', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  onClick={() => setShowSiteTransferModal(false)}
+                  style={{ padding: '10px 20px', border: '1px solid #d1d5db', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}
+                >ยกเลิก</button>
+                <button
+                  onClick={handleSiteTransfer}
+                  disabled={isSiteTransferring}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderRadius: '10px',
+                    background: isSiteTransferring ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                    color: '#fff',
+                    cursor: isSiteTransferring ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    boxShadow: isSiteTransferring ? 'none' : '0 4px 12px rgba(79,70,229,0.3)'
+                  }}
+                >{isSiteTransferring ? 'กำลังโยกย้าย...' : 'ยืนยันโยกย้าย'}</button>
               </div>
             </div>
           </div>
@@ -2519,7 +2890,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                         <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1f2937' }}>{inv.golfCourse?.name || 'ไม่ระบุ'}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                           <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #7c3aed)', borderRadius: '3px' }} />
+                            <div style={{ width: `${Math.min(pct, 100)}% `, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #7c3aed)', borderRadius: '3px' }} />
                           </div>
                           <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500, minWidth: '36px' }}>{pct}%</span>
                         </div>
@@ -2572,23 +2943,56 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
             <div style={{ padding: '2rem' }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>จำนวนที่ต้องการย้าย</label>
-                <input type="number" placeholder="ระบุจำนวน" style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none' }}
-                  onFocus={e => e.currentTarget.style.borderColor = '#f97316'} onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'} />
+                <input
+                  type="number"
+                  placeholder="ระบุจำนวน"
+                  value={transferQty}
+                  onChange={(e) => setTransferQty(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none' }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#f97316'}
+                  onBlur={e => e.currentTarget.style.borderColor = '#e5e7eb'}
+                />
               </div>
               <div style={{ marginBottom: '1.5rem' }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>ปลายทาง</label>
-                <select style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none', background: '#fff', cursor: 'pointer' }}>
+                <select
+                  value={transferDestination}
+                  onChange={(e) => setTransferDestination(e.target.value)}
+                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '12px', fontSize: '1rem', outline: 'none', background: '#fff', cursor: 'pointer' }}
+                >
                   <option value="">เลือกสถานที่...</option>
                   {golfCourses.map(gc => <option key={gc.id} value={gc.id}>{gc.name}</option>)}
                 </select>
               </div>
-              <div style={{ padding: '12px 16px', background: '#fff7ed', borderRadius: '12px', border: '1px solid #fed7aa' }}>
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#9a3412', fontWeight: 500 }}>⚠️ ฟีเจอร์นี้กำลังพัฒนา — การย้ายจริงจะเปิดให้ใช้งานเร็วๆ นี้</p>
-              </div>
             </div>
             <div style={{ padding: '1rem 2rem', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button onClick={() => setShowMoveModal(false)} style={{ padding: '10px 20px', border: '1px solid #d1d5db', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}>ยกเลิก</button>
-              <button onClick={() => { alert('ฟีเจอร์นี้กำลังพัฒนา'); setShowMoveModal(false); }} style={{ padding: '10px 20px', border: 'none', borderRadius: '10px', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(249,115,22,0.3)' }}>ย้ายอะไหล่</button>
+              <button
+                onClick={() => {
+                  setShowMoveModal(false);
+                  setTransferQty('');
+                  setTransferDestination('');
+                }}
+                style={{ padding: '10px 20px', border: '1px solid #d1d5db', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', color: '#374151' }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleTransferSubmit}
+                disabled={isTransferring}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '10px',
+                  background: isTransferring ? '#fdba74' : 'linear-gradient(135deg, #f97316, #ea580c)',
+                  color: '#fff',
+                  cursor: isTransferring ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  boxShadow: isTransferring ? 'none' : '0 4px 12px rgba(249,115,22,0.3)'
+                }}
+              >
+                {isTransferring ? 'กำลังย้าย...' : 'ย้ายอะไหล่'}
+              </button>
             </div>
           </div>
         </div>
@@ -2999,6 +3403,21 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
           </div>
         </div>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* STOCK HISTORY MODAL                                                   */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {showHistoryModal && selectedPartForHistory && (
+        <StockHistoryModal
+          part={selectedPartForHistory}
+          golfCourses={golfCourses}
+          onClose={() => {
+            setShowHistoryModal(false);
+            setSelectedPartForHistory(null);
+          }}
+        />
+      )}
+
     </div>
   );
 };
