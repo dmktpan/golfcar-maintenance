@@ -224,8 +224,8 @@ const EditUserModal = ({ isOpen, onClose, user, golfCourses, onSave, currentUser
                             </select>
                         </div>
 
-                        {/* แสดงช่อง password สำหรับ Admin, หัวหน้า และส่วนกลาง */}
-                        {(formData.role === 'admin' || formData.role === 'supervisor' || formData.role === 'central') && (
+                        {/* แสดงช่อง password สำหรับ Admin, หัวหน้า, ส่วนกลาง, ผู้จัดการ, สต๊อก และ ธุรการ */}
+                        {(['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'].includes(formData.role)) && (
                             <div className="form-group">
                                 <label htmlFor="edit-password">
                                     รหัสผ่าน (เว้นว่างหากไม่ต้องการเปลี่ยน)

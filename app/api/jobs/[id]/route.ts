@@ -228,7 +228,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       console.log('Final update data:', finalData);
 
       // Validation หลังจากรวมข้อมูลเดิม - ตรวจสอบเฉพาะฟิลด์ที่สำคัญ
-      if (!finalData.type || !finalData.status || !finalData.vehicle_id) {
+      // PART_REQUEST ไม่จำเป็นต้องมี vehicle_id (เบิกอะไหล่ไม่ผูกกับรถเฉพาะคัน)
+      const isPartRequestJob = finalData.type === 'PART_REQUEST';
+      if (!finalData.type || !finalData.status || (!isPartRequestJob && !finalData.vehicle_id)) {
         console.log('Validation failed - missing critical fields:', {
           type: finalData.type,
           status: finalData.status,

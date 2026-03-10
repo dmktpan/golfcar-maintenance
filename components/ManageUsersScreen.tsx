@@ -585,7 +585,7 @@ const ManageUsersScreen = ({ setView, users, setUsers, golfCourses, user }: Mana
                                 </div>
 
                                 {/* Password Field */}
-                                {(newUser.role === 'admin' || newUser.role === 'supervisor' || newUser.role === 'central') && (
+                                {(['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'].includes(newUser.role)) && (
                                     <div className="form-group">
                                         <label htmlFor="password">รหัสผ่าน</label>
                                         <div className="password-input-wrapper">

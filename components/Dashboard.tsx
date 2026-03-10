@@ -20,14 +20,14 @@ interface DashboardProps {
     onFillJobForm?: (job: Job) => void;
     addPartsUsageLog?: (jobId: string, partsNotes?: string) => void;
     onUpdateStatus?: (jobId: string, status: JobStatus) => void;
-    onOpenPartRequest?: () => void;
+    onOpenPartRequest?: (mode: 'repair' | 'spare') => void;
 }
 
 const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [], parts = [], setJobs, setView, onFillJobForm, addPartsUsageLog, onUpdateStatus, onOpenPartRequest }: DashboardProps) => {
     const [activeTab, setActiveTab] = useState<'assigned' | 'history' | 'parts_stock'>('assigned');
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'assigned' | 'in_progress' | 'completed'>('assigned');
     const [selectedMWR, setSelectedMWR] = useState<Job | null>(null);
-
+    const [showPartRequestDropdown, setShowPartRequestDropdown] = useState(false);
     // ใช้ useMemo เพื่อลด re-calculation
     const filteredJobs = useMemo(() => {
         const getUserJobs = () => {
@@ -153,19 +153,68 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                         >
                             <span className="btn-icon">+</span> สร้างงานใหม่
                         </button>
-                        <button
-                            className={styles.createJobButton}
-                            onClick={() => {
-                                console.log('📦 Request Parts button clicked');
-                                if (onOpenPartRequest) onOpenPartRequest();
-                            }}
-                            style={{ marginBottom: '1rem', background: '#98b8ffff' }}
-                        >
-                            <span className="btn-icon">📦</span>เบิกอะไหล่
-                        </button>
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <button
+                                className={styles.createJobButton}
+                                onClick={() => setShowPartRequestDropdown(prev => !prev)}
+                                onBlur={() => setTimeout(() => setShowPartRequestDropdown(false), 200)}
+                                style={{ marginBottom: '1rem', background: '#98b8ffff' }}
+                            >
+                                <span className="btn-icon">📦</span>เบิกอะไหล่ ▾
+                            </button>
+                            {showPartRequestDropdown && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', left: 0, zIndex: 50,
+                                    background: 'white', borderRadius: '0.5rem', border: '1px solid #e2e8f0',
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)', minWidth: '200px', overflow: 'hidden',
+                                    marginTop: '-0.5rem'
+                                }}>
+                                    <button
+                                        onClick={() => {
+                                            setShowPartRequestDropdown(false);
+                                            if (onOpenPartRequest) onOpenPartRequest('repair');
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%',
+                                            padding: '0.875rem 1rem', border: 'none', background: 'white',
+                                            cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
+                                            borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s'
+                                        }}
+                                        onMouseOver={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                                        onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+                                    >
+                                        <span style={{ fontSize: '1.25rem' }}>🔧</span>
+                                        <div>
+                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>เบิกซ่อม</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ระบุเบอร์รถที่ต้องการซ่อม</div>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowPartRequestDropdown(false);
+                                            if (onOpenPartRequest) onOpenPartRequest('spare');
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%',
+                                            padding: '0.875rem 1rem', border: 'none', background: 'white',
+                                            cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
+                                            transition: 'background 0.15s'
+                                        }}
+                                        onMouseOver={(e) => (e.currentTarget.style.background = '#f0fdf4')}
+                                        onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+                                    >
+                                        <span style={{ fontSize: '1.25rem' }}>📦</span>
+                                        <div>
+                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>สแปร์</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>เบิกสำรองไม่ระบุเบอร์รถ</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </>
                 )}
-                {(user.role === 'supervisor' || user.role === 'admin') && (
+                {(['supervisor', 'admin', 'manager', 'stock', 'clerk', 'central'].includes(user.role)) && (
                     <>
                         <button
                             className={styles.adminButton}

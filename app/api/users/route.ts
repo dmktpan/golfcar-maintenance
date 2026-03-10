@@ -6,7 +6,7 @@ export async function GET() {
   try {
     // ใช้ raw MongoDB operations เพื่อหลีกเลี่ยงปัญหา createdAt null
     let users: any[] = [];
-    
+
     try {
       // ลองใช้ Prisma findMany ก่อน
       users = await prisma.user.findMany({
@@ -16,16 +16,16 @@ export async function GET() {
       });
     } catch (prismaError) {
       console.warn('Prisma findMany failed, using raw MongoDB:', prismaError);
-      
+
       // Fallback ใช้ raw MongoDB operations
       try {
         const result = await prisma.$runCommandRaw({
           find: 'users',
           sort: { createdAt: -1 }
         }) as { cursor?: { firstBatch?: any[] } };
-        
+
         users = result?.cursor?.firstBatch || [];
-        
+
         // แปลง _id เป็น id สำหรับ compatibility
         users = users.map(user => ({
           ...user,
@@ -73,18 +73,18 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    if (!['staff', 'supervisor', 'central', 'admin'].includes(role)) {
+    if (!['staff', 'supervisor', 'central', 'admin', 'manager', 'stock', 'clerk'].includes(role)) {
       return NextResponse.json({
         success: false,
-        message: 'Role must be staff, supervisor, central, or admin'
+        message: 'Role must be staff, supervisor, central, admin, manager, stock, or clerk'
       }, { status: 400 });
     }
 
-    // ตรวจสอบ password สำหรับ admin, supervisor และ central
-    if ((role === 'admin' || role === 'supervisor' || role === 'central') && !password) {
+    // ตรวจสอบ password สำหรับ admin, supervisor, central, manager, stock และ clerk
+    if (['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'].includes(role) && !password) {
       return NextResponse.json({
         success: false,
-        message: 'Password is required for admin, supervisor, and central roles'
+        message: 'Password is required for admin, supervisor, central, manager, stock, and clerk roles'
       }, { status: 400 });
     }
 
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       });
     } catch (prismaError) {
       console.warn('Prisma create failed, using raw MongoDB:', prismaError);
-      
+
       // Fallback ใช้ raw MongoDB operations
       const documentData: any = {
         code: code.trim(),

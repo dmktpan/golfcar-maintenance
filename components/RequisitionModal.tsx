@@ -369,51 +369,96 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
                             <div className="parts-section">
                                 <div className="section-header">
                                     <h3>รายการอะไหล่</h3>
-                                    <span className="item-count">{jobParts.length} รายการ</span>
+                                    <span className="item-count">
+                                        {(job as any).mwrVehicleItems && (job as any).mwrVehicleItems.length > 0
+                                            ? `${(job as any).mwrVehicleItems.length} รายการ`
+                                            : `${jobParts.length} รายการ`
+                                        }
+                                    </span>
                                 </div>
-                                <table className="parts-table">
-                                    <thead>
-                                        <tr>
-                                            <th className="col-no">#</th>
-                                            <th className="col-code">รหัส</th>
-                                            <th className="col-name">รายการ</th>
-                                            <th className="col-qty">จำนวน</th>
-                                            <th className="col-unit">หน่วย</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {jobParts.length > 0 ? jobParts.map((part, index) => {
-                                            const partInfo = parts.find(p => p.id === part.partId);
-                                            return (
-                                                <tr key={part.id}>
-                                                    <td className="col-no">{index + 1}</td>
-                                                    <td className="col-code">{partInfo?.part_number || '-'}</td>
-                                                    <td className="col-name">{part.partName}</td>
-                                                    <td className="col-qty">{part.quantityUsed}</td>
-                                                    <td className="col-unit">{partInfo?.unit || 'ชิ้น'}</td>
-                                                </tr>
-                                            );
-                                        }) : (
+
+                                {/* Multi-vehicle table for PART_REQUEST with mwrVehicleItems */}
+                                {(job as any).mwrVehicleItems && (job as any).mwrVehicleItems.length > 0 ? (
+                                    <table className="parts-table">
+                                        <thead>
                                             <tr>
-                                                <td colSpan={5} className="empty-row">
-                                                    <div className="empty-state">
-                                                        <span>📦</span>
-                                                        <p>ไม่มีรายการอะไหล่</p>
-                                                    </div>
-                                                </td>
+                                                <th className="col-no">ลำดับ</th>
+                                                <th>Serial No.</th>
+                                                <th>เบอร์รถ</th>
+                                                <th>Type</th>
+                                                <th>อะไหล่ที่ใช้</th>
+                                                <th>Part no</th>
+                                                <th className="col-qty">จำนวน</th>
                                             </tr>
-                                        )}
-                                    </tbody>
-                                    {jobParts.length > 0 && (
+                                        </thead>
+                                        <tbody>
+                                            {(job as any).mwrVehicleItems.map((item: any, index: number) => (
+                                                <tr key={item.id || index}>
+                                                    <td className="col-no">{index + 1}</td>
+                                                    <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{item.serial_number}</td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.vehicle_number}</td>
+                                                    <td style={{ textAlign: 'center' }}>{item.vehicle_type || '-'}</td>
+                                                    <td>{item.part_name}</td>
+                                                    <td style={{ textAlign: 'center', fontFamily: 'monospace' }}>{item.part_number || '-'}</td>
+                                                    <td className="col-qty">{item.quantity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colSpan={3} className="total-label">รวมทั้งหมด</td>
-                                                <td className="total-value">{totalItems}</td>
-                                                <td></td>
+                                                <td colSpan={6} className="total-label">รวมทั้งหมด</td>
+                                                <td className="total-value">
+                                                    {(job as any).mwrVehicleItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)}
+                                                </td>
                                             </tr>
                                         </tfoot>
-                                    )}
-                                </table>
+                                    </table>
+                                ) : (
+                                    /* Original simple parts table for non-MWR jobs */
+                                    <table className="parts-table">
+                                        <thead>
+                                            <tr>
+                                                <th className="col-no">#</th>
+                                                <th className="col-code">รหัส</th>
+                                                <th className="col-name">รายการ</th>
+                                                <th className="col-qty">จำนวน</th>
+                                                <th className="col-unit">หน่วย</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {jobParts.length > 0 ? jobParts.map((part, index) => {
+                                                const partInfo = parts.find(p => p.id === part.partId);
+                                                return (
+                                                    <tr key={part.id}>
+                                                        <td className="col-no">{index + 1}</td>
+                                                        <td className="col-code">{partInfo?.part_number || '-'}</td>
+                                                        <td className="col-name">{part.partName}</td>
+                                                        <td className="col-qty">{part.quantityUsed}</td>
+                                                        <td className="col-unit">{partInfo?.unit || 'ชิ้น'}</td>
+                                                    </tr>
+                                                );
+                                            }) : (
+                                                <tr>
+                                                    <td colSpan={5} className="empty-row">
+                                                        <div className="empty-state">
+                                                            <span>📦</span>
+                                                            <p>ไม่มีรายการอะไหล่</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                        {jobParts.length > 0 && (
+                                            <tfoot>
+                                                <tr>
+                                                    <td colSpan={3} className="total-label">รวมทั้งหมด</td>
+                                                    <td className="total-value">{totalItems}</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                )}
                             </div>
 
                             {/* Signatures */}

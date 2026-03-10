@@ -28,6 +28,7 @@ interface PartsUsageLog {
 
 const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [historyTab, setHistoryTab] = useState<'repair' | 'parts'>('repair');
     const [filterVehicle, setFilterVehicle] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [filterGolfCourse, setFilterGolfCourse] = useState('');
@@ -569,6 +570,11 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         );
     };
 
+    // แยก jobs ตาม tab
+    const repairJobs = filteredAndSortedJobs.filter(j => j.type !== 'PART_REQUEST');
+    const partRequestJobs = filteredAndSortedJobs.filter(j => j.type === 'PART_REQUEST');
+    const displayedJobs = historyTab === 'repair' ? repairJobs : partRequestJobs;
+
     return (
         <div className="card">
             <div className="page-header">
@@ -584,54 +590,97 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 </div>
             </div>
 
+            {/* === TAB SELECTOR === */}
+            <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid #e2e8f0', marginBottom: '1rem' }}>
+                <button
+                    onClick={() => setHistoryTab('repair')}
+                    style={{
+                        padding: '0.75rem 1.5rem', border: 'none', cursor: 'pointer',
+                        fontWeight: historyTab === 'repair' ? '700' : '500',
+                        fontSize: '0.95rem',
+                        color: historyTab === 'repair' ? '#1e40af' : '#64748b',
+                        background: 'transparent',
+                        borderBottom: historyTab === 'repair' ? '3px solid #1e40af' : '3px solid transparent',
+                        marginBottom: '-2px', transition: 'all 0.2s'
+                    }}
+                >
+                    🔧 ประวัติการซ่อม
+                    <span style={{
+                        marginLeft: '0.5rem', padding: '0.15rem 0.5rem', borderRadius: '1rem',
+                        fontSize: '0.75rem', fontWeight: '700',
+                        background: historyTab === 'repair' ? '#dbeafe' : '#f1f5f9',
+                        color: historyTab === 'repair' ? '#1e40af' : '#64748b'
+                    }}>{repairJobs.length}</span>
+                </button>
+                <button
+                    onClick={() => setHistoryTab('parts')}
+                    style={{
+                        padding: '0.75rem 1.5rem', border: 'none', cursor: 'pointer',
+                        fontWeight: historyTab === 'parts' ? '700' : '500',
+                        fontSize: '0.95rem',
+                        color: historyTab === 'parts' ? '#166534' : '#64748b',
+                        background: 'transparent',
+                        borderBottom: historyTab === 'parts' ? '3px solid #166534' : '3px solid transparent',
+                        marginBottom: '-2px', transition: 'all 0.2s'
+                    }}
+                >
+                    📦 ประวัติการเบิกอะไหล่
+                    <span style={{
+                        marginLeft: '0.5rem', padding: '0.15rem 0.5rem', borderRadius: '1rem',
+                        fontSize: '0.75rem', fontWeight: '700',
+                        background: historyTab === 'parts' ? '#dcfce7' : '#f1f5f9',
+                        color: historyTab === 'parts' ? '#166534' : '#64748b'
+                    }}>{partRequestJobs.length}</span>
+                </button>
+            </div>
+
             {/* Filter Section */}
-            <div className="filter-section">
-                <div className="search-box">
+            <div className="filter-section" style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+                {/* Row 1: Search */}
+                <div style={{ marginBottom: '0.75rem' }}>
                     <input
                         type="text"
-                        placeholder="ค้นหาตามเบอร์รถ, ชื่อพนักงาน, หมายเหตุ"
+                        placeholder="🔍 ค้นหาตามเบอร์รถ, ชื่อพนักงาน, หมายเหตุ..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{
+                            width: '100%', padding: '0.6rem 0.85rem', border: '1px solid #e2e8f0', borderRadius: '0.5rem',
+                            fontSize: '0.9rem', background: '#fff', outline: 'none', transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#93c5fd'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
                     />
                 </div>
 
-                <div className="filter-controls">
+                {/* Row 2: Dropdown Filters */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div className="filter-group">
                         <label>สนาม:</label>
                         <select value={filterGolfCourse} onChange={(e) => setFilterGolfCourse(e.target.value)}>
                             <option value="">ทั้งหมด</option>
                             {golfCourses.map(course => (
-                                <option key={course.id} value={course.id}>
-                                    {course.name}
-                                </option>
+                                <option key={course.id} value={course.id}>{course.name}</option>
                             ))}
                         </select>
                     </div>
-
                     <div className="filter-group">
                         <label>พนักงาน:</label>
                         <select value={filterUser} onChange={(e) => setFilterUser(e.target.value)}>
                             <option value="">ทั้งหมด</option>
                             {filteredUsers.map(user => (
-                                <option key={user.id} value={user.id.toString()}>
-                                    {user.name} ({user.code})
-                                </option>
+                                <option key={user.id} value={user.id.toString()}>{user.name} ({user.code})</option>
                             ))}
                         </select>
                     </div>
-
                     <div className="filter-group">
                         <label>รถ:</label>
                         <select value={filterVehicle} onChange={(e) => setFilterVehicle(e.target.value)}>
                             <option value="">ทั้งหมด</option>
                             {filteredVehicles.map(vehicle => (
-                                <option key={vehicle.id} value={vehicle.id}>
-                                    {vehicle.vehicle_number} ({vehicle.serial_number})
-                                </option>
+                                <option key={vehicle.id} value={vehicle.id}>{vehicle.vehicle_number} ({vehicle.serial_number})</option>
                             ))}
                         </select>
                     </div>
-
                     <div className="filter-group">
                         <label>สถานะ:</label>
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -641,38 +690,55 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                             <option value="rejected">ไม่อนุมัติ</option>
                         </select>
                     </div>
+                </div>
 
-                    <div className="filter-group">
+                {/* Row 3: Date Range + Clear Button */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem' }}>
+                    <div className="filter-group" style={{ flex: '0 0 auto' }}>
                         <label>ตั้งแต่วันที่:</label>
-                        <input
-                            type="date"
-                            value={filterDateFrom}
-                            onChange={(e) => setFilterDateFrom(e.target.value)}
-                        />
+                        <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
                     </div>
-
-                    <div className="filter-group">
+                    <div className="filter-group" style={{ flex: '0 0 auto' }}>
                         <label>ถึงวันที่:</label>
-                        <input
-                            type="date"
-                            value={filterDateTo}
-                            onChange={(e) => setFilterDateTo(e.target.value)}
-                        />
+                        <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
+                    </div>
+                    <div style={{ marginLeft: 'auto' }}>
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setFilterGolfCourse('');
+                                setFilterUser('');
+                                setFilterVehicle('');
+                                setFilterStatus('');
+                                setFilterDateFrom('');
+                                setFilterDateTo('');
+                            }}
+                            style={{
+                                padding: '0.5rem 1.25rem', border: '1px solid #e2e8f0', borderRadius: '0.5rem',
+                                background: '#fff', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem',
+                                fontWeight: '600', transition: 'all 0.2s', whiteSpace: 'nowrap',
+                                display: 'flex', alignItems: 'center', gap: '0.35rem'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                        >
+                            ✕ ล้างตัวกรอง
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Summary */}
             <div className="summary-section">
-                <p>แสดงผลลัพธ์: <strong>{filteredAndSortedJobs.length}</strong> รายการ จากทั้งหมด <strong>{historyJobs.length}</strong> รายการ</p>
+                <p>แสดงผลลัพธ์: <strong>{displayedJobs.length}</strong> รายการ จากทั้งหมด <strong>{historyTab === 'repair' ? historyJobs.filter(j => j.type !== 'PART_REQUEST').length : historyJobs.filter(j => j.type === 'PART_REQUEST').length}</strong> รายการ</p>
             </div>
 
             {/* Table */}
             <div className="table-container">
-                {filteredAndSortedJobs.length === 0 ? (
+                {displayedJobs.length === 0 ? (
                     <div className="no-data">
-                        <div className="no-data-icon">📋</div>
-                        <h3>ไม่พบข้อมูลประวัติการซ่อมบำรุง</h3>
+                        <div className="no-data-icon">{historyTab === 'repair' ? '📋' : '📦'}</div>
+                        <h3>{historyTab === 'repair' ? 'ไม่พบข้อมูลประวัติการซ่อม' : 'ไม่พบข้อมูลประวัติการเบิกอะไหล่'}</h3>
                         <p>ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
                         <p className="text-muted">ประวัติจะแสดงเมื่องานได้รับการอนุมัติหรือเสร็จสิ้นแล้ว</p>
                     </div>
@@ -681,51 +747,44 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                         <thead>
                             <tr>
                                 <th></th>
-                                <th
-                                    className="sortable"
-                                    onClick={() => handleSort('created_at')}
-                                >
+                                <th className="sortable" onClick={() => handleSort('created_at')}>
                                     วันที่ {getSortIcon('created_at')}
                                 </th>
-                                <th
-                                    className="sortable"
-                                    onClick={() => handleSort('vehicle_number')}
-                                >
-                                    เบอร์รถ {getSortIcon('vehicle_number')}
-                                </th>
-                                <th>Serial รถ</th>
-                                <th>สนาม</th>
-                                <th
-                                    className="sortable"
-                                    onClick={() => handleSort('type')}
-                                >
-                                    ประเภท {getSortIcon('type')}
-                                </th>
-                                <th>ระบบ</th>
-                                <th>อะไหล่ที่ใช้</th>
-                                <th>ผู้ดำเนินการ</th>
-                                <th>ผู้อนุมัติ</th>
-                                <th
-                                    className="sortable"
-                                    onClick={() => handleSort('status')}
-                                >
+                                {historyTab === 'repair' ? (
+                                    <>
+                                        <th className="sortable" onClick={() => handleSort('vehicle_number')}>
+                                            เบอร์รถ {getSortIcon('vehicle_number')}
+                                        </th>
+                                        <th>Serial รถ</th>
+                                        <th>สนาม</th>
+                                        <th className="sortable" onClick={() => handleSort('type')}>
+                                            ประเภท {getSortIcon('type')}
+                                        </th>
+                                        <th>ระบบ</th>
+                                        <th>อะไหล่ที่ใช้</th>
+                                        <th>ผู้ดำเนินการ</th>
+                                        <th>ผู้อนุมัติ</th>
+                                    </>
+                                ) : (
+                                    <>
+                                        <th>MWR Code</th>
+                                        <th>สนามปลายทาง</th>
+                                        <th>ประเภท</th>
+                                        <th>รายการอะไหล่</th>
+                                        <th>ความเร่งด่วน</th>
+                                        <th>ผู้ขอเบิก</th>
+                                        <th>ผู้อนุมัติ</th>
+                                    </>
+                                )}
+                                <th className="sortable" onClick={() => handleSort('status')}>
                                     สถานะ {getSortIcon('status')}
                                 </th>
                                 <th>การจัดการ</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAndSortedJobs.map(job => (
+                            {displayedJobs.map(job => (
                                 <React.Fragment key={job.id}>
-                                    {/* Debug logging */}
-                                    {job.status === 'approved' && !job.approved_by_name && (() => {
-                                        console.log('⚠️ Job approved but missing approver info:', {
-                                            id: job.id,
-                                            vehicle: job.vehicle_number
-                                        });
-                                        return null;
-                                    })()}
-
                                     <tr className="main-row">
                                         <td>
                                             <button
@@ -736,34 +795,56 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                             </button>
                                         </td>
                                         <td>{formatDate((job as any).createdAt || job.created_at)}</td>
-                                        <td className="vehicle-number">{job.vehicle_number}</td>
-                                        <td>{job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'}</td>
-                                        <td>{getGolfCourseName(job.golf_course_id)}</td>
-                                        <td>
-                                            <span className={`job-type ${job.type.toLowerCase()}`}>
-                                                {job.type}
-                                            </span>
-                                        </td>
-                                        <td>{job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}</td>
-                                        <td className="parts-summary">
-                                            {(() => {
-                                                const jobParts = partsData.get(job.id) || [];
-                                                if (jobParts.length > 0) {
-                                                    return (
-                                                        <button
-                                                            className="parts-button"
-                                                            onClick={() => openPartsModal(job.id)}
-                                                        >
-                                                            🔧 {jobParts.length} รายการ
-                                                        </button>
-                                                    );
-                                                } else {
-                                                    return <span className="no-parts">-</span>;
-                                                }
-                                            })()}
-                                        </td>
-                                        <td>{job.userName}</td>
-                                        <td>{job.approved_by_name || '-'}</td>
+                                        {historyTab === 'repair' ? (
+                                            <>
+                                                <td className="vehicle-number">{job.vehicle_number}</td>
+                                                <td>{job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'}</td>
+                                                <td>{getGolfCourseName(job.golf_course_id)}</td>
+                                                <td>
+                                                    <span className={`job-type ${job.type.toLowerCase()}`}>
+                                                        {job.type}
+                                                    </span>
+                                                </td>
+                                                <td>{job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}</td>
+                                                <td className="parts-summary">
+                                                    {(() => {
+                                                        const jobParts = partsData.get(job.id) || [];
+                                                        if (jobParts.length > 0) {
+                                                            return (
+                                                                <button className="parts-button" onClick={() => openPartsModal(job.id)}>
+                                                                    🔧 {jobParts.length} รายการ
+                                                                </button>
+                                                            );
+                                                        } else {
+                                                            return <span className="no-parts">-</span>;
+                                                        }
+                                                    })()}
+                                                </td>
+                                                <td>{job.userName}</td>
+                                                <td>{job.approved_by_name || '-'}</td>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <td style={{ fontWeight: '600', color: '#2563eb' }}>{(job as any).mwr_code || '-'}</td>
+                                                <td>{getGolfCourseName(job.golf_course_id)}</td>
+                                                <td>
+                                                    <span style={{
+                                                        padding: '0.2rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600',
+                                                        background: job.system === 'spare_request' ? '#dcfce7' : '#dbeafe',
+                                                        color: job.system === 'spare_request' ? '#166534' : '#1e40af'
+                                                    }}>
+                                                        {job.system === 'spare_request' ? '📦 สแปร์' : '🔧 เบิกซ่อม'}
+                                                    </span>
+                                                </td>
+                                                <td>{job.parts?.length || 0} รายการ</td>
+                                                <td>
+                                                    {job.remarks?.includes('เร่งด่วนมาก') ? '🚨 มาก' :
+                                                        job.remarks?.includes('เร่งด่วน') ? '⚠️ ด่วน' : 'ปกติ'}
+                                                </td>
+                                                <td>{job.userName}</td>
+                                                <td>{job.approved_by_name || '-'}</td>
+                                            </>
+                                        )}
                                         <td>
                                             <StatusBadge status={job.status} />
                                         </td>

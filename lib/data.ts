@@ -123,12 +123,25 @@ export interface Job {
   approved_by_name?: string;
   approved_at?: string;
   rejection_reason?: string;
+  mwrVehicleItems?: MwrVehicleItem[]; // เฉพาะ PART_REQUEST: รายละเอียดรถ+อะไหล่
 }
 
 export interface SelectedPart {
   part_id: string;
   quantity_used: number;
   part_name: string;
+}
+
+export interface MwrVehicleItem {
+  id?: string;
+  vehicle_id: string;
+  vehicle_number: string;
+  serial_number: string;
+  vehicle_type?: string; // brand/model
+  part_id: string;
+  part_name: string;
+  part_number?: string;
+  quantity: number;
 }
 
 // Mock Data - เริ่มต้นด้วยอาร์เรย์ว่าง

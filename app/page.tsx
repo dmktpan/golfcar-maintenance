@@ -49,6 +49,7 @@ export default function HomePage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [selectedJobForForm, setSelectedJobForForm] = useState<Job | null>(null);
   const [isPartRequestModalOpen, setIsPartRequestModalOpen] = useState(false);
+  const [partRequestMode, setPartRequestMode] = useState<'repair' | 'spare'>('repair');
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
@@ -1286,8 +1287,9 @@ export default function HomePage() {
             partsUsageLog={partsUsageLog}
             parts={parts}
             onUpdateStatus={onUpdateStatus}
-            onOpenPartRequest={() => {
-              console.log('🔓 Opening Part Request Modal');
+            onOpenPartRequest={(mode: 'repair' | 'spare') => {
+              console.log('🔓 Opening Part Request Modal - mode:', mode);
+              setPartRequestMode(mode);
               setIsPartRequestModalOpen(true);
             }}
           />
@@ -1458,6 +1460,8 @@ export default function HomePage() {
         user={user}
         onJobCreate={handleCreateJob}
         golfCourses={golfCourses}
+        vehicles={vehicles}
+        requestMode={partRequestMode}
       />
     </div>
   );

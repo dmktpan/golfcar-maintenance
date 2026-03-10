@@ -100,6 +100,7 @@ model Job {
   mwr_code           String?   // @unique removed to allow nulls in legacy data. App logic will enforce uniqueness.
   prrNumber          String?   // ลบ @unique เนื่องจากมี null values หลายตัว
   parts              JobPart[]
+  mwrVehicleItems    MwrVehicleItem[]  // เฉพาะ PART_REQUEST: รายละเอียดรถ+อะไหล่
   images             String[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -161,6 +162,20 @@ model JobPart {
   // Relations
   job            Job    @relation(fields: [jobId], references: [id])
   jobId          String @db.ObjectId
+}
+
+model MwrVehicleItem {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  job             Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId           String  @db.ObjectId
+  vehicle_id      String  @db.ObjectId
+  vehicle_number  String
+  serial_number   String
+  vehicle_type    String? // brand/model
+  part_id         String
+  part_name       String
+  part_number     String?
+  quantity        Int     @default(1)
 }
 
 model PartsUsageLog {

@@ -53,8 +53,9 @@ export async function GET() {
   try {
     const jobs = await prisma.job.findMany({
       include: {
-        parts: true
-      },
+        parts: true,
+        mwrVehicleItems: true
+      } as any,
       orderBy: {
         createdAt: 'desc'
       }
@@ -100,7 +101,8 @@ export async function POST(request: Request) {
       assigned_to,
       parts,
       partsNotes,
-      images
+      images,
+      mwrVehicleItems
     } = body;
 
     // Validation
@@ -173,14 +175,31 @@ export async function POST(request: Request) {
       };
     }
 
+    // เพิ่ม mwrVehicleItems relation สำหรับ PART_REQUEST
+    if (type === 'PART_REQUEST' && mwrVehicleItems && Array.isArray(mwrVehicleItems) && mwrVehicleItems.length > 0) {
+      jobData.mwrVehicleItems = {
+        create: mwrVehicleItems.map((item: any) => ({
+          vehicle_id: item.vehicle_id,
+          vehicle_number: item.vehicle_number || '',
+          serial_number: item.serial_number || '',
+          vehicle_type: item.vehicle_type || null,
+          part_id: item.part_id,
+          part_name: item.part_name || '',
+          part_number: item.part_number || null,
+          quantity: item.quantity || 1
+        }))
+      };
+    }
+
     // ใช้ transaction เพื่อสร้างงานและบันทึก Serial History
     const job = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // สร้างงานใหม่
       const newJob = await tx.job.create({
         data: jobData,
         include: {
-          parts: true
-        }
+          parts: true,
+          mwrVehicleItems: true
+        } as any
       });
 
       // ดึงข้อมูลรถเพื่อใช้ใน Serial History (ถ้ามี vehicle_id)

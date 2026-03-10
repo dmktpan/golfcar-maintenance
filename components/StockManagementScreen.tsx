@@ -316,7 +316,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     setLoading(true);
 
     try {
-      const response = await fetch(`/ api / parts / ${editingPart.id} `, {
+      const response = await fetch(`/api/parts/${editingPart.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     setLoading(true);
 
     try {
-      const response = await fetch(`/ api / parts / ${partId} `, {
+      const response = await fetch(`/api/parts/${partId}`, {
         method: 'DELETE',
       });
 
