@@ -722,12 +722,67 @@ function SupervisorPendingJobsScreen({
                                         jobId: selectedJobForDetails.id,
                                         parts: selectedJobForDetails.parts,
                                         parts_used: (selectedJobForDetails as any).parts_used,
-                                        partsNotes: selectedJobForDetails.partsNotes
+                                        partsNotes: selectedJobForDetails.partsNotes,
+                                        mwrVehicleItems: selectedJobForDetails.mwrVehicleItems
                                     });
 
-                                    // สำหรับงาน pending: ลำดับความสำคัญ job.parts > job.parts_used
-                                    // เพราะ job.parts คือข้อมูลอะไหล่ที่เลือกตอนสร้างงาน
-                                    // ส่วน parts_used จะมีข้อมูลหลังจาก approve แล้วเท่านั้น
+                                    // ตรวจสอบว่าเป็นการเบิกซ่อมที่มี mwrVehicleItems หรือไม่ (แยกคัน)
+                                    const hasMwrItems = selectedJobForDetails.type === 'PART_REQUEST' && 
+                                                        selectedJobForDetails.mwrVehicleItems && 
+                                                        selectedJobForDetails.mwrVehicleItems.length > 0;
+
+                                    if (hasMwrItems) {
+                                        // แสดงเป็นแบบตาราง
+                                        const mwrItems = selectedJobForDetails.mwrVehicleItems || [];
+                                        const totalQty = mwrItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+                                        return (
+                                            <div className={styles.detailsSection}>
+                                                <h4>รายการอะไหล่ ({mwrItems.length} รายการ • {totalQty} ชิ้น)</h4>
+                                                <div style={{ overflowX: 'auto', marginTop: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                                    <table style={{ minWidth: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                                                        <thead style={{ background: '#f8fafc', color: '#475569', borderBottom: '2px solid #e2e8f0' }}>
+                                                            <tr>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600', width: '60px', textAlign: 'center' }}>ลำดับ</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600' }}>Serial No.</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600' }}>เบอร์รถ</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600' }}>Type</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600' }}>อะไหล่ที่ใช้</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600' }}>Part no</th>
+                                                                <th style={{ padding: '12px 16px', fontWeight: '600', textAlign: 'center' }}>จำนวน</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody style={{ color: '#334155' }}>
+                                                            {mwrItems.map((item, index) => (
+                                                                <tr key={item.id || index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                    <td style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
+                                                                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0f172a' }}>{item.serial_number || '-'}</td>
+                                                                    <td style={{ padding: '12px 16px' }}>{item.vehicle_number || '-'}</td>
+                                                                    <td style={{ padding: '12px 16px', color: '#64748b' }}>{item.vehicle_type || 'ไม่ระบุ'}</td>
+                                                                    <td style={{ padding: '12px 16px', fontWeight: '500' }}>{item.part_name}</td>
+                                                                    <td style={{ padding: '12px 16px', fontFamily: 'monospace' }}>{item.part_number || '-'}</td>
+                                                                    <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '600', color: '#0f172a' }}>{item.quantity}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                        <tfoot style={{ background: '#f1f5f9', fontWeight: '600' }}>
+                                                            <tr>
+                                                                <td colSpan={6} style={{ padding: '12px 16px', textAlign: 'right', color: '#475569' }}>รวมทั้งหมด</td>
+                                                                <td style={{ padding: '12px 16px', textAlign: 'center', color: '#0f172a', fontSize: '1rem' }}>{totalQty}</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                                {selectedJobForDetails.partsNotes && (
+                                                    <div className={styles.partsNotes} style={{ marginTop: '1rem' }}>
+                                                        <strong>หมายเหตุอะไหล่:</strong> {selectedJobForDetails.partsNotes}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    // fallback: การเบิกสแปร์ หรือ งานซ่อมธรรมดา
                                     if (selectedJobForDetails.parts && selectedJobForDetails.parts.length > 0) {
                                         partsToDisplay = selectedJobForDetails.parts.map((part: any) => ({
                                             part_name: part.part_name,
@@ -736,7 +791,6 @@ function SupervisorPendingJobsScreen({
                                             source: 'parts'
                                         }));
                                     } else if ((selectedJobForDetails as any).parts_used && (selectedJobForDetails as any).parts_used.length > 0) {
-                                        // แปลง parts_used string array เป็น object format (สำหรับกรณีที่มีข้อมูลเก่า)
                                         partsToDisplay = (selectedJobForDetails as any).parts_used.map((partString: string, index: number) => ({
                                             part_name: partString,
                                             quantity_used: 1,
@@ -747,7 +801,7 @@ function SupervisorPendingJobsScreen({
 
                                     return partsToDisplay.length > 0 ? (
                                         <div className={styles.detailsSection}>
-                                            <h4>อะไหล่ที่ใช้</h4>
+                                            <h4>อะไหล่ที่ใช้ (เบิกสแปร์/หน้างาน)</h4>
                                             <div className={styles.partsList}>
                                                 {partsToDisplay.map((part: any, index: number) => (
                                                     <div key={`part-${index}-${part.part_name?.slice(0, 10) || part.id}`} className={styles.partItem}>
@@ -770,11 +824,6 @@ function SupervisorPendingJobsScreen({
                                             <h4>อะไหล่ที่ใช้</h4>
                                             <div className={styles.noPartsMessage}>
                                                 ไม่มีข้อมูลอะไหล่ที่เลือก
-                                                <br />
-                                                <small>
-                                                    Debug: job.parts = {selectedJobForDetails.parts?.length || 0} รายการ,
-                                                    parts_used = {(selectedJobForDetails as any).parts_used?.length || 0} รายการ
-                                                </small>
                                             </div>
                                             {selectedJobForDetails.partsNotes && (
                                                 <div className={styles.partsNotes}>
