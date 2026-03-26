@@ -77,23 +77,19 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
     useEffect(() => {
         if (user.role !== 'admin') return; // ถ้าไม่ใช่ admin ไม่ต้องทำอะไร
 
-        const admins = users.filter(user =>
-            user.role === 'admin' || user.role === 'supervisor'
-        );
-
-        let filtered = admins;
+        let filtered = users.filter(u => u.is_active !== false);
 
         // กรองตามคำค้นหา
         if (searchTerm) {
-            filtered = filtered.filter(user =>
-                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.code.toLowerCase().includes(searchTerm.toLowerCase())
+            filtered = filtered.filter(u =>
+                u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.code.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
         // กรองตามบทบาท
         if (selectedRole !== 'all') {
-            filtered = filtered.filter(user => user.role === selectedRole);
+            filtered = filtered.filter(u => u.role === selectedRole);
         }
 
         setFilteredUsers(filtered);
@@ -220,8 +216,13 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                             onChange={(e) => setSelectedRole(e.target.value as UserRole | 'all')}
                         >
                             <option value="all">ทั้งหมด</option>
-                            <option value="admin">ผู้ดูแลระบบ</option>
+                            <option value="staff">พนักงานทั่วไป</option>
                             <option value="supervisor">หัวหน้างาน</option>
+                            <option value="manager">ผู้จัดการ</option>
+                            <option value="stock">สต๊อก</option>
+                            <option value="clerk">ธุรการ</option>
+                            <option value="central">ส่วนกลาง</option>
+                            <option value="admin">ผู้ดูแลระบบ</option>
                         </select>
                     </div>
                 </div>
@@ -249,7 +250,12 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                             value={user.role}
                                             onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
                                         >
+                                            <option value="staff">พนักงานทั่วไป</option>
                                             <option value="supervisor">หัวหน้างาน</option>
+                                            <option value="manager">ผู้จัดการ</option>
+                                            <option value="stock">สต๊อก</option>
+                                            <option value="clerk">ธุรการ</option>
+                                            <option value="central">ส่วนกลาง</option>
                                             <option value="admin">ผู้ดูแลระบบ</option>
                                         </select>
                                     </td>
@@ -266,7 +272,7 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={5} className="no-data">ไม่พบข้อมูลผู้ดูแลระบบ</td>
+                                <td colSpan={5} className="no-data">ไม่พบข้อมูลผู้ใช้งาน</td>
                             </tr>
                         )}
                     </tbody>
@@ -305,7 +311,14 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                                     🔐 จัดการสิทธิ์สำหรับ: {selectedUser.name}
                                 </h2>
                                 <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
-                                    ตำแหน่ง: {selectedUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 'หัวหน้างาน'}
+                                    ตำแหน่ง: {
+                                        selectedUser.role === 'admin' ? 'ผู้ดูแลระบบ' : 
+                                        selectedUser.role === 'supervisor' ? 'หัวหน้างาน' : 
+                                        selectedUser.role === 'manager' ? 'ผู้จัดการ' :
+                                        selectedUser.role === 'stock' ? 'สต๊อก' :
+                                        selectedUser.role === 'clerk' ? 'ธุรการ' :
+                                        selectedUser.role === 'central' ? 'ส่วนกลาง' : 'พนักงานทั่วไป'
+                                    }
                                 </p>
                             </div>
                             <button

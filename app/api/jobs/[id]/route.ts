@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
 import { isValidObjectId } from '@/lib/utils/validation';
-import { approvePartRequest, consumeStockForJob, StockError } from '@/lib/stock';
+import { approvePartRequest, consumeStockForJob } from '@/lib/stock';
 
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
@@ -345,7 +345,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           if (vehicle) {
             const actionDescription = updatedJob.status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
 
-            const serialHistoryEntry = await tx.serialHistoryEntry.create({
+            await tx.serialHistoryEntry.create({
               data: {
                 serial_number: vehicle.serial_number,
                 vehicle_number: updatedJob.vehicle_number || vehicle.vehicle_number,
@@ -390,6 +390,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
           parts: true
         }
       });
+    }, {
+      maxWait: 5000,
+      timeout: 20000,
     });
 
     return NextResponse.json({

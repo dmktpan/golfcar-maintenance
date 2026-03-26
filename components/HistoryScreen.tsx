@@ -31,6 +31,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const [historyTab, setHistoryTab] = useState<'repair' | 'parts'>('repair');
     const [filterVehicle, setFilterVehicle] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    const [filterType, setFilterType] = useState('');
     const [filterGolfCourse, setFilterGolfCourse] = useState('');
     const [filterUser, setFilterUser] = useState('');
     const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -154,6 +155,9 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
             // Status filter
             const statusMatch = filterStatus === '' || job.status === filterStatus;
 
+            // Type filter
+            const typeMatch = filterType === '' || job.type === filterType;
+
             // Golf Course filter
             const golfCourseMatch = filterGolfCourse === '' || filterGolfCourse === null || filterGolfCourse === undefined || job.golf_course_id === filterGolfCourse;
 
@@ -169,7 +173,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 (!fromDate || jobDate >= fromDate) &&
                 (!toDate || jobDate <= toDate);
 
-            return searchMatch && vehicleMatch && statusMatch && golfCourseMatch && userMatch && dateMatch;
+            return searchMatch && vehicleMatch && statusMatch && typeMatch && golfCourseMatch && userMatch && dateMatch;
         });
 
         // Sort the filtered results
@@ -206,7 +210,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         });
 
         return filtered;
-    }, [historyJobs, searchTerm, filterVehicle, filterStatus, filterGolfCourse, filterUser, filterDateFrom, filterDateTo, sortField, sortDirection]);
+    }, [historyJobs, searchTerm, filterVehicle, filterStatus, filterType, filterGolfCourse, filterUser, filterDateFrom, filterDateTo, sortField, sortDirection]);
 
     // ปรับปรุงฟังก์ชัน getPartName ให้ใช้ part_name ที่บันทึกไว้เป็นหลัก
     const getPartName = (part: { part_id: string; part_name?: string }) => {
@@ -653,7 +657,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 </div>
 
                 {/* Row 2: Dropdown Filters */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div className="filter-group">
                         <label>สนาม:</label>
                         <select value={filterGolfCourse} onChange={(e) => setFilterGolfCourse(e.target.value)}>
@@ -679,6 +683,15 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                             {filteredVehicles.map(vehicle => (
                                 <option key={vehicle.id} value={vehicle.id}>{vehicle.vehicle_number} ({vehicle.serial_number})</option>
                             ))}
+                        </select>
+                    </div>
+                    <div className="filter-group">
+                        <label>ประเภทงาน:</label>
+                        <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                            <option value="">ทั้งหมด</option>
+                            <option value="PM">PM (บำรุงรักษาเชิงป้องกัน)</option>
+                            <option value="BM">BM (ซ่อมด่วน)</option>
+                            <option value="Recondition">Recondition (ปรับสภาพ)</option>
                         </select>
                     </div>
                     <div className="filter-group">
@@ -710,6 +723,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                 setFilterUser('');
                                 setFilterVehicle('');
                                 setFilterStatus('');
+                                setFilterType('');
                                 setFilterDateFrom('');
                                 setFilterDateTo('');
                             }}

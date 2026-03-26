@@ -258,6 +258,9 @@ export async function POST(request: Request) {
       }
 
       return newJob;
+    }, {
+      maxWait: 5000,
+      timeout: 20000,
     });
 
     // --- Notification Logic ---
@@ -508,6 +511,9 @@ export async function PUT(request: Request) {
       }
 
       return updatedJob;
+    }, {
+      maxWait: 5000,
+      timeout: 20000,
     });
 
     return NextResponse.json({
