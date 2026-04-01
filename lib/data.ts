@@ -20,6 +20,7 @@ export type View =
   | 'view_assigned_jobs'
   | 'supervisor_pending_jobs'
   | 'create_part_request'
+  | 'agreements_management'
   | 'profile';
 export type JobType = 'PM' | 'BM' | 'Recondition' | 'PART_REQUEST';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
@@ -45,8 +46,27 @@ export interface User {
 export interface GolfCourse {
   id: string;
   name: string;
+  code?: string | null;
   location: string;
+  isActive?: boolean;
   created_at: string;
+}
+
+export interface Agreement {
+  id: string;
+  agreement_number: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  golf_course_id: string;
+  golfCourse?: {
+    id: string;
+    name: string;
+    code: string | null;
+  };
+  _count?: {
+    vehicles: number;
+  };
 }
 
 export interface Vehicle {
@@ -59,6 +79,7 @@ export interface Vehicle {
   battery_serial?: string; // เพิ่มฟิลด์สำหรับซีเรียลแบตเตอรี่
   golf_course_id: string;
   golf_course_name: string;
+  agreement_id?: string | null;
   status: 'active' | 'ready' | 'maintenance' | 'retired';
   created_at: string;
   transfer_date?: string; // เพิ่มฟิลด์สำหรับวันที่ย้าย

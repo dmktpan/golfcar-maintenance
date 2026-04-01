@@ -13,16 +13,19 @@ datasource db {
 
 model GolfCourse {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  code      String?   // รหัสสนาม (unique check handled in API to avoid MongoDB null dup key issue)
   name      String    @unique
   location  String?
+  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   // Relations
-  users     User[]
-  vehicles  Vehicle[]
-  jobs      Job[]
-  parts     Part[]
+  users      User[]
+  vehicles   Vehicle[]
+  jobs       Job[]
+  parts      Part[]
+  agreements Agreement[]
   
   inventory Inventory[]
 }
@@ -81,8 +84,27 @@ model Vehicle {
   golf_course_id   String     @db.ObjectId
   golf_course_name String // Denormalized field for convenience
 
+  agreement        Agreement? @relation(fields: [agreement_id], references: [id])
+  agreement_id     String?    @db.ObjectId
+
   jobs             Job[]
   historyLogs      SerialHistoryEntry[]
+}
+
+model Agreement {
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  agreement_number String     @unique // เลขที่สัญญา
+  startDate        DateTime
+  endDate          DateTime
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relations
+  golfCourse     GolfCourse @relation(fields: [golf_course_id], references: [id])
+  golf_course_id String     @db.ObjectId
+
+  vehicles         Vehicle[]
 }
 
 model Job {
@@ -222,6 +244,12 @@ model SerialHistoryEntry {
 
   related_job          Job?       @relation(fields: [related_job_id], references: [id])
   related_job_id       String?    @db.ObjectId
+
+  // Indexes สำหรับ cursor pagination & filter performance
+  @@index([action_date(sort: Desc)])
+  @@index([serial_number, action_date(sort: Desc)])
+  @@index([action_type, action_date(sort: Desc)])
+  @@index([vehicle_id, action_date(sort: Desc)])
 }
 
 
@@ -280,6 +308,7 @@ enum ActionType {
   decommission
   inspection
   status_change
+  agreement_change
   data_edit
   data_delete
   bulk_transfer

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             location: true
           }
         },
+        agreement: true,
         jobs: {
           include: {
             parts: true,
@@ -110,6 +111,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       status, 
       golf_course_id, 
       golf_course_name,
+      agreement_id,
+      remove_agreement,
       transfer_date,
       user_id // สำหรับบันทึก Serial History
     } = body;
@@ -154,6 +157,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
+    let final_golf_course_id = golf_course_id;
+    let final_golf_course_name = golf_course_name;
+
+    if (agreement_id && !remove_agreement) {
+      const agreement = await prisma.agreement.findUnique({
+        where: { id: agreement_id },
+        include: { golfCourse: true }
+      });
+      if (agreement) {
+        final_golf_course_id = agreement.golf_course_id;
+        final_golf_course_name = agreement.golfCourse.name;
+      }
+    }
+
     // เตรียมข้อมูลสำหรับอัพเดท
     const updateData: any = {};
     
@@ -164,8 +181,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (year !== undefined) updateData.year = year ? parseInt(year) : null;
     if (battery_serial !== undefined) updateData.battery_serial = battery_serial?.trim();
     if (status !== undefined) updateData.status = status;
-    if (golf_course_id !== undefined) updateData.golf_course_id = golf_course_id;
-    if (golf_course_name !== undefined) updateData.golf_course_name = golf_course_name.trim();
+    if (final_golf_course_id !== undefined) updateData.golf_course_id = final_golf_course_id;
+    if (final_golf_course_name !== undefined) updateData.golf_course_name = final_golf_course_name.trim();
+    if (agreement_id !== undefined && !remove_agreement) updateData.agreement_id = agreement_id;
+    if (remove_agreement) updateData.agreement_id = null;
     if (transfer_date !== undefined) updateData.transfer_date = transfer_date ? new Date(transfer_date) : null;
 
     // ใช้ transaction เพื่ออัพเดทรถและบันทึก Serial History
@@ -203,6 +222,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
         if (battery_serial && battery_serial !== existingVehicle.battery_serial) {
           changes.push(`เปลี่ยนหมายเลขแบตเตอรี่จาก ${existingVehicle.battery_serial || 'ไม่มี'} เป็น ${battery_serial}`);
+        }
+
+        if (agreement_id && agreement_id !== existingVehicle.agreement_id && !remove_agreement) {
+          changes.push(`เปลี่ยนสัญญาเข่า`);
+        }
+
+        if (remove_agreement && existingVehicle.agreement_id) {
+          changes.push(`ถอดสัญญาเช่าออก`);
         }
 
         if (changes.length > 0) {

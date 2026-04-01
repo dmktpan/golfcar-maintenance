@@ -63,13 +63,25 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, location } = body;
+    const { name, location, code, isActive } = body;
 
     if (!name) {
       return NextResponse.json({
         success: false,
         message: 'Golf course name is required'
       }, { status: 400 });
+    }
+
+    if (code) {
+      const existingCode = await prisma.golfCourse.findFirst({
+        where: { code: code.trim() }
+      });
+      if (existingCode) {
+        return NextResponse.json({
+          success: false,
+          message: 'รหัสสนามนี้มีอยู่แล้วในระบบ'
+        }, { status: 400 });
+      }
     }
 
     let golfCourse: any;
@@ -80,7 +92,9 @@ export async function POST(request: Request) {
       golfCourse = await prisma.golfCourse.create({
         data: {
           name: name.trim(),
-          location: location ? location.trim() : null
+          location: location ? location.trim() : null,
+          code: code ? code.trim() : null,
+          isActive: isActive !== undefined ? isActive : true
         }
       });
     } catch (prismaError) {
@@ -92,6 +106,8 @@ export async function POST(request: Request) {
         documents: [{
           name: name.trim(),
           location: location ? location.trim() : null,
+          code: code ? code.trim() : null,
+          isActive: isActive !== undefined ? isActive : true,
           createdAt: currentTime,
           updatedAt: currentTime
         }]
@@ -101,6 +117,8 @@ export async function POST(request: Request) {
         golfCourse = {
           name: name.trim(),
           location: location ? location.trim() : null,
+          code: code ? code.trim() : null,
+          isActive: isActive !== undefined ? isActive : true,
           createdAt: currentTime,
           updatedAt: currentTime
         };

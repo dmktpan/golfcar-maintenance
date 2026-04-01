@@ -285,9 +285,38 @@ export const localReportsApi = {
   }
 };
 
-// Serial History API
+// Serial History API — Cursor-based Pagination
+export interface SerialHistoryFilters {
+  cursor?: string | null;
+  limit?: number;
+  search?: string;
+  vehicleNumber?: string;
+  actionType?: string;
+  golfCourseId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  showInactive?: boolean;
+}
+
 export const serialHistoryApi = {
-  getAll: () => apiCall('/serial-history'),
+  // Paginated fetch with filters
+  getPage: (filters: SerialHistoryFilters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.cursor) params.set('cursor', filters.cursor);
+    if (filters.limit) params.set('limit', String(filters.limit));
+    if (filters.search) params.set('search', filters.search);
+    if (filters.vehicleNumber) params.set('vehicleNumber', filters.vehicleNumber);
+    if (filters.actionType) params.set('actionType', filters.actionType);
+    if (filters.golfCourseId) params.set('golfCourseId', filters.golfCourseId);
+    if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+    if (filters.dateTo) params.set('dateTo', filters.dateTo);
+    if (filters.showInactive === false) params.set('showInactive', 'false');
+
+    const queryString = params.toString();
+    return apiCall(`/serial-history${queryString ? `?${queryString}` : ''}`);
+  },
+  // Legacy getAll — now just calls getPage without cursor (first page, large limit)
+  getAll: () => apiCall('/serial-history?limit=500'),
   create: (data: any) => apiCall('/serial-history', {
     method: 'POST',
     body: JSON.stringify(data),

@@ -191,6 +191,9 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                     />
                 )}
 
+
+
+
                 {/* 6. จัดการผู้ใช้งาน */}
                 {canViewUsers && (
                     <AdminDashboardCard

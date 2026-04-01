@@ -16,7 +16,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
     
     const golfCourse = await prisma.golfCourse.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        agreements: true
+      }
     });
 
     if (!golfCourse) {
@@ -60,7 +63,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
     
     const body = await request.json();
-    const { name, location } = body;
+    const { name, location, code, isActive } = body;
 
     if (!name) {
       return NextResponse.json({
@@ -69,11 +72,25 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }, { status: 400 });
     }
 
+    if (code) {
+      const existingCode = await prisma.golfCourse.findFirst({
+        where: { code: code.trim() }
+      });
+      if (existingCode && existingCode.id !== id) {
+        return NextResponse.json({
+          success: false,
+          message: 'รหัสสนามนี้มีอยู่แล้วในระบบ'
+        }, { status: 400 });
+      }
+    }
+
     const golfCourse = await prisma.golfCourse.update({
       where: { id },
       data: {
         name: name.trim(),
-        location: location ? location.trim() : null
+        location: location ? location.trim() : null,
+        code: code !== undefined ? (code ? code.trim() : null) : undefined,
+        isActive: isActive !== undefined ? isActive : undefined
       }
     });
 

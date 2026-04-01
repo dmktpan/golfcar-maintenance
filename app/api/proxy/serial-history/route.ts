@@ -47,9 +47,10 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 GET /api/proxy/serial-history - Using internal API');
     
-    // ใช้ internal API แทน external API
+    // Forward all query parameters to internal API
     const baseUrl = request.nextUrl.origin;
-    const response = await fetch(`${baseUrl}/api/serial-history`, {
+    const queryString = request.nextUrl.search; // includes "?" if params exist
+    const response = await fetch(`${baseUrl}/api/serial-history${queryString}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
           success: false, 
           message: `Internal API failed with status ${response.status}`,
           data: [],
+          pagination: { nextCursor: null, hasMore: false, limit: 100 },
           details: errorText
         },
         { status: response.status }
@@ -84,6 +86,7 @@ export async function GET(request: NextRequest) {
         success: false, 
         message: 'Failed to fetch serial history from internal API', 
         data: [],
+        pagination: { nextCursor: null, hasMore: false, limit: 100 },
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

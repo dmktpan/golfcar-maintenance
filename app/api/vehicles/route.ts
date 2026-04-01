@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 
 // GET - ดึงข้อมูลรถทั้งหมด
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const agreement_id = searchParams.get('agreement_id');
+    const whereCondition = agreement_id ? { agreement_id } : {};
+
     const vehicles = await prisma.vehicle.findMany({
+      where: whereCondition,
       include: {
         golfCourse: {
           select: {
@@ -13,6 +18,7 @@ export async function GET() {
             location: true
           }
         },
+        agreement: true,
         jobs: {
           select: {
             id: true,
@@ -71,6 +77,7 @@ export async function POST(request: Request) {
       status, 
       golf_course_id, 
       golf_course_name,
+      agreement_id,
       transfer_date,
       user_id // สำหรับบันทึก Serial History
     } = body;
@@ -107,6 +114,20 @@ export async function POST(request: Request) {
       }, { status: 404 });
     }
 
+    let final_golf_course_id = golf_course_id;
+    let final_golf_course_name = golf_course_name;
+
+    if (agreement_id) {
+      const agreement = await prisma.agreement.findUnique({
+        where: { id: agreement_id },
+        include: { golfCourse: true }
+      });
+      if (agreement) {
+        final_golf_course_id = agreement.golf_course_id;
+        final_golf_course_name = agreement.golfCourse.name;
+      }
+    }
+
     // ใช้ transaction เพื่อสร้างรถและบันทึก Serial History
     const vehicle = await prisma.$transaction(async (tx) => {
       // สร้างรถใหม่
@@ -119,8 +140,9 @@ export async function POST(request: Request) {
           year: year ? parseInt(year) : null,
           battery_serial: battery_serial?.trim(),
           status: status || 'active',
-          golf_course_id,
-          golf_course_name: golf_course_name.trim(),
+          golf_course_id: final_golf_course_id,
+          golf_course_name: final_golf_course_name.trim(),
+          agreement_id: agreement_id || null,
           transfer_date: transfer_date ? new Date(transfer_date) : null
         },
         include: {
@@ -190,6 +212,8 @@ export async function PUT(request: Request) {
       status, 
       golf_course_id, 
       golf_course_name,
+      agreement_id,
+      remove_agreement,
       transfer_date,
       user_id // สำหรับบันทึก Serial History
     } = body;
@@ -242,6 +266,20 @@ export async function PUT(request: Request) {
       }
     }
 
+    let final_golf_course_id = golf_course_id;
+    let final_golf_course_name = golf_course_name;
+
+    if (agreement_id && !remove_agreement) {
+      const agreement = await prisma.agreement.findUnique({
+        where: { id: agreement_id },
+        include: { golfCourse: true }
+      });
+      if (agreement) {
+        final_golf_course_id = agreement.golf_course_id;
+        final_golf_course_name = agreement.golfCourse.name;
+      }
+    }
+
     // เตรียมข้อมูลสำหรับอัพเดท
     const updateData: any = {};
     
@@ -252,8 +290,10 @@ export async function PUT(request: Request) {
     if (year !== undefined) updateData.year = year ? parseInt(year) : null;
     if (battery_serial !== undefined) updateData.battery_serial = battery_serial?.trim();
     if (status !== undefined) updateData.status = status;
-    if (golf_course_id !== undefined) updateData.golf_course_id = golf_course_id;
-    if (golf_course_name !== undefined) updateData.golf_course_name = golf_course_name.trim();
+    if (final_golf_course_id !== undefined) updateData.golf_course_id = final_golf_course_id;
+    if (final_golf_course_name !== undefined) updateData.golf_course_name = final_golf_course_name.trim();
+    if (agreement_id !== undefined && !remove_agreement) updateData.agreement_id = agreement_id;
+    if (remove_agreement) updateData.agreement_id = null;
     if (transfer_date !== undefined) updateData.transfer_date = transfer_date ? new Date(transfer_date) : null;
 
     // ใช้ transaction เพื่ออัพเดทรถและบันทึก Serial History
@@ -287,6 +327,14 @@ export async function PUT(request: Request) {
         
         if (vehicle_number && vehicle_number !== existingVehicle.vehicle_number) {
           changes.push(`เปลี่ยนหมายเลขรถจาก ${existingVehicle.vehicle_number} เป็น ${vehicle_number}`);
+        }
+
+        if (agreement_id && agreement_id !== existingVehicle.agreement_id && !remove_agreement) {
+          changes.push(`เปลี่ยนสัญญาเข่า`);
+        }
+
+        if (remove_agreement && existingVehicle.agreement_id) {
+          changes.push(`ถอดสัญญาเช่าออก`);
         }
 
         if (changes.length > 0) {

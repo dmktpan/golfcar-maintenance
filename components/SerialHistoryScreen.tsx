@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { User, Job, SerialHistoryEntry, MOCK_GOLF_COURSES, View, Vehicle, GolfCourse } from '@/lib/data';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { User, Job, SerialHistoryEntry, View, Vehicle, GolfCourse } from '@/lib/data';
+import { serialHistoryApi, SerialHistoryFilters } from '@/lib/api';
 import StatusBadge from './StatusBadge';
 import JobDetailsModal from './JobDetailsModal';
+import { TableVirtuoso } from 'react-virtuoso';
 
 interface SerialHistoryScreenProps {
   user: User;
@@ -13,11 +15,20 @@ interface SerialHistoryScreenProps {
   serialHistory: SerialHistoryEntry[];
   golfCourses: GolfCourse[];
   users: User[];
-  partsUsageLog?: any[]; // เพิ่ม props สำหรับ PartsUsageLog
+  partsUsageLog?: any[];
 }
 
-const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, golfCourses, users, partsUsageLog = [] }: SerialHistoryScreenProps) => {
-  // Search and filter states
+interface PaginationState {
+  data: SerialHistoryEntry[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  totalCount: number | null;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+}
+
+const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory: _serialHistory, golfCourses, users, partsUsageLog = [] }: SerialHistoryScreenProps) => {
+  // === Filter States ===
   const [searchSerial, setSearchSerial] = useState('');
   const [searchVehicleNumber, setSearchVehicleNumber] = useState('');
   const [filterActionType, setFilterActionType] = useState('');
@@ -26,826 +37,355 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showInactive, setShowInactive] = useState(true);
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50); // เริ่มต้นที่ 50 รายการต่อหน้า
+  // === Pagination State ===
+  const [pagination, setPagination] = useState<PaginationState>({
+    data: [], nextCursor: null, hasMore: true, totalCount: null, isLoading: true, isLoadingMore: false,
+  });
 
-  // Sort states
-  const [sortBy] = useState<'date' | 'serial' | 'action'>('date');
-  const [sortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Modal states
+  // === Modal States ===
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Battery Serial Modal state
   const [selectedBatterySerial, setSelectedBatterySerial] = useState<string | null>(null);
   const [isBatteryModalOpen, setIsBatteryModalOpen] = useState(false);
 
-  // Helper functions
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // === Helpers ===
   const formatDate = (dateInput: string | Date | undefined | null) => {
     try {
-      // ตรวจสอบว่ามีข้อมูลวันที่หรือไม่
-      if (!dateInput) {
-        return 'ไม่ระบุวันที่';
-      }
-
+      if (!dateInput) return 'ไม่ระบุวันที่';
       let date: Date;
-
-      // ถ้าเป็น Date object อยู่แล้ว
-      if (dateInput instanceof Date) {
-        date = dateInput;
-      }
-      // ถ้าเป็น string
+      if (dateInput instanceof Date) date = dateInput;
       else if (typeof dateInput === 'string') {
-        // ตรวจสอบว่าเป็น string ว่างหรือไม่
-        if (dateInput.trim() === '') {
-          return 'ไม่ระบุวันที่';
-        }
-
-        // ถ้าเป็น timestamp (number string)
-        if (/^\d+$/.test(dateInput)) {
-          date = new Date(parseInt(dateInput));
-        } else {
-          date = new Date(dateInput);
-        }
-      } else {
-        return 'รูปแบบวันที่ไม่รู้จัก';
-      }
-
-      // ตรวจสอบว่าวันที่ถูกต้องหรือไม่
-      if (isNaN(date.getTime())) {
-        console.warn('Invalid date:', dateInput);
-        return 'วันที่ไม่ถูกต้อง';
-      }
-
-      // ตรวจสอบว่าวันที่อยู่ในช่วงที่สมเหตุสมผลหรือไม่
-      const now = new Date();
-      const minDate = new Date('2020-01-01');
-      const maxDate = new Date(now.getTime() + (365 * 24 * 60 * 60 * 1000)); // 1 ปีข้างหน้า
-
-      if (date < minDate || date > maxDate) {
-        console.warn('Date out of reasonable range:', dateInput, date);
-        return 'วันที่ไม่อยู่ในช่วงที่เหมาะสม';
-      }
-
-      return date.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Asia/Bangkok' // ระบุ timezone ไทยอย่างชัดเจน
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error, dateInput);
-      return 'ข้อผิดพลาดในการแสดงวันที่';
-    }
+        if (dateInput.trim() === '') return 'ไม่ระบุวันที่';
+        date = /^\d+$/.test(dateInput) ? new Date(parseInt(dateInput)) : new Date(dateInput);
+      } else return 'รูปแบบวันที่ไม่รู้จัก';
+      if (isNaN(date.getTime())) return 'วันที่ไม่ถูกต้อง';
+      return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+    } catch { return 'ข้อผิดพลาดในการแสดงวันที่'; }
   };
 
   const getSystemDisplayName = (system: string) => {
-    const systemNames: Record<string, string> = {
-      'brake': 'เบรก/เพื่อห้าม',
-      'steering': 'พวงมาลัย',
-      'motor': 'มอเตอร์/เพื่อขับ',
-      'electric': 'ไฟฟ้า',
-      'general': 'ทั่วไป',
-      'suspension': 'ช่วงล่างและพวงมาลัย'
-    };
-    return systemNames[system] || system;
+    const names: Record<string, string> = { 'brake': 'เบรก', 'steering': 'พวงมาลัย', 'motor': 'มอเตอร์', 'electric': 'ไฟฟ้า', 'general': 'ทั่วไป', 'suspension': 'ช่วงล่าง' };
+    return names[system] || system;
   };
 
-  // เพิ่มฟังก์ชันแปลงสถานะรถเป็นภาษาไทย
   const getStatusLabel = (status: string): string => {
-    const statusLabels: Record<string, string> = {
-      'active': 'ใช้งาน',
-      'ready': 'พร้อมใช้',
-      'maintenance': 'รอซ่อม',
-      'retired': 'เสื่อมแล้ว',
-      'parked': 'จอดไว้',
-      'spare': 'อะไหล่',
-      'inactive': 'ไม่ใช้งาน'
-    };
-    return statusLabels[status] || status;
+    const m: Record<string, string> = { 'active': 'ใช้งาน', 'ready': 'พร้อมใช้', 'maintenance': 'รอซ่อม', 'retired': 'เสื่อมแล้ว', 'parked': 'จอดไว้', 'spare': 'อะไหล่', 'inactive': 'ไม่ใช้งาน' };
+    return m[status] || status;
   };
 
-  // ฟังก์ชันแปลงรายละเอียดให้แสดงสถานะเป็นภาษาไทย
   const translateDetailsToThai = (details: string): string => {
-    // แปลงสถานะในรายละเอียดจากภาษาอังกฤษเป็นภาษาไทย
-    let translatedDetails = details;
-
-    // แปลงรูปแบบ "สถานะ: active → ready" เป็น "สถานะ: ใช้งาน → พร้อมใช้"
-    const statusChangePattern = /สถานะ:\s*(\w+)\s*→\s*(\w+)/g;
-    translatedDetails = translatedDetails.replace(statusChangePattern, (match, oldStatus, newStatus) => {
-      const oldStatusThai = getStatusLabel(oldStatus);
-      const newStatusThai = getStatusLabel(newStatus);
-      return `สถานะ: ${oldStatusThai} → ${newStatusThai}`;
-    });
-
-    // แปลงสถานะเดี่ยวที่อาจปรากฏในรายละเอียด
-    const statusWords = ['active', 'ready', 'maintenance', 'retired', 'parked', 'spare', 'inactive'];
-    statusWords.forEach(status => {
-      const regex = new RegExp(`\\b${status}\\b`, 'gi');
-      translatedDetails = translatedDetails.replace(regex, getStatusLabel(status));
-    });
-
-    return translatedDetails;
+    let t = details;
+    t = t.replace(/สถานะ:\s*(\w+)\s*→\s*(\w+)/g, (_m, o, n) => `สถานะ: ${getStatusLabel(o)} → ${getStatusLabel(n)}`);
+    ['active', 'ready', 'maintenance', 'retired', 'parked', 'spare', 'inactive'].forEach(s => { t = t.replace(new RegExp(`\\b${s}\\b`, 'gi'), getStatusLabel(s)); });
+    return t;
   };
 
   const getActionTypeLabel = (actionType: string): string => {
-    switch (actionType) {
-      case 'registration': return 'ลงทะเบียน';
-      case 'transfer': return 'โอนย้าย';
-      case 'maintenance': return 'ซ่อมบำรุง';
-      case 'decommission': return 'ปลดระวาง';
-      case 'inspection': return 'ตรวจสอบ';
-      case 'status_change': return 'เปลี่ยนสถานะ';
-      case 'data_edit': return 'แก้ไขข้อมูล';
-      case 'data_delete': return 'ลบข้อมูล';
-      case 'bulk_transfer': return 'โอนย้ายหลายคัน';
-      case 'bulk_upload': return 'อัปโหลดหลายคัน';
-      default: return actionType;
-    }
+    const m: Record<string, string> = { 'registration': 'ลงทะเบียน', 'transfer': 'โอนย้าย', 'maintenance': 'ซ่อมบำรุง', 'decommission': 'ปลดระวาง', 'inspection': 'ตรวจสอบ', 'status_change': 'เปลี่ยนสถานะ', 'data_edit': 'แก้ไขข้อมูล', 'data_delete': 'ลบข้อมูล', 'bulk_transfer': 'โอนย้ายหลายคัน', 'bulk_upload': 'อัปโหลดหลายคัน' };
+    return m[actionType] || actionType;
   };
 
-  const getActionTypeColorClass = (actionType: string): string => {
-    switch (actionType) {
-      case 'registration': return 'action-registration';
-      case 'transfer': return 'action-transfer';
-      case 'maintenance': return 'action-maintenance';
-      case 'decommission': return 'action-decommission';
-      case 'inspection': return 'action-inspection';
-      case 'status_change': return 'action-status-change';
-      case 'data_edit': return 'action-data-edit';
-      case 'data_delete': return 'action-data-delete';
-      case 'bulk_transfer': return 'action-bulk-transfer';
-      case 'bulk_upload': return 'action-bulk-upload';
-      default: return 'action-default';
-    }
+  const getActionTypeStyle = (actionType: string) => {
+    const styles: Record<string, { bg: string; color: string }> = {
+      'registration': { bg: '#dcfce7', color: '#166534' }, 'transfer': { bg: '#dbeafe', color: '#1e40af' },
+      'maintenance': { bg: '#fef3c7', color: '#92400e' }, 'decommission': { bg: '#fee2e2', color: '#991b1b' },
+      'inspection': { bg: '#ede9fe', color: '#5b21b6' }, 'status_change': { bg: '#ffedd5', color: '#9a3412' },
+      'data_edit': { bg: '#e0e7ff', color: '#3730a3' }, 'data_delete': { bg: '#fce7f3', color: '#9d174d' },
+      'bulk_transfer': { bg: '#ccfbf1', color: '#134e4a' }, 'bulk_upload': { bg: '#d1fae5', color: '#065f46' },
+    };
+    return styles[actionType] || { bg: '#f1f5f9', color: '#475569' };
   };
 
-  // Helper function สำหรับแปลงค่า performed_by ให้ปลอดภัย
   const safeGetPerformedBy = (userName: any): string => {
-    if (userName === null || userName === undefined) {
-      return 'ไม่ระบุ';
-    }
-
-    if (typeof userName === 'string') {
-      return userName.trim() || 'ไม่ระบุ';
-    }
-
+    if (userName === null || userName === undefined) return 'ไม่ระบุ';
+    if (typeof userName === 'string') return userName.trim() || 'ไม่ระบุ';
     if (typeof userName === 'object') {
-      // ลองดึงค่าจาก object properties ต่างๆ
-      const possibleNames = [
-        userName.name,
-        userName.username,
-        userName.displayName,
-        userName.fullName,
-        userName.user_name
-      ];
-
-      for (const name of possibleNames) {
-        if (typeof name === 'string' && name.trim()) {
-          return name.trim();
-        }
+      for (const name of [userName.name, userName.username, userName.displayName, userName.fullName, userName.user_name]) {
+        if (typeof name === 'string' && name.trim()) return name.trim();
       }
-
-      // ถ้าไม่มี property ที่เป็น string ให้แปลงทั้ง object เป็น string
-      return JSON.stringify(userName);
     }
-
-    // สำหรับ type อื่นๆ ให้แปลงเป็น string
     return String(userName);
   };
 
-  // สร้าง Serial History Entries จากงานที่มีในระบบ
-  const generateSerialHistoryFromJobs = useMemo(() => {
-    const generatedEntries: SerialHistoryEntry[] = [];
-
-    jobs.forEach(job => {
-      const vehicle = vehicles.find(v => v.id === job.vehicle_id);
-      if (!vehicle) return;
-
-      // ใช้ golfCourses จาก API แทน MOCK_GOLF_COURSES
-      const golfCourse = golfCourses.find(gc => gc.id === vehicle.golf_course_id);
-      if (!golfCourse) return;
-
-      const entry: SerialHistoryEntry = {
-        id: job.id + 1000,
-        serial_number: vehicle.serial_number,
-        vehicle_id: vehicle.id,
-        vehicle_number: vehicle.vehicle_number,
-        action_type: 'maintenance',
-        action_date: job.updated_at || job.created_at,
-        details: `งาน${job.type === 'PM' ? 'ซ่อมบำรุงตามแผน' : job.type === 'BM' ? 'ซ่อมแซม' : 'ปรับปรุงสภาพ'} (${job.type})${job.system ? ` - ระบบ${getSystemDisplayName(job.system)}` : ''}${job.subTasks && job.subTasks.length > 0 ? `: ${job.subTasks.join(', ')}` : ''}`,
-        performed_by: safeGetPerformedBy(job.userName),
-        performed_by_id: job.user_id,
-        golf_course_id: vehicle.golf_course_id,
-        golf_course_name: golfCourse.name,
-        is_active: true,
-        related_job_id: job.id,
-        job_type: job.type,
-        system: job.system,
-        parts_used: job.parts?.map(p => `${p.part_name || 'ไม่ระบุ'} (${p.quantity_used || 0} ชิ้น)`) || [],
-        status: job.status === 'rejected' ? undefined : job.status as 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned'
-      };
-
-      generatedEntries.push(entry);
-    });
-
-    return generatedEntries;
-  }, [jobs, vehicles, golfCourses]);
-
-  // รวม Serial History จาก mock data และข้อมูลที่สร้างจากงาน (ป้องกันการซ้ำกัน)
-  const allSerialHistory = useMemo(() => {
-    // สร้าง Set ของ job IDs ที่มีอยู่ใน serialHistory แล้ว
-    const existingJobIds = new Set(
-      serialHistory
-        .filter(entry => entry.related_job_id)
-        .map(entry => entry.related_job_id)
-    );
-
-    // กรองข้อมูลจาก generateSerialHistoryFromJobs ที่ไม่ซ้ำกับที่มีอยู่แล้ว
-    const uniqueGeneratedEntries = generateSerialHistoryFromJobs.filter(
-      entry => !existingJobIds.has(entry.related_job_id)
-    );
-
-    const combinedHistory = [...serialHistory, ...uniqueGeneratedEntries];
-
-    // ตรวจสอบการซ้ำกันเพิ่มเติมด้วย unique key (serial + date + action)
-    const uniqueEntries = combinedHistory.filter((entry, index, array) => {
-      const uniqueKey = `${entry.serial_number}-${entry.action_date}-${entry.action_type}-${entry.details}`;
-      return array.findIndex(e =>
-        `${e.serial_number}-${e.action_date}-${e.action_type}-${e.details}` === uniqueKey
-      ) === index;
-    });
-
-
-
-    return uniqueEntries;
-  }, [serialHistory, generateSerialHistoryFromJobs]);
-
-  // Get unique action types for filter
-  const actionTypes = useMemo(() => {
-    return Array.from(new Set(allSerialHistory.map(entry => entry.action_type)));
-  }, [allSerialHistory]);
-
-  // Get unique serial numbers from actual data
-  const availableSerials = useMemo(() => {
-    const serials = Array.from(new Set(allSerialHistory.map(entry => entry.serial_number)))
-      .filter(serial => serial && serial.trim() !== '')
-      .sort();
-    return serials;
-  }, [allSerialHistory]);
-
-  // Get unique vehicle numbers from actual data
-  const availableVehicleNumbers = useMemo(() => {
-    const vehicleNumbers = Array.from(new Set(allSerialHistory.map(entry => entry.vehicle_number)))
-      .filter(number => number && number.trim() !== '')
-      .sort();
-    return vehicleNumbers;
-  }, [allSerialHistory]);
-
-  // Get golf courses that actually have history data (เหมือนกับ actionTypes)
-  const availableGolfCoursesWithData = useMemo(() => {
-    // กรองข้อมูลตาม user access ก่อน
-    const accessibleHistory = allSerialHistory.filter(entry => {
-      let hasAccess = false;
-
-      if (user.role === 'admin') {
-        hasAccess = true;
-      } else if (user.role === 'supervisor' && user.managed_golf_courses) {
-        // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
-        const totalGolfCourses = golfCourses.length;
-        const managedCoursesCount = user.managed_golf_courses.length;
-
-        if (managedCoursesCount === totalGolfCourses) {
-          hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
-        } else {
-          hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
-        }
-      } else {
-        hasAccess = entry.golf_course_id === user.golf_course_id;
-      }
-
-      return hasAccess;
-    });
-
-    // Get unique golf course IDs from accessible history data
-    const uniqueCourseIds = Array.from(new Set(accessibleHistory.map(entry => entry.golf_course_id)))
-      .filter(id => id !== null && id !== undefined);
-
-    // Map to golf course objects with names
-    const coursesWithData = uniqueCourseIds.map(courseId => {
-      // Try to find in golfCourses first (from API) - แปลง ID เป็น string เพื่อเปรียบเทียบ
-      const apiCourse = golfCourses.find(course => String(course.id) === String(courseId));
-      if (apiCourse) {
-        return {
-          id: String(apiCourse.id), // แปลงเป็น string เพื่อความสม่ำเสมอ
-          name: apiCourse.name
-        };
-      }
-
-      // Fallback to name from history data
-      const historyEntry = accessibleHistory.find(entry => String(entry.golf_course_id) === String(courseId));
-      return {
-        id: String(courseId), // แปลงเป็น string เพื่อความสม่ำเสมอ
-        name: historyEntry?.golf_course_name || `สนาม ${courseId}`
-      };
-    });
-
-    // Sort by name
-    const sortedCourses = coursesWithData.sort((a, b) => a.name.localeCompare(b.name));
-
-    return sortedCourses;
-  }, [allSerialHistory, golfCourses, user]);
-
-  // Filter and sort entries
-  const filteredEntries = useMemo(() => {
-    const filtered = allSerialHistory.filter(entry => {
-      let hasAccess = false;
-
-      if (user.role === 'admin') {
-        hasAccess = true;
-      } else if (user.role === 'supervisor' && user.managed_golf_courses) {
-        // หัวหน้าที่เลือกทั้งหมด (จำนวนสนามที่ดูแลเท่ากับจำนวนสนามทั้งหมด) จะดูได้ทั้งหมดเหมือน admin
-        const totalGolfCourses = golfCourses.length;
-        const managedCoursesCount = user.managed_golf_courses.length;
-
-        if (managedCoursesCount === totalGolfCourses) {
-          hasAccess = true; // ดูได้ทั้งหมดเหมือน admin
-        } else {
-          hasAccess = user.managed_golf_courses.includes(entry.golf_course_id);
-        }
-      } else {
-        hasAccess = entry.golf_course_id === user.golf_course_id;
-      }
-
-      if (!hasAccess) return false;
-
-      if (searchSerial && !entry.serial_number.toLowerCase().includes(searchSerial.toLowerCase())) {
-        return false;
-      }
-
-      if (searchVehicleNumber && !entry.vehicle_number.toLowerCase().includes(searchVehicleNumber.toLowerCase())) {
-        return false;
-      }
-
-      if (filterActionType && entry.action_type !== filterActionType) {
-        return false;
-      }
-
-      if (filterGolfCourse && filterGolfCourse !== '') {
-        // แปลงทั้งสองค่าเป็น string เพื่อเปรียบเทียบ
-        const entryGolfCourseId = String(entry.golf_course_id);
-        const selectedGolfCourseId = String(filterGolfCourse);
-
-        if (entryGolfCourseId !== selectedGolfCourseId) {
-          return false;
-        }
-      }
-
-      if (filterDateFrom) {
-        const entryDate = new Date(entry.action_date);
-        const fromDate = new Date(filterDateFrom);
-        if (entryDate < fromDate) return false;
-      }
-
-      if (filterDateTo) {
-        const entryDate = new Date(entry.action_date);
-        const toDate = new Date(filterDateTo);
-        toDate.setHours(23, 59, 59, 999);
-        if (entryDate > toDate) return false;
-      }
-
-      if (!showInactive && !entry.is_active) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case 'date':
-          comparison = new Date(a.action_date).getTime() - new Date(b.action_date).getTime();
-          break;
-        case 'serial':
-          comparison = a.serial_number.localeCompare(b.serial_number);
-          break;
-        case 'action':
-          comparison = a.action_type.localeCompare(b.action_type);
-          break;
-      }
-
-      return sortOrder === 'desc' ? -comparison : comparison;
-    });
-
-    return filtered;
-  }, [allSerialHistory, user, searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive, sortBy, sortOrder, golfCourses]);
-
-  // Pagination logic
-  const totalItems = filteredEntries.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-
-  // Reset to first page when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
+  // === Data Fetching (API only — no local job merge) ===
+  const buildFilters = useCallback((): SerialHistoryFilters => {
+    const f: SerialHistoryFilters = { limit: 100 };
+    if (searchSerial) f.search = searchSerial;
+    if (searchVehicleNumber) f.vehicleNumber = searchVehicleNumber;
+    if (filterActionType) f.actionType = filterActionType;
+    if (filterGolfCourse) f.golfCourseId = filterGolfCourse;
+    if (filterDateFrom) f.dateFrom = filterDateFrom;
+    if (filterDateTo) f.dateTo = filterDateTo;
+    if (!showInactive) f.showInactive = false;
+    return f;
   }, [searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive]);
 
-  // Event handlers
-  const handleViewJob = (jobId: string) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (job) {
-      setSelectedJob(job);
-      setIsModalOpen(true);
+  const fetchData = useCallback(async (isLoadMore = false, cursorOverride?: string | null) => {
+    try {
+      setPagination(prev => isLoadMore ? { ...prev, isLoadingMore: true } : { ...prev, isLoading: true });
+      const filters = buildFilters();
+      if (isLoadMore && cursorOverride) filters.cursor = cursorOverride;
+      const result = await serialHistoryApi.getPage(filters);
+      if (result.success) {
+        const newData = (result.data || []) as SerialHistoryEntry[];
+        const pi = (result as any).pagination || {};
+        setPagination(prev => ({
+          data: isLoadMore ? [...prev.data, ...newData] : newData,
+          nextCursor: pi.nextCursor || null, hasMore: pi.hasMore ?? false,
+          totalCount: pi.totalCount ?? prev.totalCount, isLoading: false, isLoadingMore: false,
+        }));
+      } else {
+        setPagination(prev => ({ ...prev, isLoading: false, isLoadingMore: false }));
+      }
+    } catch (error) {
+      console.error('Error fetching serial history:', error);
+      setPagination(prev => ({ ...prev, isLoading: false, isLoadingMore: false }));
     }
-  };
+  }, [buildFilters]);
 
-  const handleViewDetails = (entry: SerialHistoryEntry) => {
-    alert(`รายละเอียด: ${translateDetailsToThai(entry.details)}`);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(false); }, []);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedJob(null);
-  };
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { fetchData(false); }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchSerial, searchVehicleNumber, filterActionType, filterGolfCourse, filterDateFrom, filterDateTo, showInactive]);
 
-  const handleViewPartsHistory = () => {
-    setView('parts_management');
-  };
+  // === ใช้ข้อมูลจาก API เท่านั้น (ไม่ merge job ในเครื่อง) ===
+  const allEntries = pagination.data;
 
-  const clearFilters = () => {
-    setSearchSerial('');
-    setSearchVehicleNumber('');
-    setFilterActionType('');
-    setFilterGolfCourse('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
-    setShowInactive(true);
-    setCurrentPage(1); // Reset pagination
-  };
+  const handleEndReached = useCallback(() => {
+    if (pagination.hasMore && !pagination.isLoadingMore && pagination.nextCursor) {
+      fetchData(true, pagination.nextCursor);
+    }
+  }, [pagination.hasMore, pagination.isLoadingMore, pagination.nextCursor, fetchData]);
 
-  const handleViewBatterySerial = (serial: string) => {
-    setSelectedBatterySerial(serial);
-    setIsBatteryModalOpen(true);
-  };
+  const availableGolfCourses = useMemo(() => {
+    if (user.role === 'admin') return golfCourses;
+    if (user.role === 'supervisor' && user.managed_golf_courses) {
+      if (user.managed_golf_courses.length === golfCourses.length) return golfCourses;
+      return golfCourses.filter(gc => user.managed_golf_courses!.includes(gc.id));
+    }
+    return golfCourses.filter(gc => gc.id === user.golf_course_id);
+  }, [golfCourses, user]);
 
-  const handleCloseBatteryModal = () => {
-    setIsBatteryModalOpen(false);
-    setSelectedBatterySerial(null);
-  };
+  const actionTypes = ['registration', 'transfer', 'maintenance', 'decommission', 'inspection', 'status_change', 'data_edit', 'data_delete', 'bulk_transfer', 'bulk_upload'];
 
-  // Calculate summary statistics
-  const totalSerials = new Set(filteredEntries.map(e => e.serial_number)).size;
-  const totalMaintenanceJobs = filteredEntries.filter(e => e.action_type === 'maintenance').length;
-  const activeVehicles = filteredEntries.filter(e => e.is_active).length;
+  const totalSerials = useMemo(() => new Set(allEntries.map(e => e.serial_number)).size, [allEntries]);
+  const totalMaintenanceJobs = useMemo(() => allEntries.filter(e => e.action_type === 'maintenance').length, [allEntries]);
+
+  // === Event Handlers ===
+  const handleViewJob = (jobId: string) => { const job = jobs.find(j => j.id === jobId); if (job) { setSelectedJob(job); setIsModalOpen(true); } };
+  const handleViewDetails = (entry: SerialHistoryEntry) => { alert(`รายละเอียด: ${translateDetailsToThai(entry.details)}`); };
+  const handleCloseModal = () => { setIsModalOpen(false); setSelectedJob(null); };
+  const handleViewPartsHistory = () => { setView('parts_management'); };
+  const clearFilters = () => { setSearchSerial(''); setSearchVehicleNumber(''); setFilterActionType(''); setFilterGolfCourse(''); setFilterDateFrom(''); setFilterDateTo(''); setShowInactive(true); };
+  const handleViewBatterySerial = (serial: string) => { setSelectedBatterySerial(serial); setIsBatteryModalOpen(true); };
+  const handleCloseBatteryModal = () => { setIsBatteryModalOpen(false); setSelectedBatterySerial(null); };
 
   return (
     <div className="serial-history-screen">
-      {/* Header Section */}
-      <div className="screen-header">
-        <div className="header-content">
-          <div className="header-left">
-            <div className="header-icon">📋</div>
-            <div className="header-text">
-              <h1>ประวัติ Serial รถกอล์ฟ</h1>
-              <p>ติดตามประวัติการใช้งานและการซ่อมบำรุงของรถกอล์ฟแต่ละคัน</p>
+      {/* Header */}
+      <div className="page-header-card">
+        <div className="header-row">
+          <div className="header-title-area">
+            <div className="header-icon-box">📋</div>
+            <div>
+              <h1 className="page-title">ประวัติ Serial รถกอล์ฟ</h1>
+              <p className="page-subtitle">ติดตามประวัติการใช้งานและการซ่อมบำรุงของรถกอล์ฟแต่ละคัน</p>
             </div>
           </div>
-          <div className="header-actions">
-            <button
-              onClick={handleViewPartsHistory}
-              className="btn-parts-history"
-            >
-              <span className="btn-icon">🔧</span>
-              <span>ประวัติอะไหล่</span>
-            </button>
+          <div className="header-buttons">
+            <button onClick={() => fetchData(false)} className="btn-action btn-refresh">🔄 รีเฟรช</button>
+            <button onClick={handleViewPartsHistory} className="btn-action btn-green">🔧 ประวัติอะไหล่</button>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">🚗</div>
-          <div className="stat-content">
-            <div className="stat-value">{totalSerials}</div>
-            <div className="stat-label">Serial ที่มีประวัติ</div>
+      {/* Stats Row */}
+      <div className="stats-row">
+        {[
+          { icon: '🚗', value: totalSerials, label: 'Serial ที่มีประวัติ', accent: '#4299e1' },
+          { icon: '🔧', value: totalMaintenanceJobs, label: 'งานซ่อมบำรุง', accent: '#ed8936' },
+          { icon: '📊', value: allEntries.length, label: 'รายการที่แสดง', accent: '#9f7aea' },
+          { icon: '#', value: pagination.totalCount?.toLocaleString() ?? '...', label: 'รายการในฐานข้อมูล', accent: '#48bb78' },
+        ].map((s, i) => (
+          <div key={i} className="stat-box" style={{ borderTop: `3px solid ${s.accent}` }}>
+            <span className="stat-icon-txt">{s.icon}</span>
+            <div>
+              <div className="stat-number">{s.value}</div>
+              <div className="stat-desc">{s.label}</div>
+            </div>
           </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">🔧</div>
-          <div className="stat-content">
-            <div className="stat-value">{totalMaintenanceJobs}</div>
-            <div className="stat-label">งานซ่อมบำรุง</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <div className="stat-value">{filteredEntries.length}</div>
-            <div className="stat-label">รายการทั้งหมด</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">⚡</div>
-          <div className="stat-content">
-            <div className="stat-value">{activeVehicles}</div>
-            <div className="stat-label">รถใช้งานอยู่</div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-header">
-          <h3>🔍 ตัวกรองข้อมูล</h3>
-          <button onClick={clearFilters} className="btn-clear">
-            <span>🗑️</span> ล้างตัวกรอง
-          </button>
+      {/* Filters */}
+      <div className="filter-card">
+        <div className="filter-top-row">
+          <span className="filter-title">🔍 ตัวกรองข้อมูล</span>
+          <button onClick={clearFilters} className="btn-clear-filter">✕ ล้างตัวกรอง</button>
         </div>
-
         <div className="filter-grid">
-          <div className="filter-group">
-            <label>🔍 ค้นหาซีเรียล:</label>
-            <div className="search-input-container">
-              <input
-                type="text"
-                value={searchSerial}
-                onChange={(e) => setSearchSerial(e.target.value)}
-                placeholder="ใส่หมายเลขซีเรียล..."
-                className="filter-input"
-                list="serial-list"
-              />
-              <datalist id="serial-list">
-                {availableSerials.map(serial => (
-                  <option key={serial} value={serial} />
-                ))}
-              </datalist>
-            </div>
-            <small className="filter-hint">มี {availableSerials.length} ซีเรียลในระบบ</small>
+          <div className="fg">
+            <label>ค้นหาซีเรียล</label>
+            <input type="text" value={searchSerial} onChange={(e) => setSearchSerial(e.target.value)} placeholder="ใส่ซีเรียล..." />
           </div>
-
-          <div className="filter-group">
-            <label>🚗 ค้นหาหมายเลขรถ:</label>
-            <div className="search-input-container">
-              <input
-                type="text"
-                value={searchVehicleNumber}
-                onChange={(e) => setSearchVehicleNumber(e.target.value)}
-                placeholder="ใส่หมายเลขรถ..."
-                className="filter-input"
-                list="vehicle-list"
-              />
-              <datalist id="vehicle-list">
-                {availableVehicleNumbers.map(number => (
-                  <option key={number} value={number} />
-                ))}
-              </datalist>
-            </div>
-            <small className="filter-hint">มี {availableVehicleNumbers.length} หมายเลขรถในระบบ</small>
+          <div className="fg">
+            <label>ค้นหาเลขรถ</label>
+            <input type="text" value={searchVehicleNumber} onChange={(e) => setSearchVehicleNumber(e.target.value)} placeholder="ใส่เลขรถ..." />
           </div>
-
-          <div className="filter-group">
-            <label>⚙️ ประเภทการดำเนินการ:</label>
-            <select
-              value={filterActionType}
-              onChange={(e) => setFilterActionType(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">ทั้งหมด ({actionTypes.length} ประเภท)</option>
-              {actionTypes.map(type => (
-                <option key={type} value={type}>
-                  {getActionTypeLabel(type)}
-                </option>
-              ))}
+          <div className="fg">
+            <label>ประเภทการดำเนินการ</label>
+            <select value={filterActionType} onChange={(e) => setFilterActionType(e.target.value)}>
+              <option value="">ทั้งหมด</option>
+              {actionTypes.map(t => (<option key={t} value={t}>{getActionTypeLabel(t)}</option>))}
             </select>
           </div>
-
-          <div className="filter-group">
-            <label>🏌️ สนามกอล์ฟ:</label>
-            <select
-              value={filterGolfCourse}
-              onChange={(e) => setFilterGolfCourse(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">ทั้งหมด ({availableGolfCoursesWithData.length} สนาม)</option>
-              {availableGolfCoursesWithData.map((course, index) => (
-                <option key={`course-${course.id}-${index}`} value={String(course.id)}>
-                  {String(course.name)}
-                </option>
-              ))}
+          <div className="fg">
+            <label>สนามกอล์ฟ</label>
+            <select value={filterGolfCourse} onChange={(e) => setFilterGolfCourse(e.target.value)}>
+              <option value="">ทั้งหมด ({availableGolfCourses.length} สนาม)</option>
+              {availableGolfCourses.map(c => (<option key={c.id} value={String(c.id)}>{c.name}</option>))}
             </select>
           </div>
-
-          <div className="filter-group">
-            <label>📅 วันที่เริ่มต้น:</label>
-            <input
-              type="date"
-              value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="filter-input"
-            />
+          <div className="fg">
+            <label>ตั้งแต่วันที่</label>
+            <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} />
           </div>
-
-          <div className="filter-group">
-            <label>📅 วันที่สิ้นสุด:</label>
-            <input
-              type="date"
-              value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
-              className="filter-input"
-            />
+          <div className="fg">
+            <label>ถึงวันที่</label>
+            <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} />
           </div>
-
-          <div className="filter-group checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="filter-checkbox"
-              />
-              <span>🚫 แสดงรถปลดระวาง</span>
+          <div className="fg checkbox-fg">
+            <label className="cb-label">
+              <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+              <span>แสดงรถปลดระวาง</span>
             </label>
           </div>
         </div>
-
-        <div className="results-summary">
-          <span className="results-count">
-            📊 พบ <strong>{filteredEntries.length}</strong> รายการ จากทั้งหมด <strong>{allSerialHistory.length}</strong> รายการ
-          </span>
+        <div className="result-bar">
+          พบ <strong>{allEntries.length}</strong> รายการ
+          {pagination.totalCount !== null && <> จากทั้งหมด <strong>{pagination.totalCount.toLocaleString()}</strong> รายการ</>}
+          {pagination.hasMore && <span className="more-hint"> (เลื่อนลงเพื่อโหลดเพิ่ม)</span>}
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="table-section">
-        {filteredEntries.length === 0 ? (
-          <div className="no-data">
-            <div className="no-data-icon">📋</div>
-            <h3>ไม่พบข้อมูล</h3>
-            <p>ไม่พบประวัติที่ตรงกับเงื่อนไขการค้นหา</p>
-          </div>
+      {/* Table */}
+      <div className="table-card">
+        {pagination.isLoading ? (
+          <div className="empty-state"><div className="spinner"></div><p>กำลังโหลดข้อมูล...</p></div>
+        ) : allEntries.length === 0 ? (
+          <div className="empty-state"><div className="empty-icon">📋</div><h3>ไม่พบข้อมูล</h3><p>ไม่พบประวัติที่ตรงกับเงื่อนไขการค้นหา</p></div>
         ) : (
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>📅 วันที่/เวลา</th>
-                  <th>🏷️ หมายเลขซีเรียล</th>
-                  <th>🚗 หมายเลขรถ</th>
-                  <th>🔋 ซีเรียลแบต</th>
-                  <th>⚙️ ประเภท</th>
-                  <th>📝 รายละเอียด</th>
-                  <th>👤 ผู้รับผิดชอบ</th>
-                  <th>🏌️ สนามกอล์ฟ</th>
-                  <th>📊 สถานะ</th>
-                  <th>🔧 การดำเนินการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedEntries.map((entry) => (
-                  <tr key={entry.id} className={`table-row ${!entry.is_active ? 'inactive-row' : ''}`}>
-                    <td className="date-col">
-                      <div className="date-display">
-                        <div className="system-date">
-                          <span className="date-label">บันทึกในระบบ:</span>
-                          <span className="date-value">{formatDate(entry.action_date)}</span>
+          <TableVirtuoso
+            style={{ height: 'calc(100vh - 300px)', minHeight: '700px' }}
+            data={allEntries}
+            endReached={handleEndReached}
+            overscan={200}
+            fixedHeaderContent={() => (
+              <tr className="table-header-row">
+                <th className="th-date">วันที่/เวลา</th>
+                <th className="th-serial">ซีเรียล</th>
+                <th className="th-vehicle">เลขรถ</th>
+                <th className="th-battery">แบต</th>
+                <th className="th-type">ประเภท</th>
+                <th className="th-details">รายละเอียด</th>
+                <th className="th-performer">ผู้ดำเนินการ</th>
+                <th className="th-course">สนาม</th>
+                <th className="th-status">สถานะ</th>
+                <th className="th-action">จัดการ</th>
+              </tr>
+            )}
+            itemContent={(_index, entry) => {
+              const batterySerial = String(entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '');
+              const actionStyle = getActionTypeStyle(entry.action_type);
+              return (
+                <>
+                  <td data-label="วันที่" className="td-date">
+                    <span className="cell-date">{formatDate(entry.action_date)}</span>
+                    {entry.actual_transfer_date && (
+                      <div className="sub-date">ย้ายจริง: {formatDate(entry.actual_transfer_date)}</div>
+                    )}
+                  </td>
+                  <td data-label="ซีเรียล" className="td-serial">
+                    <span className="badge-serial">{String(entry.serial_number || '-')}</span>
+                  </td>
+                  <td data-label="เลขรถ" className="td-vehicle">
+                    <span className="badge-vehicle">{String(entry.vehicle_number || '-')}</span>
+                  </td>
+                  <td data-label="แบต" className="td-battery">
+                    {batterySerial && batterySerial !== '-' && batterySerial !== '' ? (
+                      <button onClick={() => handleViewBatterySerial(batterySerial)} className="btn-battery" title={batterySerial}>🔋 ดู</button>
+                    ) : (<span className="text-muted">-</span>)}
+                  </td>
+                  <td data-label="ประเภท" className="td-type">
+                    <span className="badge-action" style={{ background: actionStyle.bg, color: actionStyle.color }}>{getActionTypeLabel(entry.action_type)}</span>
+                  </td>
+                  <td data-label="รายละเอียด" className="td-details">
+                    <div className="cell-details">
+                      <p className="detail-text">{translateDetailsToThai(String(entry.details || ''))}</p>
+                      {entry.parts_used && entry.parts_used.length > 0 && (
+                        <div className="detail-parts">
+                          {entry.parts_used.slice(0, 2).map((p, i) => (
+                            <span key={`p-${entry.id}-${i}`} className="part-tag">{String(p)}</span>
+                          ))}
+                          {entry.parts_used.length > 2 && <span className="part-more">+{entry.parts_used.length - 2}</span>}
                         </div>
-                        {entry.actual_transfer_date && (
-                          <div className="actual-date">
-                            <span className="date-label">วันที่ย้ายจริง:</span>
-                            <span className="date-value">{formatDate(entry.actual_transfer_date)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="serial-col">
-                      <span className="serial-badge">{String(entry.serial_number || '-')}</span>
-                    </td>
-                    <td className="vehicle-col">
-                      <span className="vehicle-badge">{String(entry.vehicle_number || '-')}</span>
-                    </td>
-                    <td className="battery-col">
-                      {(() => {
-                        const batterySerial = String(entry.battery_serial || vehicles.find(v => v.id === entry.vehicle_id)?.battery_serial || '-');
-                        if (batterySerial === '-' || !batterySerial) {
-                          return <span className="text-gray-400">-</span>;
-                        }
-                        return (
-                          <button
-                            onClick={() => handleViewBatterySerial(batterySerial)}
-                            className="battery-view-btn"
-                            title={batterySerial}
-                          >
-                            <span className="battery-icon">🔋</span> ดูซีเรียล
-                          </button>
-                        );
-                      })()}
-                    </td>
-                    <td className="action-col">
-                      <span className={`action-badge ${getActionTypeColorClass(entry.action_type)}`}>
-                        {getActionTypeLabel(entry.action_type)}
+                      )}
+                      {entry.system && <span className="detail-system">⚙️ {getSystemDisplayName(String(entry.system))}</span>}
+                    </div>
+                  </td>
+                  <td data-label="ผู้ดำเนินการ" className="td-performer">
+                    <span className="cell-text">{safeGetPerformedBy(entry.performed_by)}</span>
+                  </td>
+                  <td data-label="สนาม" className="td-course">
+                    <span className="cell-text-muted">{String(entry.golf_course_name || 'ไม่ระบุ')}</span>
+                  </td>
+                  <td data-label="สถานะ" className="td-status">
+                    <div className="status-stack">
+                      <span className={`is-active-tag ${entry.is_active ? 'active' : 'inactive'}`}>
+                        {entry.is_active ? 'ใช้งาน' : 'ปลดระวาง'}
                       </span>
-                    </td>
-                    <td className="details-col">
-                      <div className="details-content">
-                        <p className="details-text">{translateDetailsToThai(String(entry.details || ''))}</p>
-                        {entry.parts_used && entry.parts_used.length > 0 && (
-                          <div className="parts-info">
-                            <span className="info-label">🔧 อะไหล่ที่ใช้:</span>
-                            <div className="parts-list">
-                              {entry.parts_used.map((part, index) => (
-                                <span key={`part-${entry.id}-${index}-${String(part).replace(/[^a-zA-Z0-9]/g, '')}`} className="part-item">{String(part)}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {entry.system && (
-                          <div className="system-info">
-                            <span className="info-label">⚙️ ระบบ:</span>
-                            <span className="system-name">{getSystemDisplayName(String(entry.system))}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="performer-col">
-                      <div className="performer-info">
-                        <span className="performer-name">{safeGetPerformedBy(entry.performed_by)}</span>
-                      </div>
-                    </td>
-                    <td className="course-col">
-                      <span className="course-name">{String(entry.golf_course_name || 'ไม่ระบุ')}</span>
-                    </td>
-                    <td className="status-col">
-                      <div className="status-container">
-                        <span className={`status-badge ${entry.is_active ? 'active' : 'inactive'}`}>
-                          {entry.is_active ? '✅ ใช้งาน' : '❌ ปลดระวาง'}
-                        </span>
-                        {entry.status && (
-                          <StatusBadge status={entry.status} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="actions-col">
-                      <div className="action-buttons">
-                        {entry.related_job_id ? (
-                          <button
-                            onClick={() => handleViewJob(entry.related_job_id!)}
-                            className="action-btn primary"
-                          >
-                            👁️ ดูงาน
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleViewDetails(entry)}
-                            className="action-btn secondary"
-                          >
-                            📋 รายละเอียด
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {entry.status && <StatusBadge status={entry.status} />}
+                    </div>
+                  </td>
+                  <td data-label="จัดการ" className="td-action">
+                    {entry.related_job_id ? (
+                      <button onClick={() => handleViewJob(entry.related_job_id!)} className="btn-view-job">ดูงาน</button>
+                    ) : (
+                      <button onClick={() => handleViewDetails(entry)} className="btn-view-detail">ดู</button>
+                    )}
+                  </td>
+                </>
+              );
+            }}
+          />
+        )}
+        {pagination.isLoadingMore && (
+          <div className="loading-bar"><div className="spinner-sm"></div> กำลังโหลดเพิ่ม...</div>
+        )}
+        {!pagination.hasMore && allEntries.length > 0 && !pagination.isLoadingMore && (
+          <div className="end-bar">— แสดงข้อมูลทั้งหมด {allEntries.length.toLocaleString()} รายการ —</div>
         )}
       </div>
 
-      {/* Job Details Modal */}
+      {/* Modals */}
       {isModalOpen && selectedJob && (
-        <JobDetailsModal
-          job={selectedJob}
-          golfCourses={golfCourses}
-          users={users}
-          vehicles={vehicles}
-          partsUsageLog={partsUsageLog}
-          onClose={handleCloseModal}
-        />
+        <JobDetailsModal job={selectedJob} golfCourses={golfCourses} users={users} vehicles={vehicles} partsUsageLog={partsUsageLog} onClose={handleCloseModal} />
       )}
 
-      {/* Battery Serial Modal */}
       {isBatteryModalOpen && selectedBatterySerial && (
         <div className="modal-overlay" onClick={handleCloseBatteryModal}>
-          <div className="modal-content battery-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
               <h3>🔋 ซีเรียลแบตเตอรี่</h3>
-              <button className="close-btn" onClick={handleCloseBatteryModal}>&times;</button>
+              <button className="modal-close" onClick={handleCloseBatteryModal}>&times;</button>
             </div>
-            <div className="modal-body">
-              <div className="battery-serial-display">
-                {selectedBatterySerial}
-              </div>
-            </div>
+            <div className="battery-display">{selectedBatterySerial}</div>
           </div>
         </div>
       )}
@@ -853,687 +393,288 @@ const SerialHistoryScreen = ({ user, setView, jobs, vehicles, serialHistory, gol
       <style jsx>{`
         .serial-history-screen {
           padding: 24px;
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
           min-height: 100vh;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: 'Inter', -apple-system, sans-serif;
         }
 
-        .screen-header {
-          background: white;
-          border-radius: 20px;
-          padding: 32px;
-          margin-bottom: 24px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-        }
-
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-        }
-
-        .header-icon {
-          font-size: 3.5rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          width: 80px;
-          height: 80px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .header-text h1 {
-          font-size: 2.5rem;
-          font-weight: 700;
-          color: #1a202c;
-          margin: 0 0 8px 0;
-          background: linear-gradient(135deg, #667eea 0%, #764BA2FF 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .header-text p {
-          font-size: 1.1rem;
-          color: #718096;
-          margin: 0;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn-parts-history {
-          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-          color: white;
-          border: none;
-          padding: 16px 24px;
-          border-radius: 12px;
-          font-weight: 600;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 4px 20px rgba(72, 187, 120, 0.3);
-        }
-
-        .btn-parts-history:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(72, 187, 120, 0.4);
-        }
-
-        .btn-icon {
-          font-size: 1.2rem;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 20px;
-          margin-bottom: 24px;
-        }
-
-        .stat-card {
+        /* === Header === */
+        .page-header-card {
           background: white;
           border-radius: 16px;
-          padding: 28px;
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e2e8f0;
-          transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-        }
-
-        .stat-icon {
-          font-size: 3rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          width: 70px;
-          height: 70px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .stat-value {
-          font-size: 2.5rem;
-          font-weight: 700;
-          color: #1a202c;
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: 1rem;
-          color: #718096;
-          margin-top: 4px;
-          font-weight: 500;
-        }
-
-        .filter-section {
-          background: white;
-          border-radius: 20px;
-          padding: 28px;
-          margin-bottom: 24px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e2e8f0;
-        }
-
-        .filter-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #f7fafc;
-        }
-
-        .filter-header h3 {
-          font-size: 1.4rem;
-          font-weight: 600;
-          color: #1a202c;
-          margin: 0;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .btn-clear {
-          background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-          color: white;
-          border: none;
-          padding: 12px 20px;
-          border-radius: 10px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 4px 16px rgba(245, 101, 101, 0.3);
-        }
-
-        .btn-clear:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(245, 101, 101, 0.4);
-        }
-
-        .filter-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 20px;
+          padding: 28px 32px;
           margin-bottom: 20px;
-        }
-
-        .filter-group {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .filter-group label {
-          font-weight: 600;
-          color: #4a5568;
-          font-size: 0.95rem;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .filter-input, .filter-select {
-          padding: 14px 16px;
-          border: 2px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 0.95rem;
-          transition: all 0.3s ease;
-          background: white;
-          font-family: inherit;
-        }
-
-        .filter-input:focus, .filter-select:focus {
-          outline: none;
-          border-color: #667eea;
-          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        }
-
-        .checkbox-group {
-          flex-direction: row;
-          align-items: center;
-        }
-
-        .checkbox-label {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
-          font-weight: 500;
-        }
-
-        .filter-checkbox {
-          width: 20px;
-          height: 20px;
-          accent-color: #667eea;
-        }
-
-        .results-summary {
-          text-align: center;
-          padding: 20px;
-          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-          border-radius: 12px;
+          box-shadow: 0 1px 8px rgba(0,0,0,0.06);
           border: 1px solid #e2e8f0;
         }
-
-        .results-count {
-          font-size: 1.1rem;
-          color: #E7F0FFFF;
-          font-weight: 600;
-        }
-
-        .table-section {
-          background: white;
-          border-radius: 20px;
-          overflow: hidden;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-          border: 1px solid #e2e8f0;
-        }
-
-        .table-container {
-          overflow-x: auto;
-        }
-
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .data-table th {
-          background: linear-gradient(135deg, #667eea 0%, #667eea 100%);
-          color: white;
-          padding: 20px 16px;
-          text-align: left;
-          font-weight: 600;
-          font-size: 0.95rem;
-          border-bottom: 2px solid #5a67d8;
-          white-space: nowrap;
-        }
-
-        .table-row {
-          transition: all 0.3s ease;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table-row:hover {
-          background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
-          transform: scale(1.001);
-        }
-
-        .table-row.inactive-row {
-          opacity: 0.6;
-          background: linear-gradient(135deg, #fef5e7 0%, #fed7aa 100%);
-        }
-
-        .data-table td {
-          padding: 20px 16px;
-          vertical-align: top;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        .serial-col, .action-col, .vehicle-col, .status-col {
-          white-space: nowrap;
-        }
-
-        .battery-col {
-          white-space: nowrap;
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .date-display {
-          font-weight: 500;
-          color: #4a5568;
-        }
-
-        .system-date, .actual-date {
-          margin-bottom: 4px;
-        }
-
-        .date-label {
-          font-size: 0.8rem;
-          color: #718096;
-          font-weight: 600;
-          display: block;
-        }
-
-        .date-value {
-          font-size: 0.9rem;
-          color: #2d3748;
-          font-weight: 500;
-          display: block;
-        }
-
-        .actual-date {
-          padding-top: 8px;
-          border-top: 1px solid #e2e8f0;
-          margin-top: 8px;
-        }
-
-        .actual-date .date-label {
-          color: #e53e3e;
-        }
-
-        .actual-date .date-value {
-          color: #c53030;
-          font-weight: 600;
-        }
-
-        .serial-badge {
-          background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 600;
-          font-size: 0.9rem;
-          box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
-        }
-
-        .vehicle-badge {
-          background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 600;
-          font-size: 0.9rem;
-          box-shadow: 0 2px 8px rgba(237, 137, 54, 0.3);
-        }
-
-        .battery-view-btn {
-          background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
-          color: white;
-          border: none;
-          padding: 6px 12px;
-          border-radius: 12px;
-          font-weight: 600;
-          font-size: 0.8rem;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          box-shadow: 0 2px 6px rgba(159, 122, 234, 0.3);
-          white-space: nowrap;
-        }
-
-        .battery-view-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 10px rgba(159, 122, 234, 0.4);
-        }
-
-        .battery-icon {
-          font-size: 0.9rem;
-        }
-
-        .action-badge {
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 600;
-          font-size: 0.85rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .action-registration { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; }
-        .action-transfer { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; }
-        .action-maintenance { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); color: white; }
-        .action-decommission { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); color: white; }
-        .action-inspection { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); color: white; }
-        .action-status-change { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); color: white; }
-        .action-data-edit { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .action-data-delete { background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); color: white; }
-        .action-bulk-transfer { background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: white; }
-        .action-bulk-upload { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; }
-        .action-default { background: linear-gradient(135deg, #a0aec0 0%, #718096 100%); color: white; }
-
-        .details-content {
-          min-width: 350px;
-          max-width: 600px;
-        }
-
-        .details-text {
-          margin: 0 0 8px 0;
-          color: #2d3748;
-          line-height: 1.5;
-          font-weight: 500;
-        }
-
-        .parts-info, .system-info {
-          margin: 6px 0;
-          font-size: 0.9rem;
-        }
-
-        .info-label {
-          font-weight: 600;
-          color: #4a5568;
-        }
-
-        .parts-list, .system-name {
-          color: #718096;
-        }
-
-        .parts-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 4px;
-        }
-
-        .part-item {
-          background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
-          color: #234e52;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          border: 1px solid #81e6d9;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .performer-name {
-          font-weight: 600;
-          color: #2d3748;
-        }
-
-        .course-name {
-          color: #4a5568;
-          font-weight: 500;
-        }
-
-        .status-container {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          align-items: flex-start;
-        }
-
-        .status-badge {
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 600;
-          font-size: 0.85rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .status-badge.active {
-          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-          color: white;
-        }
-
-        .status-badge.inactive {
-          background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-          color: white;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-        }
-
-        .action-btn {
-          padding: 10px 16px;
-          border: none;
-          border-radius: 10px;
-          font-weight: 600;
-          font-size: 0.9rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .action-btn.primary {
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        .header-title-area { display: flex; align-items: center; gap: 16px; }
+        .header-icon-box {
+          font-size: 2.5rem;
+          width: 64px; height: 64px;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+        }
+        .page-title {
+          font-size: 1.8rem; font-weight: 700; margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .page-subtitle { margin: 4px 0 0; font-size: 0.95rem; color: #718096; }
+        .header-buttons { display: flex; gap: 10px; }
+        .btn-action {
+          border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600;
+          font-size: 0.95rem; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-action:hover { transform: translateY(-1px); }
+        .btn-refresh { background: #667eea; color: white; }
+        .btn-green { background: #48bb78; color: white; }
+
+        /* === Stats === */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-box {
+          background: white; border-radius: 12px; padding: 20px 24px;
+          display: flex; align-items: center; gap: 16px;
+          box-shadow: 0 1px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
+        }
+        .stat-icon-txt { font-size: 2rem; }
+        .stat-number { font-size: 2rem; font-weight: 700; color: #1a202c; line-height: 1; }
+        .stat-desc { font-size: 0.85rem; color: #718096; margin-top: 2px; }
+
+        /* === Filters === */
+        .filter-card {
+          background: white; border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
+          box-shadow: 0 1px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
+        }
+        .filter-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+        .filter-title { font-size: 1.1rem; font-weight: 600; color: #1a202c; }
+        .btn-clear-filter {
+          background: none; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px;
+          font-size: 0.85rem; cursor: pointer; color: #64748b; font-weight: 600; transition: all 0.2s;
+        }
+        .btn-clear-filter:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .fg { display: flex; flex-direction: column; gap: 6px; }
+        .fg label { font-weight: 600; color: #4a5568; font-size: 0.85rem; }
+        .fg input, .fg select {
+          padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem;
+          transition: all 0.2s; background: white; font-family: inherit;
+        }
+        .fg input:focus, .fg select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+        .checkbox-fg { flex-direction: row; align-items: flex-end; }
+        .cb-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #4a5568; }
+        .result-bar {
+          text-align: center; padding: 14px; background: #f7fafc; border-radius: 8px;
+          font-size: 0.95rem; color: #4a5568; border: 1px solid #e2e8f0;
+        }
+        .more-hint { color: #667eea; font-weight: 500; }
+
+        /* === Table Card === */
+        .table-card {
+          background: white; border-radius: 16px; overflow: hidden;
+          box-shadow: 0 1px 8px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
         }
 
-        .action-btn.secondary {
-          background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
-          color: white;
+        /* Table Base */
+        .table-card :global(table) { width: 100%; border-collapse: collapse; }
+
+        /* Column Widths — proportional distribution */
+        .table-card :global(.th-date),
+        .table-card :global(.td-date) { width: 11%; min-width: 120px; }
+        .table-card :global(.th-serial),
+        .table-card :global(.td-serial) { width: 10%; min-width: 110px; }
+        .table-card :global(.th-vehicle),
+        .table-card :global(.td-vehicle) { width: 6%; min-width: 60px; text-align: center; }
+        .table-card :global(.th-battery),
+        .table-card :global(.td-battery) { width: 5%; min-width: 55px; text-align: center; }
+        .table-card :global(.th-type),
+        .table-card :global(.td-type) { width: 8%; min-width: 90px; }
+        .table-card :global(.th-details),
+        .table-card :global(.td-details) { width: 26%; }
+        .table-card :global(.th-performer),
+        .table-card :global(.td-performer) { width: 10%; min-width: 90px; }
+        .table-card :global(.th-course),
+        .table-card :global(.td-course) { width: 9%; min-width: 80px; }
+        .table-card :global(.th-status),
+        .table-card :global(.td-status) { width: 9%; min-width: 80px; }
+        .table-card :global(.th-action),
+        .table-card :global(.td-action) { width: 6%; min-width: 60px; text-align: center; }
+
+        /* Table Header */
+        .table-card :global(thead tr),
+        .table-card :global(.table-header-row) {
+          background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%);
+        }
+        .table-card :global(th) {
+          color: white; padding: 14px 10px; text-align: left; font-weight: 600;
+          font-size: 0.8rem; white-space: nowrap; border-bottom: 2px solid #4c51bf;
+          letter-spacing: 0.02em;
         }
 
-        .action-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        /* Table Rows */
+        .table-card :global(td) {
+          padding: 10px 10px; vertical-align: middle; border-bottom: 1px solid #edf2f7;
+          font-size: 0.84rem; color: #2d3748;
+        }
+        .table-card :global(tr:nth-child(even) td) { background: #fafbfc; }
+        .table-card :global(tr:hover td) { background: #edf2f7; }
+
+        /* Cell Styles */
+        .cell-date { font-size: 0.8rem; color: #4a5568; font-weight: 500; display: block; line-height: 1.35; }
+        .sub-date { font-size: 0.72rem; color: #e53e3e; margin-top: 3px; font-weight: 500; }
+
+        .badge-serial {
+          display: inline-block;
+          background: #ebf4ff; color: #2b6cb0; padding: 3px 8px; border-radius: 5px;
+          font-weight: 600; font-size: 0.78rem; border: 1px solid #bee3f8;
+          word-break: break-all; line-height: 1.3;
+        }
+        .badge-vehicle {
+          display: inline-flex; align-items: center; justify-content: center;
+          background: #feebc8; color: #c05621; padding: 3px 8px; border-radius: 5px;
+          font-weight: 700; font-size: 0.8rem; border: 1px solid #fbd38d; min-width: 32px;
         }
 
-        .no-data {
-          text-align: center;
-          padding: 80px 20px;
-          color: #718096;
+        .btn-battery {
+          background: #faf5ff; border: 1px solid #d6bcfa; color: #6b46c1;
+          padding: 3px 8px; border-radius: 5px; font-weight: 600; font-size: 0.75rem;
+          cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .btn-battery:hover { background: #e9d8fd; }
+
+        .badge-action {
+          display: inline-block; padding: 3px 10px; border-radius: 5px;
+          font-weight: 600; font-size: 0.76rem; white-space: nowrap;
         }
 
-        .no-data-icon {
-          font-size: 5rem;
-          margin-bottom: 20px;
-          opacity: 0.5;
+        .cell-details { }
+        .detail-text { margin: 0; line-height: 1.4; color: #2d3748; font-size: 0.82rem; word-break: break-word; }
+        .detail-parts { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+        .part-tag {
+          display: inline-block; background: #e6fffa; color: #234e52;
+          padding: 1px 6px; border-radius: 3px; font-size: 0.72rem; font-weight: 500; border: 1px solid #b2f5ea;
         }
+        .part-more { font-size: 0.72rem; color: #a0aec0; margin-left: 2px; }
+        .detail-system { display: block; font-size: 0.74rem; color: #718096; margin-top: 3px; }
 
-        .no-data h3 {
-          font-size: 1.8rem;
-          margin: 0 0 12px 0;
-          color: #4a5568;
-          font-weight: 600;
+        .cell-text { font-weight: 500; color: #2d3748; font-size: 0.82rem; }
+        .cell-text-muted { color: #718096; font-size: 0.82rem; }
+        .text-muted { color: #cbd5e0; }
+
+        .status-stack { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+        .is-active-tag {
+          display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 600;
         }
+        .is-active-tag.active { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+        .is-active-tag.inactive { background: #fff5f5; color: #9b2c2c; border: 1px solid #fed7d7; }
 
-        .no-data p {
-          margin: 0;
-          font-size: 1.1rem;
+        .btn-view-job {
+          background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 6px;
+          font-weight: 600; font-size: 0.76rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
         }
-
-        @media (max-width: 768px) {
-          .serial-history-screen {
-            padding: 16px;
-          }
-
-          .screen-header {
-            padding: 24px;
-          }
-
-          .header-content {
-            flex-direction: column;
-            gap: 20px;
-            text-align: center;
-          }
-
-          .header-left {
-            flex-direction: column;
-            text-align: center;
-          }
-
-          .header-text h1 {
-            font-size: 2rem;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-          }
-
-          .filter-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .data-table {
-            font-size: 0.85rem;
-          }
-
-          .data-table th,
-          .data-table td {
-            padding: 12px 8px;
-          }
-
-          .details-content {
-            max-width: 250px;
-          }
+        .btn-view-job:hover { background: #5a67d8; }
+        .btn-view-detail {
+          background: #edf2f7; color: #4a5568; border: 1px solid #e2e8f0; padding: 5px 10px;
+          border-radius: 6px; font-weight: 600; font-size: 0.76rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
         }
+        .btn-view-detail:hover { background: #e2e8f0; }
 
+        /* Loading / Empty */
+        .empty-state { text-align: center; padding: 60px 20px; color: #718096; }
+        .empty-icon { font-size: 3.5rem; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state h3 { font-size: 1.4rem; margin: 0 0 8px; color: #4a5568; }
+        .empty-state p { margin: 0; }
+        .spinner {
+          width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #667eea;
+          border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+        }
+        .spinner-sm {
+          display: inline-block; width: 16px; height: 16px; border: 2px solid #e2e8f0; border-top-color: #667eea;
+          border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px;
+        }
+        .loading-bar { text-align: center; padding: 16px; color: #667eea; font-weight: 600; font-size: 0.9rem; }
+        .end-bar { text-align: center; padding: 14px; color: #a0aec0; font-size: 0.85rem; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Modal */
         .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center;
+          z-index: 1000; backdrop-filter: blur(4px);
+        }
+        .modal-box {
+          background: white; padding: 28px; border-radius: 16px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.15); width: 90%; max-width: 380px;
+        }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .modal-head h3 { margin: 0; font-size: 1.15rem; color: #2d3748; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; color: #a0aec0; cursor: pointer; padding: 0; }
+        .modal-close:hover { color: #4a5568; }
+        .battery-display {
+          background: #f7fafc; padding: 20px; border-radius: 10px; border: 2px dashed #cbd5e0;
+          text-align: center; font-size: 1.15rem; font-weight: 600; color: #4a5568; font-family: monospace; word-break: break-all;
         }
 
-        .modal-content.battery-modal {
-          background: white;
-          padding: 24px;
-          border-radius: 16px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-          width: 90%;
-          max-width: 400px;
-          animation: slideUp 0.3s ease-out;
+        /* === Responsive: Tablet === */
+        @media (max-width: 1200px) {
+          .table-card :global(.th-battery),
+          .table-card :global(.td-battery) { display: none; }
+          .table-card :global(.th-course),
+          .table-card :global(.td-course) { display: none; }
         }
 
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 20px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid #e2e8f0;
+        @media (max-width: 1024px) {
+          .stats-row { grid-template-columns: repeat(2, 1fr); }
+          .header-row { flex-direction: column; gap: 16px; text-align: center; }
+          .header-title-area { flex-direction: column; text-align: center; }
+          .page-title { font-size: 1.5rem; }
+          .table-card :global(.th-performer),
+          .table-card :global(.td-performer) { display: none; }
         }
 
-        .modal-header h3 {
-          margin: 0;
-          font-size: 1.25rem;
-          color: #2d3748;
-          display: flex;
-          align-items: center;
-          gap: 8px;
+        /* === Responsive: Mobile === */
+        @media (max-width: 768px) {
+          .serial-history-screen { padding: 12px; }
+          .page-header-card { padding: 20px; }
+          .filter-card { padding: 16px 18px; }
+          .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+          .stat-box { padding: 14px 16px; gap: 10px; }
+          .stat-icon-txt { font-size: 1.5rem; }
+          .stat-number { font-size: 1.5rem; }
+          .stat-desc { font-size: 0.78rem; }
+          .filter-grid { grid-template-columns: 1fr; }
+
+          /* Table: keep as table but smaller */
+          .table-card :global(th) { padding: 10px 6px; font-size: 0.72rem; }
+          .table-card :global(td) { padding: 8px 6px; font-size: 0.78rem; }
+
+          .table-card :global(.th-battery),
+          .table-card :global(.td-battery),
+          .table-card :global(.th-course),
+          .table-card :global(.td-course),
+          .table-card :global(.th-performer),
+          .table-card :global(.td-performer),
+          .table-card :global(.th-status),
+          .table-card :global(.td-status) { display: none; }
+
+          .badge-serial, .badge-vehicle { font-size: 0.72rem; padding: 2px 6px; }
+          .badge-action { font-size: 0.7rem; padding: 2px 6px; }
+          .detail-text { font-size: 0.76rem; }
+          .btn-view-job, .btn-view-detail { font-size: 0.7rem; padding: 4px 8px; }
         }
 
-        .close-btn {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          color: #a0aec0;
-          cursor: pointer;
-          transition: color 0.2s;
-          padding: 0;
-          line-height: 1;
-        }
+        @media (max-width: 480px) {
+          .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+          .stat-box { padding: 10px 12px; }
+          .stat-number { font-size: 1.2rem; }
+          .header-icon-box { width: 48px; height: 48px; font-size: 1.8rem; }
+          .page-title { font-size: 1.2rem; }
 
-        .close-btn:hover {
-          color: #4a5568;
-        }
-
-        .battery-serial-display {
-          background: #f7fafc;
-          padding: 20px;
-          border-radius: 12px;
-          border: 2px dashed #cbd5e0;
-          text-align: center;
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #4a5568;
-          word-break: break-all;
-          font-family: monospace;
-        }
-
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          .table-card :global(.th-details),
+          .table-card :global(.td-details) { display: none; }
         }
       `}</style>
     </div>

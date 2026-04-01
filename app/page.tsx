@@ -23,6 +23,7 @@ import GolfCourseManagementScreen from '@/components/GolfCourseManagementScreen'
 import AssignedJobFormScreen from '@/components/AssignedJobFormScreen';
 import ViewAssignedJobsScreen from '@/components/ViewAssignedJobsScreen';
 import SupervisorPendingJobsScreen from '@/components/SupervisorPendingJobsScreen';
+import AgreementManagementScreen from '@/components/AgreementManagementScreen';
 
 import EmployeeHistoryScreen from '@/components/EmployeeHistoryScreen';
 import ProfileScreen from '@/components/ProfileScreen';
@@ -1126,136 +1127,343 @@ export default function HomePage() {
 
   // แสดง loading screen ขณะโหลดข้อมูล
   if (loading) {
+    const progressPercent = Math.floor(loadingProgress);
+    const circumference = 2 * Math.PI * 54;
+    const progressOffset = circumference * (1 - loadingProgress / 100);
+
     return (
       <div
-        className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center z-50 overflow-hidden"
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
           width: '100vw',
           height: '100vh',
-          background: 'linear-gradient(135deg, #06122AFF 0%, #210A4DFF 50%, #031E43FF 100%)',
+          background: 'linear-gradient(135deg, #06122A 0%, #210A4D 50%, #031E43 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 9999
+          zIndex: 9999,
+          overflow: 'hidden',
+          fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
         }}
       >
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
-        </div>
+        {/* === Animated Background Layers === */}
+        {/* Radial ambient glow */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(6,182,212,0.08) 0%, transparent 70%)',
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'radial-gradient(ellipse 60% 80% at 30% 70%, rgba(99,102,241,0.06) 0%, transparent 60%)',
+        }} />
 
-        <div className="text-center relative z-10 px-8 flex flex-col items-center justify-center">
-          {/* Golf Cart Icon */}
-          <div className="mb-12 transform hover:scale-110 transition-transform duration-300">
-            <div className="relative">
-              <svg
-                width="120"
-                height="120"
-                viewBox="0 0 100 100"
-                className="mx-auto text-white drop-shadow-2xl"
-                fill="currentColor"
-              >
-                {/* Golf Cart Body */}
-                <rect x="20" y="40" width="50" height="25" rx="3" fill="white" />
-                {/* Golf Cart Roof */}
-                <rect x="15" y="25" width="60" height="20" rx="5" fill="white" />
-                {/* Golf Cart Wheels */}
-                <circle cx="30" cy="70" r="8" fill="white" />
-                <circle cx="60" cy="70" r="8" fill="white" />
-                {/* Golf Cart Details */}
-                <rect x="25" y="45" width="15" height="15" rx="2" fill="black" />
-                <rect x="50" y="45" width="15" height="15" rx="2" fill="black" />
-              </svg>
-              {/* Glow Effect */}
-              <div className="absolute inset-0 bg-cyan-400 rounded-full blur-xl opacity-20 animate-pulse"></div>
+        {/* Floating particles */}
+        {[...Array(20)].map((_, i) => (
+          <div key={`particle-${i}`} style={{
+            position: 'absolute',
+            width: `${2 + (i % 3) * 2}px`,
+            height: `${2 + (i % 3) * 2}px`,
+            borderRadius: '50%',
+            background: i % 2 === 0
+              ? 'rgba(6,182,212,0.4)'
+              : 'rgba(99,102,241,0.35)',
+            left: `${5 + (i * 4.7) % 90}%`,
+            top: `${5 + (i * 7.3) % 90}%`,
+            animation: `floatParticle ${4 + (i % 4) * 2}s ease-in-out infinite`,
+            animationDelay: `${(i * 0.3) % 3}s`,
+            boxShadow: i % 2 === 0
+              ? '0 0 6px rgba(6,182,212,0.6)'
+              : '0 0 6px rgba(99,102,241,0.5)',
+          }} />
+        ))}
+
+        {/* Grid overlay for depth */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.03,
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '60px 60px',
+        }} />
+
+        {/* === Main Content Card (Glassmorphism) === */}
+        <div style={{
+          position: 'relative', zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '48px 56px 42px',
+          borderRadius: '24px',
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+          minWidth: '380px',
+          maxWidth: '440px',
+        }}>
+
+          {/* === Orbital Rings + Golf Cart Icon === */}
+          <div style={{ position: 'relative', width: '160px', height: '160px', marginBottom: '32px' }}>
+            {/* Outer orbit ring */}
+            <div style={{
+              position: 'absolute', inset: '-12px',
+              border: '1px solid rgba(6,182,212,0.12)',
+              borderRadius: '50%',
+              animation: 'orbitSpin 12s linear infinite',
+            }}>
+              <div style={{
+                position: 'absolute', top: '-3px', left: '50%', transform: 'translateX(-50%)',
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: '#06b6d4',
+                boxShadow: '0 0 10px rgba(6,182,212,0.8), 0 0 20px rgba(6,182,212,0.4)',
+              }} />
             </div>
-          </div>
-
-          {/* Loading Text */}
-          <div className="mb-10">
-            <h2 className="text-gray-300 text-2xl font-light tracking-[0.3em] mb-2">
-              LOADING
-            </h2>
-            <div className="flex justify-center space-x-1">
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            {/* Middle orbit ring */}
+            <div style={{
+              position: 'absolute', inset: '4px',
+              border: '1px solid rgba(99,102,241,0.1)',
+              borderRadius: '50%',
+              animation: 'orbitSpin 8s linear infinite reverse',
+            }}>
+              <div style={{
+                position: 'absolute', bottom: '-3px', left: '50%', transform: 'translateX(-50%)',
+                width: '5px', height: '5px', borderRadius: '50%',
+                background: '#6366f1',
+                boxShadow: '0 0 10px rgba(99,102,241,0.8)',
+              }} />
             </div>
-          </div>
 
-          {/* Percentage */}
-          <div className="mb-12">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 text-6xl font-bold tracking-wider">
-              {Math.floor(loadingProgress)}%
-            </span>
-          </div>
-
-          {/* Circular Progress */}
-          <div className="relative w-40 h-40 mx-auto mb-8">
-            {/* Outer Glow Ring */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 opacity-20 blur-md"></div>
-
-            {/* Background Circle */}
-            <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
-              {/* Gradient Definition - ต้องอยู่ก่อน circle ที่ใช้งาน */}
+            {/* Circular progress ring (SVG) */}
+            <svg
+              viewBox="0 0 120 120"
+              style={{
+                position: 'absolute', inset: '8px',
+                transform: 'rotate(-90deg)',
+                filter: 'drop-shadow(0 0 8px rgba(6,182,212,0.3))',
+              }}
+            >
               <defs>
-                <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#3b82f6" />
+                  <stop offset="50%" stopColor="#818cf8" />
+                  <stop offset="100%" stopColor="#6366f1" />
                 </linearGradient>
               </defs>
-
+              <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,0.04)" strokeWidth="3" fill="none" />
               <circle
-                cx="50"
-                cy="50"
-                r="42"
-                stroke="rgba(55, 65, 81, 0.3)"
-                strokeWidth="2"
-                fill="none"
-              />
-
-              {/* Progress Circle */}
-              <circle
-                cx="50"
-                cy="50"
-                r="42"
-                stroke="url(#loadingGradient)"
-                strokeWidth="4"
+                cx="60" cy="60" r="54"
+                stroke="url(#progressGrad)"
+                strokeWidth="3.5"
                 fill="none"
                 strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 42}`}
-                strokeDashoffset={`${2 * Math.PI * 42 * (1 - loadingProgress / 100)}`}
-                className="transition-all duration-500 ease-out"
-                style={{
-                  filter: 'drop-shadow(0 0 12px #06b6d4)',
-                  opacity: 1
-                }}
+                strokeDasharray={circumference}
+                strokeDashoffset={progressOffset}
+                style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}
               />
             </svg>
 
-            {/* Center Dot */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full animate-pulse"></div>
+            {/* Center icon container */}
+            <div style={{
+              position: 'absolute', inset: '28px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%)',
+            }}>
+              {/* Golf cart icon */}
+              <svg
+                width="56" height="56" viewBox="0 0 100 100"
+                style={{
+                  animation: 'floatIcon 3s ease-in-out infinite',
+                  filter: 'drop-shadow(0 0 16px rgba(6,182,212,0.5))',
+                }}
+              >
+                <defs>
+                  <linearGradient id="cartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#67e8f9" />
+                    <stop offset="100%" stopColor="#a5b4fc" />
+                  </linearGradient>
+                </defs>
+                <rect x="20" y="40" width="50" height="25" rx="4" fill="url(#cartGrad)" opacity="0.95" />
+                <rect x="15" y="25" width="60" height="20" rx="6" fill="url(#cartGrad)" opacity="0.85" />
+                <circle cx="30" cy="70" r="8" fill="url(#cartGrad)" opacity="0.9" />
+                <circle cx="60" cy="70" r="8" fill="url(#cartGrad)" opacity="0.9" />
+                <circle cx="30" cy="70" r="4" fill="#0e1a3a" />
+                <circle cx="60" cy="70" r="4" fill="#0e1a3a" />
+                <rect x="26" y="46" width="13" height="13" rx="2.5" fill="rgba(6,18,42,0.7)" />
+                <rect x="51" y="46" width="13" height="13" rx="2.5" fill="rgba(6,18,42,0.7)" />
+              </svg>
+            </div>
+          </div>
+
+          {/* === App Name / Brand === */}
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <h1 style={{
+              fontSize: '18px', fontWeight: 600, letterSpacing: '0.12em',
+              background: 'linear-gradient(135deg, #e0f2fe, #c7d2fe)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              margin: 0,
+            }}>
+              GOLF CART MAINTENANCE
+            </h1>
+          </div>
+
+          {/* === Loading Status Text === */}
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <p style={{
+              fontSize: '13px', color: 'rgba(148,163,184,0.7)',
+              letterSpacing: '0.2em', fontWeight: 400, margin: 0,
+              display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center',
+            }}>
+              <span>กำลังเตรียมระบบ</span>
+              <span style={{ display: 'flex', gap: '3px' }}>
+                {[0, 1, 2].map(i => (
+                  <span key={i} style={{
+                    width: '4px', height: '4px', borderRadius: '50%',
+                    background: '#06b6d4',
+                    animation: 'dotPulse 1.4s ease-in-out infinite',
+                    animationDelay: `${i * 0.2}s`,
+                    opacity: 0.6,
+                  }} />
+                ))}
+              </span>
+            </p>
+          </div>
+
+          {/* === Percentage Display === */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <span style={{
+              fontSize: '52px', fontWeight: 700, letterSpacing: '-0.02em',
+              background: 'linear-gradient(135deg, #06b6d4 0%, #818cf8 50%, #6366f1 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              lineHeight: 1,
+              textShadow: 'none',
+            }}>
+              {progressPercent}
+              <span style={{ fontSize: '28px', fontWeight: 500, opacity: 0.8 }}>%</span>
+            </span>
+          </div>
+
+          {/* === Horizontal Progress Bar === */}
+          <div style={{ width: '100%', marginBottom: '16px' }}>
+            {/* Track */}
+            <div style={{
+              position: 'relative', height: '6px', borderRadius: '8px',
+              background: 'rgba(255,255,255,0.06)',
+              overflow: 'hidden',
+            }}>
+              {/* Fill */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: `${loadingProgress}%`,
+                borderRadius: '8px',
+                background: 'linear-gradient(90deg, #06b6d4, #818cf8, #6366f1)',
+                transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 0 16px rgba(6,182,212,0.5), 0 0 32px rgba(99,102,241,0.3)',
+              }} />
+              {/* Shimmer animation */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: `${loadingProgress}%`,
+                borderRadius: '8px',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 2s ease-in-out infinite',
+                transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+              }} />
+            </div>
+
+            {/* Step indicators */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', marginTop: '10px',
+              padding: '0 2px',
+            }}>
+              {['เชื่อมต่อ', 'โหลดข้อมูล', 'เตรียมหน้าจอ', 'เสร็จสิ้น'].map((label, i) => {
+                const stepThreshold = [0, 25, 60, 95];
+                const isActive = loadingProgress >= stepThreshold[i];
+                return (
+                  <div key={i} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                  }}>
+                    <div style={{
+                      width: '8px', height: '8px', borderRadius: '50%',
+                      background: isActive
+                        ? 'linear-gradient(135deg, #06b6d4, #6366f1)'
+                        : 'rgba(255,255,255,0.08)',
+                      border: isActive ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                      boxShadow: isActive ? '0 0 8px rgba(6,182,212,0.5)' : 'none',
+                      transition: 'all 0.4s ease',
+                    }} />
+                    <span style={{
+                      fontSize: '10px',
+                      color: isActive ? 'rgba(6,182,212,0.8)' : 'rgba(148,163,184,0.35)',
+                      fontWeight: isActive ? 500 : 400,
+                      transition: 'all 0.4s ease',
+                    }}>
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Error Display */}
           {loadingError && (
-            <div className="mt-8 p-6 bg-gradient-to-r from-red-900/30 to-red-800/30 backdrop-blur-sm border border-red-500/30 rounded-xl max-w-md mx-auto shadow-2xl">
-              <p className="text-red-300 mb-6 text-lg">{loadingError}</p>
+            <div style={{
+              marginTop: '20px', padding: '20px 24px',
+              background: 'rgba(239,68,68,0.08)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '16px', width: '100%',
+              boxShadow: '0 8px 24px rgba(239,68,68,0.1)',
+            }}>
+              <p style={{ color: '#fca5a5', fontSize: '14px', margin: '0 0 16px 0', lineHeight: 1.5 }}>
+                {loadingError}
+              </p>
               <button
                 onClick={() => window.location.reload()}
-                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                style={{
+                  width: '100%', padding: '10px 24px',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  color: 'white', border: 'none', borderRadius: '10px',
+                  fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
+                onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
               >
                 โหลดใหม่
               </button>
             </div>
           )}
         </div>
+
+        {/* === CSS Keyframes === */}
+        <style>{`
+          @keyframes floatParticle {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+            25% { transform: translateY(-20px) translateX(8px); opacity: 0.7; }
+            50% { transform: translateY(-10px) translateX(-5px); opacity: 0.5; }
+            75% { transform: translateY(-25px) translateX(12px); opacity: 0.6; }
+          }
+          @keyframes orbitSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
+          @keyframes dotPulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+            40% { transform: scale(1.2); opacity: 1; }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -1408,6 +1616,11 @@ export default function HomePage() {
             serialHistory={serialHistory}
             forceRefreshAllData={forceRefreshAllData}
             user={user}
+          />
+        )}
+        {view === 'agreements_management' && (
+          <AgreementManagementScreen
+            golfCourses={golfCourses}
           />
         )}
         {view === 'assigned_job_form' && selectedJobForForm && (

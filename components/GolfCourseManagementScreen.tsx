@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { Plus, Check, X, Trash2, Edit, FileText, CalendarRange, ArrowUp, ArrowDown, ArrowUpDown, Car, Building2 } from 'lucide-react';
+import AgreementManagementScreen from './AgreementManagementScreen';
 
 // Import interfaces and functions from lib/data.ts
 import {
   GolfCourse,
   Vehicle,
   SerialHistoryEntry,
-  User
+  User,
+  Agreement
 } from '@/lib/data';
 
 interface GolfCourseManagementScreenProps {
@@ -36,26 +39,51 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   user
 }) => {
   // Remove conflicting useState declarations and use props instead
-  const [activeTab, setActiveTab] = useState<'courses' | 'vehicles'>('courses');
-  const [newCourse, setNewCourse] = useState({ name: '', location: '' });
-  const [editingCourse, setEditingCourse] = useState<GolfCourse | null>(null);
-  const [showAddCourseForm, setShowAddCourseForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'courses' | 'vehicles' | 'agreements'>('courses');
+  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [courseFormData, setCourseFormData] = useState({ name: '', location: '', code: '', isActive: true });
+  const [showAgreementsModal, setShowAgreementsModal] = useState(false);
+  const [selectedCourseForAgreements, setSelectedCourseForAgreements] = useState<GolfCourse | null>(null);
+  const [courseAgreements, setCourseAgreements] = useState<any[]>([]);
+  const [isLoadingAgreements, setIsLoadingAgreements] = useState(false);
   const [newVehicle, setNewVehicle] = useState({ serial_number: '', vehicle_number: '', golf_course_id: '' });
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
+  const [allAgreements, setAllAgreements] = useState<Agreement[]>([]);
   const [filterCourse, setFilterCourse] = useState<string | ''>('');
+  const [filterAgreement, setFilterAgreement] = useState<string>('');
   const [filterSerial, setFilterSerial] = useState<string>(''); // เพิ่ม state สำหรับกรอง Serial
   const [filterBatterySerial, setFilterBatterySerial] = useState<string>(''); // เพิ่ม state สำหรับกรอง Battery Serial
   const [filterVehicleNumber, setFilterVehicleNumber] = useState<string>(''); // เพิ่ม state สำหรับกรองหมายเลขรถ
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([]);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showBulkTransferModal, setShowBulkTransferModal] = useState(false);
+  const [showBulkAgreementModal, setShowBulkAgreementModal] = useState(false);
+  const [bulkAgreementCourseId, setBulkAgreementCourseId] = useState<string | ''>('');
+  const [bulkAgreementId, setBulkAgreementId] = useState<string | ''>('');
   const [bulkUploadData, setBulkUploadData] = useState<BulkUploadData[]>([]);
   const [bulkUploadErrors, setBulkUploadErrors] = useState<string[]>([]);
   const [transferToCourse, setTransferToCourse] = useState<string | ''>('');
   const [transferDate, setTransferDate] = useState<string>(''); // เพิ่ม state สำหรับวันที่ย้าย
   const [serialError, setSerialError] = useState<string>(''); // เพิ่ม state สำหรับแสดงข้อผิดพลาด Serial ซ้ำ
   const [vehicleNumberError, setVehicleNumberError] = useState<string>(''); // เพิ่ม state สำหรับแสดงข้อผิดพลาดหมายเลขรถซ้ำ
+
+  // Fetch all agreements
+  useEffect(() => {
+    const fetchAgreements = async () => {
+      try {
+        const response = await fetch('/api/agreements');
+        if (response.ok) {
+          const result = await response.json();
+          setAllAgreements(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching agreements:', error);
+      }
+    };
+    fetchAgreements();
+  }, []);
 
   // Debug logging for newVehicle state changes
   useEffect(() => {
@@ -117,63 +145,61 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   // ใช้ข้อมูลจาก props ที่ส่งมาจาก lib/data.ts แทน mock data
 
   // Golf Course Management Functions
-  const handleAddCourse = async () => {
-    if (newCourse.name && newCourse.location) {
-      try {
-        const response = await fetch('/api/proxy/golf-courses', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newCourse)
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setGolfCourses([...golfCourses, result.data]);
-          setNewCourse({ name: '', location: '' });
-          setShowAddCourseForm(false);
-          alert('เพิ่มสนามกอล์ฟสำเร็จ');
-        } else {
-          const error = await response.json();
-          alert(`เกิดข้อผิดพลาด: ${error.message}`);
-        }
-      } catch (error) {
-        console.error('Error adding golf course:', error);
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-      }
+  const openCourseModal = (course?: GolfCourse) => {
+    if (course) {
+      setEditingCourseId(course.id);
+      setCourseFormData({
+        name: course.name,
+        location: course.location || '',
+        code: course.code || '',
+        isActive: course.isActive !== false
+      });
+    } else {
+      setEditingCourseId(null);
+      setCourseFormData({ name: '', location: '', code: '', isActive: true });
     }
+    setShowCourseModal(true);
   };
 
-  const handleUpdateCourse = async () => {
-    if (editingCourse) {
-      try {
-        const response = await fetch(`/api/proxy/golf-courses/${editingCourse.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: editingCourse.name,
-            location: editingCourse.location
-          })
-        });
+  const handleSaveCourse = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!courseFormData.name) {
+      alert('กรุณาระบุชื่อสนาม');
+      return;
+    }
 
-        if (response.ok) {
-          const result = await response.json();
+    try {
+      const url = editingCourseId ? `/api/proxy/golf-courses/${editingCourseId}` : '/api/proxy/golf-courses';
+      const method = editingCourseId ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(courseFormData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (editingCourseId) {
           setGolfCourses(golfCourses.map(course =>
-            course.id === editingCourse.id ? result.data : course
+            course.id === editingCourseId ? result.data : course
           ));
-          setEditingCourse(null);
-          alert('อัปเดตสนามกอล์ฟสำเร็จ');
         } else {
-          const error = await response.json();
-          alert(`เกิดข้อผิดพลาด: ${error.message}`);
+          setGolfCourses([result.data, ...golfCourses]);
         }
-      } catch (error) {
-        console.error('Error updating golf course:', error);
-        alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+        setShowCourseModal(false);
+        setCourseFormData({ name: '', location: '', code: '', isActive: true });
+        setEditingCourseId(null);
+        alert(editingCourseId ? 'อัปเดตสนามกอล์ฟสำเร็จ' : 'เพิ่มสนามกอล์ฟสำเร็จ');
+      } else {
+        const error = await response.json();
+        alert(`เกิดข้อผิดพลาด: ${error.message}`);
       }
+    } catch (error) {
+      console.error('Error saving golf course:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     }
   };
 
@@ -196,6 +222,23 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         console.error('Error deleting golf course:', error);
         alert('เกิดข้อผิดพลาดในการลบข้อมูล');
       }
+    }
+  };
+
+  const handleViewAgreements = async (course: GolfCourse) => {
+    setSelectedCourseForAgreements(course);
+    setShowAgreementsModal(true);
+    setIsLoadingAgreements(true);
+    try {
+      const res = await fetch(`/api/golf-courses/${course.id}`);
+      if (res.ok) {
+        const result = await res.json();
+        setCourseAgreements(result.data?.agreements || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch course agreements', err);
+    } finally {
+      setIsLoadingAgreements(false);
     }
   };
 
@@ -318,6 +361,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         vehicle_number: editingVehicle.vehicle_number.trim(),
         golf_course_id: editingVehicle.golf_course_id,
         golf_course_name: golfCourses.find(c => c.id === editingVehicle.golf_course_id)?.name || 'ไม่ระบุ',
+        agreement_id: editingVehicle.agreement_id || null,
         status: editingVehicle.status || 'active',
         brand: editingVehicle.brand || 'ไม่ระบุ',
         model: editingVehicle.model || 'ไม่ระบุ',
@@ -669,6 +713,44 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
     }
   };
 
+  const handleBulkAgreementChange = async () => {
+    if (selectedVehicles.length === 0) return;
+
+    try {
+      const response = await fetch('/api/vehicles/bulk-agreement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vehicle_ids: selectedVehicles,
+          agreement_id: bulkAgreementId || null,
+          user_id: user?.id?.toString() || 'unknown'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        if (forceRefreshAllData) {
+          await forceRefreshAllData();
+        }
+
+        alert(`เปลี่ยนสัญญาสำเร็จ ${result.data.length} คัน`);
+
+        setSelectedVehicles([]);
+        setBulkAgreementCourseId('');
+        setBulkAgreementId('');
+        setShowBulkAgreementModal(false);
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error changing bulk agreement:', error);
+      alert('เกิดข้อผิดพลาดในการเปลี่ยนสัญญา');
+    }
+  };
+
   const downloadTemplate = () => {
     // สร้าง header พร้อมคำอธิบาย
     const header = 'serial_number,vehicle_number,battery_serial,golf_course_id';
@@ -705,6 +787,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesCourse = filterCourse ? String(vehicle.golf_course_id) === filterCourse : true;
+    const matchesAgreement = filterAgreement ? vehicle.agreement_id === filterAgreement : true;
     const matchesSerial = filterSerial
       ? vehicle.serial_number.toLowerCase().includes(filterSerial.toLowerCase())
       : true;
@@ -715,7 +798,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
       ? vehicle.vehicle_number.toLowerCase().includes(filterVehicleNumber.toLowerCase())
       : true;
 
-    return matchesCourse && matchesSerial && matchesBatterySerial && matchesVehicleNumber;
+    return matchesCourse && matchesAgreement && matchesSerial && matchesBatterySerial && matchesVehicleNumber;
   }).sort((a, b) => {
     if (!sortConfig) return 0;
 
@@ -751,6 +834,14 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
         : String(bValue).localeCompare(String(aValue), undefined, { numeric: true, sensitivity: 'base' });
     }
 
+    if (key === 'agreement_id') {
+      const aAgr = allAgreements.find(a => a.id === aValue)?.agreement_number || '';
+      const bAgr = allAgreements.find(a => a.id === bValue)?.agreement_number || '';
+      if (aAgr < bAgr) return direction === 'asc' ? -1 : 1;
+      if (aAgr > bAgr) return direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+
     if (aValue < bValue) {
       return direction === 'asc' ? -1 : 1;
     }
@@ -761,10 +852,10 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   });
 
   const getSortIcon = (key: keyof Vehicle) => {
-    if (!sortConfig || sortConfig.key !== key) return <span className="sort-icon text-gray-400">↕</span>;
+    if (!sortConfig || sortConfig.key !== key) return <span className="ml-1 inline-flex text-zinc-300 dark:text-zinc-600"><ArrowUpDown size={14} /></span>;
     return sortConfig.direction === 'asc'
-      ? <span className="sort-icon text-blue-600">↑</span>
-      : <span className="sort-icon text-blue-600">↓</span>;
+      ? <span className="ml-1 inline-flex text-indigo-600 dark:text-indigo-400"><ArrowUp size={14} /></span>
+      : <span className="ml-1 inline-flex text-indigo-600 dark:text-indigo-400"><ArrowDown size={14} /></span>;
   };
 
   // Pagination State
@@ -774,7 +865,7 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
   // Reset to first page when filtering
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterCourse, filterSerial, filterBatterySerial, filterVehicleNumber]);
+  }, [filterCourse, filterAgreement, filterSerial, filterBatterySerial, filterVehicleNumber]);
 
   // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -784,166 +875,304 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
+  const activeCourses = golfCourses.filter(c => c.isActive !== false);
+  const inactiveCourses = golfCourses.filter(c => c.isActive === false);
+
   return (
-    <div className="golf-course-management">
-      <div className="page-header">
-        <button onClick={onBack} className="back-button">← กลับ</button>
-        <h1>จัดการสนามกอล์ฟและรถ</h1>
+    <div className="p-4 sm:p-6 lg:p-12 min-h-screen bg-slate-50/50 dark:bg-zinc-950 font-sans">
+      <div className="flex items-center gap-4 mb-6 sm:mb-8">
+        <button onClick={onBack} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 font-medium px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-sm transition-all duration-200 active:scale-95 flex items-center gap-2">
+          ← กลับ
+        </button>
       </div>
 
       {/* Tab Navigation */}
-      <div className="tab-navigation">
+      <div className="flex overflow-x-auto gap-2 pb-2 mb-6 sm:mb-8 hide-scrollbar">
         <button
-          className={`tab-button ${activeTab === 'courses' ? 'active' : ''}`}
+          className={`whitespace-nowrap flex-none px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'courses' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
           onClick={() => setActiveTab('courses')}
         >
           จัดการสนาม
         </button>
         <button
-          className={`tab-button ${activeTab === 'vehicles' ? 'active' : ''}`}
+          className={`whitespace-nowrap flex-none px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'vehicles' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
           onClick={() => setActiveTab('vehicles')}
         >
           จัดการรถ
+        </button>
+        <button
+          className={`whitespace-nowrap flex-none px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'agreements' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}
+          onClick={() => setActiveTab('agreements')}
+        >
+          สัญญาเช่า
         </button>
       </div>
 
       {/* Manage Courses Tab */}
       {activeTab === 'courses' && (
         <div className="courses-section">
-          <div className="section-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <h2>สนามกอล์ฟ</h2>
-              <span style={{
-                backgroundColor: '#e0f2fe',
-                color: '#0369a1',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '0.9rem',
-                fontWeight: 500
-              }}>
-                ทั้งหมด {golfCourses.length} สนาม
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                <Building2 className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
+                จัดการสนามกอล์ฟ
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm sm:text-base">
+                เพิ่ม ลบ หรือแก้ไขข้อมูลและรหัสของสนามกอล์ฟในระบบ <span className="inline-block ml-1 font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded text-xs">(ทั้งหมด {golfCourses.length} สนาม)</span>
+              </p>
             </div>
             <button
-              onClick={() => setShowAddCourseForm(true)}
-              className="add-button"
+              onClick={() => openCourseModal()}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              + เพิ่มสนาม
+              <Plus size={16} strokeWidth={2} />
+              เพิ่มสนามใหม่
             </button>
           </div>
 
-          {/* Add Course Form */}
-          {showAddCourseForm && (
-            <div className="form-section">
-              <h3>เพิ่มสนามใหม่</h3>
-              <div className="form-row">
-                <input
-                  type="text"
-                  placeholder="ชื่อสนาม"
-                  value={newCourse.name}
-                  onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                />
-                <input
-                  type="text"
-                  placeholder="ที่อยู่"
-                  value={newCourse.location}
-                  onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })}
-                />
-                <button onClick={handleAddCourse} className="save-button">บันทึก</button>
-                <button onClick={() => setShowAddCourseForm(false)} className="cancel-button">ยกเลิก</button>
+          {/* Course Add/Edit Modal */}
+          {showCourseModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm transition-opacity">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-full max-w-lg overflow-hidden border border-zinc-200/50 dark:border-zinc-800/50 transform transition-all">
+                <div className="flex items-center justify-between p-6 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50">
+                  <h2 className="text-xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-indigo-600" />
+                    {editingCourseId ? 'แก้ไขข้อมูลสนามกอล์ฟ' : 'เพิ่มสนามกอล์ฟใหม่'}
+                  </h2>
+                  <button onClick={() => setShowCourseModal(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveCourse} className="p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">รหัสสนาม</label>
+                      <input
+                        type="text"
+                        placeholder="เช่น G01"
+                        value={courseFormData.code}
+                        onChange={(e) => setCourseFormData({ ...courseFormData, code: e.target.value })}
+                        className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">ชื่อสนาม <span className="text-red-500">*</span></label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="ระบุชื่อสนามกอล์ฟ"
+                        value={courseFormData.name}
+                        onChange={(e) => setCourseFormData({ ...courseFormData, name: e.target.value })}
+                        className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">ที่อยู่</label>
+                    <input
+                      type="text"
+                      placeholder="ระบุที่ตั้ง/ที่อยู่ของสนาม"
+                      value={courseFormData.location}
+                      onChange={(e) => setCourseFormData({ ...courseFormData, location: e.target.value })}
+                      className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                    />
+                  </div>
+                  {editingCourseId && (
+                    <div className="space-y-1.5 border-t border-zinc-100 dark:border-zinc-800/50 pt-4 mt-2">
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">สถานะสัญญา <span className="text-xs font-normal text-zinc-500">(เปิดใช้งาน/ระงับใช้งาน)</span></label>
+                      <div className="flex gap-4 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="isActive"
+                            checked={courseFormData.isActive}
+                            onChange={() => setCourseFormData({ ...courseFormData, isActive: true })}
+                            className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">✅ เปิดใช้งาน (Active)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="isActive"
+                            checked={!courseFormData.isActive}
+                            onChange={() => setCourseFormData({ ...courseFormData, isActive: false })}
+                            className="w-4 h-4 text-zinc-500 focus:ring-zinc-500"
+                          />
+                          <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">❌ หมดสัญญา/ระงับ (Archived)</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-8 pt-5 flex justify-end gap-3 -mx-6 -mb-6 px-6 py-4 rounded-b-xl border-t border-zinc-200/50 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowCourseModal(false)}
+                      className="bg-transparent border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-5 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm"
+                    >
+                      {editingCourseId ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
 
           {/* Courses Table */}
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>ชื่อสนาม</th>
-                  <th>ที่อยู่</th>
-                  <th>จำนวนรถ</th>
-                  <th>การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {golfCourses.map(course => (
-                  <tr key={course.id}>
-                    <td>
-                      {editingCourse?.id === course.id ? (
-                        <input
-                          type="text"
-                          value={editingCourse.name}
-                          onChange={(e) => setEditingCourse({ ...editingCourse, name: e.target.value })}
-                        />
-                      ) : (
-                        course.name
-                      )}
-                    </td>
-                    <td>
-                      {editingCourse?.id === course.id ? (
-                        <input
-                          type="text"
-                          value={editingCourse.location}
-                          onChange={(e) => setEditingCourse({ ...editingCourse, location: e.target.value })}
-                        />
-                      ) : (
-                        course.location
-                      )}
-                    </td>
-                    <td>
-                      <span className="vehicle-count">
-                        {getVehicleCountByCourse(course.id)} คัน
-                      </span>
-                    </td>
-                    <td>
-                      {editingCourse?.id === course.id ? (
-                        <>
-                          <button onClick={handleUpdateCourse} className="save-button">บันทึก</button>
-                          <button onClick={() => setEditingCourse(null)} className="cancel-button">ยกเลิก</button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => setEditingCourse(course)} className="edit-button">แก้ไข</button>
-                          <button onClick={() => handleDeleteCourse(course.id)} className="delete-button">ลบ</button>
-                        </>
-                      )}
-                    </td>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-zinc-50/50 dark:bg-zinc-800/30 border-b border-zinc-200/50 dark:border-zinc-800/50">
+                  <tr>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-center w-32">รหัสสนาม</th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-left min-w-[200px]">ชื่อสนาม</th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-left max-w-[300px]">ที่อยู่</th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-center w-32">จำนวนรถ</th>
+                    <th className="px-6 py-4 font-medium text-zinc-500 dark:text-zinc-400 text-center w-48">การจัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/30">
+                  {activeCourses.map(course => (
+                    <tr key={course.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors group">
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-mono text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1.5 rounded-md text-xs font-semibold border border-indigo-100 dark:border-indigo-500/20 shadow-sm">{course.code || '-'}</span>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-zinc-900 dark:text-zinc-100 text-left">
+                        {course.name}
+                      </td>
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 truncate max-w-[200px] lg:max-w-xs text-left cursor-default" title={course.location || ''}>
+                        {course.location || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center justify-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200/50 dark:border-emerald-500/20 shadow-sm min-w-[80px]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                          {getVehicleCountByCourse(course.id)} คัน
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={() => handleViewAgreements(course)} className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 border border-indigo-100 dark:border-indigo-800/30 shadow-sm shadow-indigo-100/20 dark:shadow-none" title="ดูสัญญาเช่า">
+                            <CalendarRange size={14} />
+                            สัญญาเช่า
+                          </button>
+                          <button onClick={() => openCourseModal(course)} className="text-zinc-500 bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white p-1.5 rounded-md transition-all duration-200 active:scale-95 shadow-sm" title="แก้ไข">
+                            <Edit size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteCourse(course.id)} className="text-zinc-500 bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-white p-1.5 rounded-md transition-all duration-200 active:scale-95 shadow-sm" title="ลบ">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {activeCourses.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText size={32} className="text-zinc-300 dark:text-zinc-600 mb-2" />
+                          <p>ยังไม่มีข้อมูลสนามกอล์ฟที่ใช้งานอยู่</p>
+                          <button onClick={() => openCourseModal()} className="text-indigo-600 dark:text-indigo-400 hover:underline mt-1 text-sm font-medium">
+                            เพิ่มสนามกอล์ฟใหม่
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Inactive Courses Table (Archived) */}
+          {inactiveCourses.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold tracking-tight text-zinc-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-zinc-400" />
+                สนามที่หมดสัญญา / ถูกระงับชั่วคราว <span className="text-sm font-normal text-zinc-500 bg-zinc-200/50 px-2 py-0.5 rounded ml-2">{inactiveCourses.length} แห่ง</span>
+              </h3>
+              <div className="bg-white/50 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800/50 rounded-xl shadow-sm overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-zinc-50/50 dark:bg-zinc-800/30 border-b border-zinc-200/50 dark:border-zinc-800/50">
+                      <tr>
+                        <th className="px-6 py-3.5 font-medium text-zinc-500 dark:text-zinc-400 text-center w-32">รหัสสนาม</th>
+                        <th className="px-6 py-3.5 font-medium text-zinc-500 dark:text-zinc-400 text-left min-w-[200px]">ชื่อสนาม</th>
+                        <th className="px-6 py-3.5 font-medium text-zinc-500 dark:text-zinc-400 text-left max-w-[300px]">ที่อยู่</th>
+                        <th className="px-6 py-3.5 font-medium text-zinc-500 dark:text-zinc-400 text-center w-32">จำนวนรถ</th>
+                        <th className="px-6 py-3.5 font-medium text-zinc-500 dark:text-zinc-400 text-center w-48">การจัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/30">
+                      {inactiveCourses.map(course => (
+                        <tr key={course.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/20 transition-colors group">
+                          <td className="px-6 py-3.5 text-center">
+                            <span className="font-mono text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-md text-xs font-medium border border-zinc-200 dark:border-zinc-700">{course.code || '-'}</span>
+                          </td>
+                          <td className="px-6 py-3.5 font-medium text-zinc-600 dark:text-zinc-300 line-through decoration-zinc-300 dark:decoration-zinc-600 opacity-70 text-left">
+                            {course.name}
+                          </td>
+                          <td className="px-6 py-3.5 text-zinc-500 dark:text-zinc-500 truncate max-w-[200px] lg:max-w-xs text-left" title={course.location || ''}>
+                            {course.location || '-'}
+                          </td>
+                          <td className="px-6 py-3.5 text-center">
+                            <span className="inline-flex items-center justify-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2.5 py-0.5 rounded-full text-xs font-medium border border-zinc-200 dark:border-zinc-700 min-w-[80px]">
+                              {getVehicleCountByCourse(course.id)} คัน
+                            </span>
+                          </td>
+                          <td className="px-6 py-3.5">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => openCourseModal(course)} className="bg-white dark:bg-zinc-800 text-zinc-600 hover:text-white hover:bg-emerald-500 dark:hover:bg-emerald-500 border border-zinc-200 dark:border-zinc-700 rounded px-3 py-1.5 text-xs font-medium transition-all duration-200 shadow-sm" title="กู้คืน / เปิดใช้งาน">
+                                แก้ไขสถานะ
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Manage Vehicles Tab */}
       {activeTab === 'vehicles' && (
         <div className="vehicles-section">
-          <div className="section-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <h2>รถกอล์ฟ</h2>
-              <span style={{
-                backgroundColor: '#dcfce7',
-                color: '#15803d',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '0.9rem',
-                fontWeight: 500
-              }}>
-                ทั้งหมด {vehicles.length} คัน
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 sm:mb-8">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                <Car className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
+                จัดการรถกอล์ฟ
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm sm:text-base">
+                จัดการบัญชีรายชื่อรถ สถานะ และการผูกกับสัญญาเช่าหรือสนาม <span className="inline-block ml-1 font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-500/20 text-xs">(ทั้งหมด {vehicles.length} คัน)</span>
+              </p>
             </div>
-            <div className="header-actions">
-              <button onClick={() => setShowBulkUploadModal(true)} className="bulk-button">
-                📁 อัปโหลดจำนวนมาก
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <button onClick={() => setShowBulkUploadModal(true)} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+                <FileText size={16} strokeWidth={2} className="text-zinc-500" />
+                อัปโหลดจำนวนมาก
               </button>
-              <button onClick={() => {
-                setShowAddVehicleForm(true);
-                setSerialError('');
-                setVehicleNumberError('');
-              }} className="add-button">
-                + เพิ่มรถ
+              <button
+                onClick={() => {
+                  setShowAddVehicleForm(true);
+                  setSerialError('');
+                  setVehicleNumberError('');
+                }}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <Plus size={16} strokeWidth={2} />
+                เพิ่มรถใหม่
               </button>
             </div>
           </div>
@@ -1009,243 +1238,343 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
           )}
 
           {/* Filter and Bulk Actions */}
-          <div className="filter-section">
-            <div className="filter-controls">
-              <div className="filter-item">
-                <label>กรองตามสนาม:</label>
-                <select
-                  value={filterCourse}
-                  onChange={(e) => setFilterCourse(e.target.value || '')}
-                >
-                  <option value="">ทุกสนาม</option>
-                  {golfCourses.map(course => (
-                    <option key={course.id} value={String(course.id)}>{course.name}</option>
-                  ))}
-                </select>
-              </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-xl shadow-sm overflow-hidden mb-6 flex flex-col transition-all duration-300">
+            <div className="p-4 sm:p-5 bg-zinc-50/50 dark:bg-zinc-800/30">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">กรองตามสนาม</label>
+                  <select
+                    value={filterCourse}
+                    onChange={(e) => {
+                      setFilterCourse(e.target.value || '');
+                      setFilterAgreement('');
+                    }}
+                    className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-700 dark:text-zinc-300 transition-all duration-200"
+                  >
+                    <option value="">ทุกสนาม</option>
+                    {golfCourses.map(course => (
+                      <option key={course.id} value={String(course.id)}>{course.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="filter-item">
-                <label>หมายเลขซีเรียล:</label>
-                <input
-                  type="text"
-                  placeholder="ค้นหา Serial..."
-                  value={filterSerial}
-                  onChange={(e) => setFilterSerial(e.target.value)}
-                  className="filter-input"
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">กรองตามสัญญา</label>
+                  <select
+                    value={filterAgreement}
+                    onChange={(e) => setFilterAgreement(e.target.value || '')}
+                    disabled={!filterCourse}
+                    className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-700 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    <option value="">ทุกสัญญา</option>
+                    {allAgreements
+                      .filter(a => String(a.golf_course_id) === filterCourse)
+                      .map(agreement => (
+                        <option key={agreement.id} value={agreement.id}>{agreement.agreement_number}</option>
+                      ))}
+                  </select>
+                </div>
 
-              <div className="filter-item">
-                <label>หมายเลขรถ:</label>
-                <input
-                  type="text"
-                  placeholder="ค้นหาหมายเลขรถ..."
-                  value={filterVehicleNumber}
-                  onChange={(e) => setFilterVehicleNumber(e.target.value)}
-                  className="filter-input"
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">หมายเลขซีเรียล</label>
+                  <input
+                    type="text"
+                    placeholder="ค้นหา Serial..."
+                    value={filterSerial}
+                    onChange={(e) => setFilterSerial(e.target.value)}
+                    className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 transition-all duration-200"
+                  />
+                </div>
 
-              <div className="filter-item">
-                <label>ซีเรียลแบต:</label>
-                <input
-                  type="text"
-                  placeholder="ค้นหา Battery Serial..."
-                  value={filterBatterySerial}
-                  onChange={(e) => setFilterBatterySerial(e.target.value)}
-                  className="filter-input"
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">หมายเลขรถ</label>
+                  <input
+                    type="text"
+                    placeholder="ค้นหาหมายเลขรถ..."
+                    value={filterVehicleNumber}
+                    onChange={(e) => setFilterVehicleNumber(e.target.value)}
+                    className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 transition-all duration-200"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">ซีเรียลแบต</label>
+                  <input
+                    type="text"
+                    placeholder="ค้นหา Battery Serial..."
+                    value={filterBatterySerial}
+                    onChange={(e) => setFilterBatterySerial(e.target.value)}
+                    className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 transition-all duration-200"
+                  />
+                </div>
               </div>
             </div>
+
             {selectedVehicles.length > 0 && (
-              <div className="bulk-actions">
-                <span>{selectedVehicles.length} รายการที่เลือก</span>
-                <button
-                  onClick={() => setShowBulkTransferModal(true)}
-                  className="transfer-button"
-                >
-                  ย้ายสนาม
-                </button>
+              <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-200/50 dark:border-zinc-800/50 bg-indigo-50/50 dark:bg-indigo-900/10 transition-all">
+                <span className="text-indigo-700 dark:text-indigo-400 font-medium text-sm flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                  เลือกไว้ {selectedVehicles.length} คัน
+                </span>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => setShowBulkTransferModal(true)}
+                    className="flex-1 sm:flex-none bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 shadow-sm active:scale-95"
+                  >
+                    ย้ายสนาม
+                  </button>
+                  <button
+                    onClick={() => setShowBulkAgreementModal(true)}
+                    className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-400 text-white rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 shadow-sm active:scale-95"
+                  >
+                    เปลี่ยนสัญญา
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
           {/* Vehicles Table */}
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedVehicles(filteredVehicles.map(v => v.id));
-                        } else {
-                          setSelectedVehicles([]);
-                        }
-                      }}
-                      checked={selectedVehicles.length === filteredVehicles.length && filteredVehicles.length > 0}
-                    />
-                  </th>
-                  <th onClick={() => handleSort('serial_number')} className="sortable-header">
-                    <div className="th-content">
-                      หมายเลขซีเรียล {getSortIcon('serial_number')}
-                    </div>
-                  </th>
-                  <th onClick={() => handleSort('vehicle_number')} className="sortable-header">
-                    <div className="th-content">
-                      หมายเลขรถ {getSortIcon('vehicle_number')}
-                    </div>
-                  </th>
-                  <th onClick={() => handleSort('battery_serial')} className="sortable-header">
-                    <div className="th-content">
-                      ซีเรียลแบต {getSortIcon('battery_serial')}
-                    </div>
-                  </th>
-                  <th onClick={() => handleSort('golf_course_name')} className="sortable-header">
-                    <div className="th-content">
-                      สนาม {getSortIcon('golf_course_name')}
-                    </div>
-                  </th>
-                  <th onClick={() => handleSort('status')} className="sortable-header">
-                    <div className="th-content">
-                      สถานะ {getSortIcon('status')}
-                    </div>
-                  </th>
-                  <th>การจัดการ</th>
-                  <th onClick={() => handleSort('transfer_date')} className="sortable-header">
-                    <div className="th-content">
-                      วันที่ย้าย {getSortIcon('transfer_date')}
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentVehicles.map((vehicle, index) => {
-                  const course = golfCourses.find(c => c.id === vehicle.golf_course_id);
-                  return (
-                    <tr key={`vehicle-${vehicle.id}-${index}`}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedVehicles.includes(vehicle.id)}
-                          onChange={() => handleSelectVehicle(vehicle.id)}
-                        />
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-xl shadow-sm overflow-hidden mb-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-zinc-50/50 dark:bg-zinc-800/30 border-b border-zinc-200/50 dark:border-zinc-800/50">
+                  <tr>
+                    <th className="px-5 py-4 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedVehicles(filteredVehicles.map(v => v.id));
+                          } else {
+                            setSelectedVehicles([]);
+                          }
+                        }}
+                        checked={selectedVehicles.length === filteredVehicles.length && filteredVehicles.length > 0}
+                      />
+                    </th>
+                    <th onClick={() => handleSort('serial_number')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group min-w-[170px]">
+                      <div className="flex items-center">
+                        หมายเลขซีเรียล {getSortIcon('serial_number')}
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort('vehicle_number')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group w-[110px]">
+                      <div className="flex items-center">
+                        หมายเลขรถ {getSortIcon('vehicle_number')}
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort('battery_serial')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group min-w-[150px]">
+                      <div className="flex items-center">
+                        ซีเรียลแบต {getSortIcon('battery_serial')}
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort('golf_course_name')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group min-w-[150px]">
+                      <div className="flex items-center">
+                        สนาม {getSortIcon('golf_course_name')}
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort('agreement_id')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group min-w-[130px]">
+                      <div className="flex items-center">
+                        เลขที่สัญญา {getSortIcon('agreement_id')}
+                      </div>
+                    </th>
+                    <th onClick={() => handleSort('status')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group w-[110px]">
+                      <div className="flex items-center">
+                        สถานะ {getSortIcon('status')}
+                      </div>
+                    </th>
+                    <th className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 w-[120px] text-right">
+                      การจัดการ
+                    </th>
+                    <th onClick={() => handleSort('transfer_date')} className="px-5 py-4 font-medium text-zinc-500 dark:text-zinc-400 cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors whitespace-nowrap group w-[130px] text-right">
+                      <div className="flex items-center justify-end">
+                        วันที่ย้าย {getSortIcon('transfer_date')}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/30">
+                  {currentVehicles.map((vehicle, index) => {
+                    const course = golfCourses.find(c => c.id === vehicle.golf_course_id);
+                    return (
+                      <tr key={`vehicle-${vehicle.id}-${index}`} className={`transition-colors group ${selectedVehicles.includes(vehicle.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20'}`}>
+                        <td className="px-5 py-4 text-center">
                           <input
-                            type="text"
-                            value={editingVehicle.serial_number}
-                            onChange={(e) => setEditingVehicle({ ...editingVehicle, serial_number: e.target.value })}
+                            type="checkbox"
+                            className="rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                            checked={selectedVehicles.includes(vehicle.id)}
+                            onChange={() => handleSelectVehicle(vehicle.id)}
                           />
-                        ) : (
-                          vehicle.serial_number
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <input
-                            type="text"
-                            value={editingVehicle.vehicle_number}
-                            onChange={(e) => setEditingVehicle({ ...editingVehicle, vehicle_number: e.target.value })}
-                          />
-                        ) : (
-                          vehicle.vehicle_number
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <input
-                            type="text"
-                            value={editingVehicle.battery_serial || ''}
-                            onChange={(e) => setEditingVehicle({ ...editingVehicle, battery_serial: e.target.value })}
-                            placeholder="ระบุซีเรียลแบต"
-                          />
-                        ) : (
-                          vehicle.battery_serial || '-'
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <select
-                            value={String(editingVehicle.golf_course_id)}
-                            onChange={(e) => {
-                              const courseId = e.target.value;
-                              const selectedCourse = golfCourses.find(c => c.id === courseId);
-                              setEditingVehicle({
+                        </td>
+                        <td className="px-5 py-4">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <input
+                              type="text"
+                              value={editingVehicle.serial_number}
+                              onChange={(e) => setEditingVehicle({ ...editingVehicle, serial_number: e.target.value })}
+                              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                          ) : (
+                            <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">{vehicle.serial_number}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-zinc-900 dark:text-zinc-100">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <input
+                              type="text"
+                              value={editingVehicle.vehicle_number}
+                              onChange={(e) => setEditingVehicle({ ...editingVehicle, vehicle_number: e.target.value })}
+                              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                          ) : (
+                            vehicle.vehicle_number || '-'
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <input
+                              type="text"
+                              value={editingVehicle.battery_serial || ''}
+                              onChange={(e) => setEditingVehicle({ ...editingVehicle, battery_serial: e.target.value })}
+                              placeholder="ระบุซีเรียลแบต"
+                              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                          ) : (
+                            <span className="text-zinc-600 dark:text-zinc-400">{vehicle.battery_serial || '-'}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-zinc-700 dark:text-zinc-300">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <select
+                                value={String(editingVehicle.golf_course_id)}
+                                onChange={(e) => {
+                                  const courseId = e.target.value;
+                                  const selectedCourse = golfCourses.find(c => c.id === courseId);
+                                  setEditingVehicle({
+                                    ...editingVehicle,
+                                    golf_course_id: courseId,
+                                    golf_course_name: selectedCourse?.name || 'ไม่ระบุ',
+                                    agreement_id: null
+                                  });
+                                }}
+                                className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              >
+                                {golfCourses.map(course => (
+                                  <option key={course.id} value={String(course.id)}>{course.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : (
+                            <span className="truncate block max-w-[150px]" title={course?.name}>{course?.name || 'ไม่พบสนาม'}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <select
+                              value={editingVehicle.agreement_id || ''}
+                              onChange={(e) => {
+                                setEditingVehicle({
+                                  ...editingVehicle,
+                                  agreement_id: e.target.value || null
+                                });
+                              }}
+                              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">ไม่มีสัญญา</option>
+                              {allAgreements
+                                .filter(a => a.golf_course_id === editingVehicle.golf_course_id)
+                                .map(a => (
+                                  <option key={a.id} value={a.id}>{a.agreement_number}</option>
+                                ))
+                              }
+                            </select>
+                          ) : (
+                            <span className="font-mono text-zinc-600 dark:text-zinc-400 text-xs bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded truncate max-w-[120px] inline-block" title={allAgreements.find(a => a.id === vehicle.agreement_id)?.agreement_number || ''}>
+                              {allAgreements.find(a => a.id === vehicle.agreement_id)?.agreement_number || '-'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {editingVehicle?.id === vehicle.id ? (
+                            <select
+                              value={editingVehicle.status || vehicle.status || 'active'}
+                              onChange={(e) => setEditingVehicle({
                                 ...editingVehicle,
-                                golf_course_id: courseId,
-                                golf_course_name: selectedCourse?.name || 'ไม่ระบุ'
-                              });
-                            }}
-                            className="course-select"
-                          >
-                            {golfCourses.map(course => (
-                              <option key={course.id} value={String(course.id)}>{course.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          course?.name || 'ไม่พบสนาม'
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <select
-                            value={editingVehicle.status || vehicle.status || 'active'}
-                            onChange={(e) => setEditingVehicle({
-                              ...editingVehicle,
-                              status: e.target.value as Vehicle['status']
-                            })}
-                            className="status-select"
-                          >
-                            <option value="active">ใช้งาน</option>
-                            <option value="ready">พร้อมใช้</option>
-                            <option value="maintenance">รอซ่อม</option>
-                            <option value="retired">เสื่อมแล้ว</option>
-
-                          </select>
-                        ) : (
-                          <span className={`status-badge ${vehicle.status || 'active'}`}>
-                            {getStatusLabel(vehicle.status || 'active')}
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {editingVehicle?.id === vehicle.id ? (
-                          <>
-                            <button onClick={handleUpdateVehicle} className="save-button">บันทึก</button>
-                            <button onClick={() => setEditingVehicle(null)} className="cancel-button">ยกเลิก</button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => {
-                              // ตรวจสอบให้แน่ใจว่า status มีค่าเสมอ
-                              const vehicleWithStatus = {
-                                ...vehicle,
-                                status: vehicle.status || 'active'
-                              };
-                              setEditingVehicle(vehicleWithStatus);
-                            }} className="edit-button">แก้ไข</button>
-                            <button onClick={() => handleDeleteVehicle(vehicle.id)} className="delete-button">ลบ</button>
-                          </>
-                        )}
-                      </td>
-                      <td>
-                        {vehicle.transfer_date ? (
-                          <span className="transfer-date">
-                            {new Date(vehicle.transfer_date).toLocaleDateString('th-TH')}
-                          </span>
-                        ) : (
-                          <span className="no-transfer-date">-</span>
-                        )}
+                                status: e.target.value as Vehicle['status']
+                              })}
+                              className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="active">ใช้งาน</option>
+                              <option value="ready">พร้อมใช้</option>
+                              <option value="maintenance">รอซ่อม</option>
+                              <option value="retired">เสื่อมแล้ว</option>
+                            </select>
+                          ) : (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                              ${(vehicle.status === 'active' || vehicle.status === 'ready' || !vehicle.status) ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : ''}
+                              ${vehicle.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : ''}
+                              ${vehicle.status === 'retired' ? 'bg-red-50 text-red-700 border-red-200/50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' : ''}
+                            `}>
+                              {getStatusLabel(vehicle.status || 'active')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {editingVehicle?.id === vehicle.id ? (
+                              <>
+                                <button onClick={handleUpdateVehicle} className="text-white bg-indigo-600 hover:bg-indigo-500 rounded-md p-1.5 transition-colors" title="บันทึก">
+                                  <Check size={16} />
+                                </button>
+                                <button onClick={() => setEditingVehicle(null)} className="text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md p-1.5 transition-colors" title="ยกเลิก">
+                                  <X size={16} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => {
+                                  const vehicleWithStatus = {
+                                    ...vehicle,
+                                    status: vehicle.status || 'active'
+                                  };
+                                  setEditingVehicle(vehicleWithStatus);
+                                }} className="text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" title="แก้ไข">
+                                  <Edit size={16} />
+                                </button>
+                                <button onClick={() => handleDeleteVehicle(vehicle.id)} className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="ลบ">
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {vehicle.transfer_date ? (
+                            <span className="text-indigo-600 dark:text-indigo-400 font-medium text-xs bg-indigo-50 dark:bg-indigo-900/10 px-2 py-1 rounded">
+                              {new Date(vehicle.transfer_date).toLocaleDateString('th-TH')}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {currentVehicles.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="flex flex-col items-center gap-2">
+                          <Car size={32} className="text-zinc-300 dark:text-zinc-600 mb-2" />
+                          <p>ไม่พบข้อมูลรถกอล์ฟ</p>
+                        </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination Controls */}
@@ -1471,6 +1800,134 @@ const GolfCourseManagementScreen: React.FC<GolfCourseManagementScreenProps> = ({
               <button onClick={() => setShowBulkTransferModal(false)} className="cancel-button">
                 ยกเลิก
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Agreement Change Modal */}
+      {showBulkAgreementModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>เปลี่ยนสัญญาแบบกลุ่ม ({selectedVehicles.length} คัน)</h3>
+              <button onClick={() => setShowBulkAgreementModal(false)} className="close-button">×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <p style={{ marginBottom: '15px', color: '#6b7280', fontSize: '14px' }}>
+                กรุณาเลือกสนามและสัญญาที่ต้องการเปลี่ยนให้กลุ่มรถที่เลือก
+                (หากเปลี่ยนสัญญาที่มีสนามต่างกัน ระบบจะย้ายสนามของรถให้โดยอัตโนมัติ)
+              </p>
+
+              <div className="form-group" style={{ marginBottom: '15px' }}>
+                <label>1. เลือกสนามกอล์ฟ:</label>
+                <select
+                  value={bulkAgreementCourseId}
+                  onChange={(e) => {
+                    setBulkAgreementCourseId(e.target.value);
+                    setBulkAgreementId(''); // รีเซ็ตสัญญาเมื่อเปลี่ยนสนาม
+                  }}
+                  className="form-input"
+                >
+                  <option value="">-- เลือกเพื่อกรองสัญญา --</option>
+                  {golfCourses.map(course => (
+                    <option key={course.id} value={course.id}>{course.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>2. เลือกสัญญาเช่า:</label>
+                <select
+                  value={bulkAgreementId}
+                  onChange={(e) => setBulkAgreementId(e.target.value)}
+                  className="form-input"
+                  style={{ borderColor: bulkAgreementCourseId ? '#cbd5e1' : '#e2e8f0', backgroundColor: bulkAgreementCourseId ? '#fff' : '#f8fafc' }}
+                  disabled={!bulkAgreementCourseId}
+                >
+                  <option value="">-- ถอดสัญญา (ไม่มีสัญญา) --</option>
+                  {allAgreements
+                    .filter(a => a.golf_course_id === bulkAgreementCourseId)
+                    .map(a => (
+                      <option key={a.id} value={a.id}>{a.agreement_number}</option>
+                    ))}
+                </select>
+              </div>
+
+              {selectedVehicles.length > 0 && (
+                <div className="selected-vehicles" style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '10px' }}>
+                  <h4 style={{ fontSize: '13px', marginBottom: '8px' }}>รถที่เลือกไว้ (จะไม่ระบุสัญญาเดิมที่นี่):</h4>
+                  <ul style={{ listStyleType: 'disc', paddingLeft: '20px', fontSize: '13px', color: '#475569' }}>
+                    {vehicles
+                      .filter(v => selectedVehicles.includes(v.id))
+                      .map(vehicle => (
+                        <li key={vehicle.id}>
+                          {vehicle.serial_number} - {vehicle.vehicle_number}
+                        </li>
+                      ))
+                    }
+                  </ul>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={handleBulkAgreementChange}
+                className="save-button"
+                style={{ backgroundColor: '#f59e0b' }}
+              >
+                ยืนยันการเปลี่ยนสัญญา
+              </button>
+              <button onClick={() => setShowBulkAgreementModal(false)} className="cancel-button">
+                ยกเลิก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Agreements Tab */}
+      {activeTab === 'agreements' && (
+        <AgreementManagementScreen golfCourses={golfCourses} />
+      )}
+
+      {/* View Agreements Modal */}
+      {showAgreementsModal && selectedCourseForAgreements && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <h3>สัญญาเช่าทั้งหมด - {selectedCourseForAgreements.name}</h3>
+              <button onClick={() => setShowAgreementsModal(false)} className="close-button">×</button>
+            </div>
+            <div className="modal-body">
+              {isLoadingAgreements ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>กำลังโหลดข้อมูลสัญญา...</div>
+              ) : courseAgreements.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>ไม่พบข้อมูลสัญญาเช่าสำหรับสนามนี้</div>
+              ) : (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead style={{ backgroundColor: '#f9fafb' }}>
+                      <tr>
+                        <th style={{ padding: '12px' }}>เลขที่สัญญา</th>
+                        <th style={{ padding: '12px' }}>วันที่เริ่มต้น</th>
+                        <th style={{ padding: '12px' }}>วันที่สิ้นสุด</th>
+                        <th style={{ padding: '12px' }}>จำนวนรถในสัญญา</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courseAgreements.map(agreement => (
+                        <tr key={agreement.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '12px' }}>{agreement.agreement_number}</td>
+                          <td style={{ padding: '12px' }}>{new Date(agreement.startDate).toLocaleDateString('th-TH')}</td>
+                          <td style={{ padding: '12px' }}>{new Date(agreement.endDate).toLocaleDateString('th-TH')}</td>
+                          <td style={{ padding: '12px' }}>{agreement._count?.vehicles || 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
