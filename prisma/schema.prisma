@@ -121,6 +121,8 @@ model Job {
   partsNotes         String?
   mwr_code           String?   // @unique removed to allow nulls in legacy data. App logic will enforce uniqueness.
   prrNumber          String?   // ลบ @unique เนื่องจากมี null values หลายตัว
+  bplus_code         String?   // อ้างอิงเอกสารในระบบ Bplus
+  attachment_url     String?   // ลิงก์เก็บไฟล์เอกสาร/Excel
   parts              JobPart[]
   mwrVehicleItems    MwrVehicleItem[]  // เฉพาะ PART_REQUEST: รายละเอียดรถ+อะไหล่
   images             String[]
@@ -282,6 +284,7 @@ enum JobStatus {
   completed
   approved
   rejected
+  stock_pending
 }
 
 enum VehicleStatus {
