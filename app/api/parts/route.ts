@@ -43,7 +43,7 @@ export async function GET() {
         // แปลง _id เป็น id สำหรับ compatibility
         parts = parts.map(part => ({
           ...part,
-          id: part._id,
+          id: part._id?.$oid || part._id?.toString() || part._id,
           _id: undefined
         }));
       } catch (rawError) {

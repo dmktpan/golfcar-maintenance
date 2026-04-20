@@ -29,7 +29,7 @@ export async function GET() {
         // แปลง _id เป็น id สำหรับ compatibility
         golfCourses = golfCourses.map(course => ({
           ...course,
-          id: course._id,
+          id: course._id?.$oid || course._id?.toString() || course._id,
           _id: undefined
         }));
       } catch (rawError) {

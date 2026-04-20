@@ -29,7 +29,7 @@ export async function GET() {
         // แปลง _id เป็น id สำหรับ compatibility
         users = users.map(user => ({
           ...user,
-          id: user._id,
+          id: user._id?.$oid || user._id?.toString() || user._id,
           _id: undefined
         }));
       } catch (rawError) {

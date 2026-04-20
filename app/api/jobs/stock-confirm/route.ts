@@ -71,12 +71,23 @@ export async function POST(request: Request) {
 
         // 2. ลูปย้ายของจากส่วนกลาง (Central) -> ไปยังสาขา (Site) ตารายการใน Excel
         for (const item of items) {
-           const partId = item['Part ID (DB)'];
+           let partId = item['Part ID (DB)'];
+           const bplusPartCode = item['BPlus Code'] || item['รหัสอะไหล่'] || item['Part Number'];
            const partName = item['Part Name'] || 'Unknown';
            const actualQty = parseInt(item['Actual Quantity']?.toString() || '0', 10);
 
+           // หากไม่มี Part ID (DB) แต่มีรหัส BPlus ให้พยายามค้นหาจากตาราง Part แทน
+           if (!partId && bplusPartCode) {
+               const partMatch = await tx.part.findFirst({
+                   where: { part_number: String(bplusPartCode).trim() }
+               });
+               if (partMatch) {
+                   partId = partMatch.id;
+               }
+           }
+
            if (!partId) {
-             throw new Error(`ลืมระบุรหัส Part ID ในรายยการของ MWR ${mwrCode}`);
+             throw new Error(`ลืมระบุรหัส Part ID หรือรหัสไม่ตรงกับระบบสำหรับ MWR ${mwrCode} (รหัสอะไหล่ที่ส่งมา: ${bplusPartCode || partId})`);
            }
            if (actualQty <= 0) continue; // ถ้าให้แค่ 0 ก็ไม่ต้องหักของ
 
