@@ -239,8 +239,6 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('currentUser');
     }
   }, [user]);
 
@@ -1477,7 +1475,7 @@ export default function HomePage() {
 
   return (
     <div className="app">
-      <Header user={user} onLogout={handleLogout} setView={handleSetView} parts={parts} />
+      <Header user={user} onLogout={handleLogout} setView={handleSetView} parts={parts} jobs={jobs} />
       {showWelcome && <WelcomeBanner user={user} onDismiss={() => setShowWelcome(false)} />}
 
       <main className="main-content">
@@ -1631,6 +1629,7 @@ export default function HomePage() {
             setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
+            jobs={jobs}
           />
         )}
         {view === 'view_assigned_jobs' && (
@@ -1656,6 +1655,7 @@ export default function HomePage() {
             vehicles={vehicles}
             onUpdateStatus={onUpdateStatus}
             setView={setView}
+            onFillJobForm={handleFillJobForm}
           />
         )}
 

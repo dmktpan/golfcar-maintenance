@@ -10,10 +10,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "User identifier is required" }, { status: 400 });
         }
 
-        // 1. Try to update by ID first
+        // 1. Try to update by ID first and check if active
         try {
-            await (prisma.user.update as any)({
+            const user = await prisma.user.findUnique({
                 where: { id: userId },
+                select: { is_active: true }
+            });
+
+            if (user && user.is_active === false) {
+                return NextResponse.json({ error: "User is suspended", active: false }, { status: 403 });
+            }
+
+            await (prisma.user.update as any)({
+                where: { id: userId, is_active: true },
                 data: {
                     lastActive: new Date(),
                     isOnline: true

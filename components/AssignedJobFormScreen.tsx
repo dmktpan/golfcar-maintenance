@@ -20,11 +20,12 @@ interface AssignedJobFormScreenProps {
     setView: (view: View) => void;
     vehicles: Vehicle[];
     golfCourses: GolfCourse[];
+    jobs: Job[];
 }
 
 // รายการอะไหล่ตามระบบ - จะถูกโหลดจากระบบ stock management
 
-const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golfCourses }: AssignedJobFormScreenProps) => {
+const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golfCourses, jobs }: AssignedJobFormScreenProps) => {
     // ข้อมูลรถและสนามจาก job ที่ได้รับมอบหมาย
     const assignedVehicle = vehicles.find(v => v.id === job.vehicle_id);
     const golfCourse = golfCourses.find(gc => gc.id === assignedVehicle?.golf_course_id);
@@ -64,6 +65,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const [newSubTask, setNewSubTask] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
+    const [selectedMWRs, setSelectedMWRs] = useState<string[]>([]); // สำหรับเลือกใบเบิก
 
     // โหลดข้อมูลอะไหล่จากระบบ stock เมื่อ component mount
     useEffect(() => {
@@ -104,7 +106,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์',
             'electric': 'ระบบไฟฟ้า',
-            'other': 'อื่นๆ'
+            'other': 'อื่นๆ',
+            'mwr': 'รายการในใบเบิก'
         };
         return tabNames[tab] || tab;
     };
@@ -126,6 +129,44 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         const allParts = Object.values(partsBySystem).flat();
         const searchTerm = partsSearchTerm.toLowerCase().trim();
         return allParts.filter((part: CategorizedPart) =>
+            part.name.toLowerCase().includes(searchTerm) ||
+            (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
+        );
+    };
+
+    const availableMWRs = React.useMemo(() => {
+        return jobs.filter(j => 
+            j.type === 'PART_REQUEST' && 
+            j.status === 'completed' && 
+            j.golf_course_id === user.golf_course_id &&
+            j.bplus_code
+        );
+    }, [jobs, user.golf_course_id]);
+
+    const getMwrFilteredParts = () => {
+        if (selectedMWRs.length === 0) return [];
+        
+        const mwrPartsMap = new Map<string, CategorizedPart>();
+        const allParts = Object.values(partsBySystem).flat();
+        
+        selectedMWRs.forEach(code => {
+            const mwr = availableMWRs.find(j => j.bplus_code === code);
+            if (mwr && mwr.parts) {
+                mwr.parts.forEach(p => {
+                    const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
+                    if (systemPart && !mwrPartsMap.has(systemPart.id.toString())) {
+                        mwrPartsMap.set(systemPart.id.toString(), systemPart);
+                    }
+                });
+            }
+        });
+        
+        const partsList = Array.from(mwrPartsMap.values());
+        if (!partsSearchTerm.trim()) {
+            return partsList;
+        }
+        const searchTerm = partsSearchTerm.toLowerCase().trim();
+        return partsList.filter(part =>
             part.name.toLowerCase().includes(searchTerm) ||
             (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
@@ -209,7 +250,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     quantity_used: part.quantity,
                     part_name: part.name
                 })),
-                partsNotes: jobType === 'PM' ? partsNotes : '',
+                partsNotes: partsNotes, // เก็บหมายเหตุอะไหล่สำหรับทุกประเภทงาน
                 remarks: remarks,
                 battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
                 images: images, // เพิ่มรูปภาพ
@@ -254,11 +295,11 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         return categoryNames[category] || category;
     };
 
-    // Reset additionalSubTasks และ partsNotes เมื่ยกคำค้นหา PM เป็น BM/RC
+    // Reset additionalSubTasks เมื่อเปลี่ยนจาก PM เป็น BM/RC (ไม่เคลียร์ partsNotes เพราะใช้กับทุกประเภทงาน)
     useEffect(() => {
         if (jobType !== 'PM') {
             setAdditionalSubTasks([]);
-            setPartsNotes('');
+            // ไม่เคลียร์ partsNotes เพราะอาจมีข้อมูลที่กรอกไว้แล้ว
         }
     }, [jobType]);
 
@@ -490,12 +531,10 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                     </div>
                 </div>
 
-                {jobType === 'PM' && (
-                    <div className="form-group">
-                        <label htmlFor="parts-notes">รายการอะไหล่ที่เปลี่ยน (เพิ่มเติม)</label>
-                        <textarea id="parts-notes" value={partsNotes} onChange={e => setPartsNotes(e.target.value)} placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารี..."></textarea>
-                    </div>
-                )}
+                <div className="form-group">
+                    <label htmlFor="parts-notes">หมายเหตุอะไหล่</label>
+                    <textarea id="parts-notes" value={partsNotes} onChange={e => setPartsNotes(e.target.value)} placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารี, รหัสใบเบิก..."></textarea>
+                </div>
 
                 <div className="form-group">
                     <label htmlFor="remarks">หมายเหตุ</label>
@@ -538,7 +577,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </ul>
                             </div>
                         )}
-                        {(selectedParts.length > 0 || (jobType === 'PM' && partsNotes.trim())) && (
+                        {(selectedParts.length > 0 || partsNotes.trim()) && (
                             <div className="summary-item">
                                 <strong>อะไหล่ที่เปลี่ยน:</strong>
                                 <div className="parts-summary">
@@ -552,9 +591,9 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             </ul>
                                         </div>
                                     )}
-                                    {jobType === 'PM' && partsNotes.trim() && (
+                                    {partsNotes.trim() && (
                                         <div>
-                                            <em>อะไหล่เพิ่มเติม:</em>
+                                            <em>หมายเหตุอะไหล่:</em>
                                             <p className="parts-notes">{partsNotes}</p>
                                         </div>
                                     )}
@@ -594,7 +633,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </button>
                                 {isDropdownOpen && (
                                     <div className="header-category-dropdown-menu">
-                                        {Object.keys(partsBySystem).map(tab => (
+                                        {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
                                             <div
                                                 key={tab}
                                                 className="header-category-dropdown-item"
@@ -616,7 +655,7 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         </div>
 
                         <div className="modal-tabs">
-                            {Object.keys(partsBySystem).map(tab => (
+                            {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
                                 <button
                                     key={tab}
                                     type="button"
@@ -652,6 +691,27 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                         </div>
 
                         <div className="modal-body">
+                            {activePartsTab === 'mwr' && (
+                                <div className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100/50 shadow-sm">
+                                    <label className="block text-sm font-semibold text-indigo-900 mb-2 whitespace-nowrap">เลือกใบเบิก (MWR) ที่ต้องการดึงอะไหล่:</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableMWRs.length === 0 ? (
+                                            <span className="text-sm text-gray-500">ไม่มีใบเบิกที่สามารถใช้งานได้ หรือยังไม่มีใบเบิกที่ได้รับการอนุมัติ/โอนคลัง</span>
+                                        ) : availableMWRs.map(mwr => (
+                                            <button
+                                                key={mwr.id}
+                                                type="button"
+                                                onClick={() => setSelectedMWRs(prev => prev.includes(mwr.bplus_code!) ? prev.filter(c => c !== mwr.bplus_code) : [...prev, mwr.bplus_code!])}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 active:scale-[0.98] ${selectedMWRs.includes(mwr.bplus_code!) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-indigo-50 hover:border-indigo-200'}`}
+                                            >
+                                                {mwr.bplus_code || mwr.id.slice(-6)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {selectedMWRs.length === 0 && availableMWRs.length > 0 && <p className="text-xs text-indigo-500 mt-3">* กรุณาคลิกเลือกเลขที่ใบเบิกเพื่อแสดงรายการอะไหล่</p>}
+                                </div>
+                            )}
+
                             {isLoadingParts ? (
                                 <div className="loading-parts">
                                     <div className="loading-spinner"></div>
@@ -659,8 +719,8 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                 </div>
                             ) : (
                                 <div className="parts-grid">
-                                    {getFilteredParts().length > 0 ? (
-                                        getFilteredParts().map(part => {
+                                    {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).length > 0 ? (
+                                        (activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).map(part => {
                                             const selectedPart = selectedParts.find(p => p.id === part.id);
                                             return (
                                                 <div key={part.id} className="part-item">
@@ -709,7 +769,16 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                             <button
                                 type="button"
                                 className="btn-primary"
-                                onClick={() => setShowPartsModal(false)}
+                                onClick={() => {
+                                    setShowPartsModal(false);
+                                    if (activePartsTab === 'mwr' && selectedMWRs.length > 0) {
+                                        // Auto inject MWR tag to parts notes
+                                        const tag = `[ใช้จากใบเบิก: ${selectedMWRs.join(', ')}]`;
+                                        if (!partsNotes.includes(tag)) {
+                                            setPartsNotes(prev => prev ? `${prev}\n${tag}` : tag);
+                                        }
+                                    }
+                                }}
                             >
                                 เพิ่มอะไหล่ที่เลือก
                             </button>

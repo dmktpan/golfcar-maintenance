@@ -39,6 +39,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
     const [bmCause, setBmCause] = useState<BMCause | ''>('');
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [selectedMWRs, setSelectedMWRs] = useState<string[]>([]); // สำหรับเก็บ bplus_code หลายบิล
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
 
@@ -91,7 +92,8 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
             setSubTasks([]);
         }
         if (jobType === 'BM' || jobType === 'Recondition') {
-            setRemarks('');
+            // ไม่ควรไปรีเซ็ต remarks เพราะผู้ใช้อาจจะพิมพ์หมายเหตุไปแล้วแล้วค่อยเปลี่ยนประเภทงาน
+            // setRemarks('');
         }
         if (jobType !== 'BM') {
             setBmCause('');
@@ -148,6 +150,23 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
             (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
     };
+
+    const getMwrFilteredParts = () => {
+        if (selectedMWRs.length === 0) return [];
+        const mwrJobs = jobs.filter(j => j.bplus_code && selectedMWRs.includes(j.bplus_code));
+        const allParts = Object.values(partsBySystem).flat();
+        
+        return allParts.filter(dbPart => 
+            mwrJobs.some(mwr => mwr.parts?.some(mp => mp.part_id === dbPart.id.toString()))
+        );
+    };
+
+    const availableMwrJobs = jobs.filter(j => 
+        j.type === 'PART_REQUEST' && 
+        j.status === 'completed' && 
+        j.bplus_code && 
+        (!selectedGolfCourseId || j.golf_course_id === selectedGolfCourseId)
+    );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -244,6 +263,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
             'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
+            'mwr': 'รายการในใบเบิก (MWR)',
             'other': 'อื่นๆ'
         };
         return tabNames[tab] || tab;
@@ -577,7 +597,7 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             </div>
 
                             <div className="parts-tabs">
-                                {Object.keys(partsBySystem).map(tab => (
+                                {['brake', 'steering', 'motor', 'electric', 'mwr', 'other'].map(tab => (
                                     <button
                                         key={tab}
                                         type="button"
@@ -590,32 +610,74 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             </div>
 
                             <div className="parts-list">
+                                {/* MWR Selector Display */}
+                                {activePartsTab === 'mwr' && (
+                                    <div className="form-group" style={{ padding: '0 20px', marginBottom: '15px' }}>
+                                        <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem', display: 'block' }}>เลือกใบเบิกที่ต้องการดึงอะไหล่</label>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {availableMwrJobs.length === 0 ? (
+                                                <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>ไม่มีใบเบิกที่จ่ายเสร็จสิ้นในสนามนี้</span>
+                                            ) : (
+                                                availableMwrJobs.map(mwr => (
+                                                    <button 
+                                                        key={mwr.id}
+                                                        type="button"
+                                                        onClick={() => setSelectedMWRs(prev => prev.includes(mwr.bplus_code!) ? prev.filter(c => c !== mwr.bplus_code) : [...prev, mwr.bplus_code!])}
+                                                        style={{
+                                                            padding: '6px 16px',
+                                                            borderRadius: '20px',
+                                                            border: '1px solid',
+                                                            borderColor: selectedMWRs.includes(mwr.bplus_code!) ? '#2563eb' : '#d1d5db',
+                                                            background: selectedMWRs.includes(mwr.bplus_code!) ? '#eff6ff' : '#f9fafb',
+                                                            color: selectedMWRs.includes(mwr.bplus_code!) ? '#1d4ed8' : '#374151',
+                                                            fontSize: '0.875rem',
+                                                            fontWeight: 500,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px'
+                                                        }}
+                                                    >
+                                                        {mwr.bplus_code} {selectedMWRs.includes(mwr.bplus_code!) && <span style={{ color: '#2563eb', fontWeight: 'bold' }}>✓</span>}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {isLoadingParts ? (
                                     <div className="loading-parts" style={{ textAlign: 'center', padding: '20px' }}>
                                         <p>กำลังโหลดข้อมูลอะไหล่...</p>
                                     </div>
                                 ) : (
                                     <>
-                                        {getFilteredParts().map(part => (
-                                            <div
-                                                key={part.id}
-                                                className={`part-item ${selectedParts.some(p => p.id === part.id) ? 'selected' : ''}`}
-                                                onClick={() => handlePartSelection(part)}
-                                            >
-                                                <div className="part-name">{part.name}</div>
-                                                <div className="part-details">
-                                                    {part.part_number && (
-                                                        <span className="part-code">[รหัส: {part.part_number}]</span>
+                                        {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).map(part => {
+                                            const selectedPart = selectedParts.find(p => p.id === part.id);
+                                            return (
+                                                <div
+                                                    key={part.id}
+                                                    className={`part-item ${selectedPart ? 'selected' : ''}`}
+                                                    onClick={() => handlePartSelection(part)}
+                                                >
+                                                    <div className="part-name">{part.name}</div>
+                                                    <div className="part-details">
+                                                        {part.part_number && (
+                                                            <span className="part-code">[รหัส: {part.part_number}]</span>
+                                                        )}
+                                                        <span className="part-unit">({part.unit})</span>
+                                                    </div>
+                                                    {selectedPart && (
+                                                        <div className="selected-quantity" style={{ marginTop: '4px', fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold' }}>
+                                                            จำนวนที่เลือก: {selectedPart.quantity}
+                                                        </div>
                                                     )}
-                                                    <span className="part-unit">({part.unit})</span>
                                                 </div>
-                                                {selectedParts.some(p => p.id === part.id) && (
-                                                    <span className="selected-indicator">✓</span>
-                                                )}
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
-                                        {getFilteredParts().length === 0 && (
+                                        {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).length === 0 && (
                                             <div className="no-parts-found">
                                                 <p>ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;</p>
                                                 <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
@@ -630,9 +692,17 @@ const CentralCreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCour
                             <button
                                 type="button"
                                 className="btn-primary"
-                                onClick={() => setShowPartsModal(false)}
+                                onClick={() => {
+                                    setShowPartsModal(false);
+                                    if (activePartsTab === 'mwr' && selectedMWRs.length > 0) {
+                                        const tag = `[ใช้จากใบเบิก: ${selectedMWRs.join(', ')}]`;
+                                        if (!partsNotes.includes(tag)) {
+                                            setPartsNotes(prev => prev ? `${prev}\n${tag}` : tag);
+                                        }
+                                    }
+                                }}
                             >
-                                เสร็จสิ้น
+                                อัปเดตและเพิ่มอะไหล่
                             </button>
                         </div>
                     </div>

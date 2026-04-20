@@ -48,7 +48,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit'
+                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
                 ];
             case 'supervisor':
                 return [
@@ -69,16 +69,14 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                 ];
             case 'stock':
                 return [
-                    'golf_course:view', 'golf_course:edit', 'serial_history:view', 'stock:view', 'stock:edit'
+                    'golf_course:view', 'golf_course:edit', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
                 ];
             case 'clerk':
                 return [
                     'history:view', 'golf_course:view', 'stock:view'
                 ];
             case 'staff':
-                return [
-                    'stock:view'
-                ];
+                return [];
             default:
                 return [];
         }

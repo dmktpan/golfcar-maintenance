@@ -222,10 +222,10 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    if (status && !['completed', 'pending', 'in_progress', 'approved', 'assigned'].includes(status)) {
+    if (status && !['completed', 'pending', 'in_progress', 'approved', 'assigned', 'stock_pending'].includes(status)) {
       return NextResponse.json({
         success: false,
-        message: 'Status must be completed, pending, in_progress, approved, or assigned'
+        message: 'Status must be completed, pending, in_progress, approved, assigned, or stock_pending'
       }, { status: 400 });
     }
 

@@ -24,25 +24,26 @@ interface Permission {
 
 // สิทธิ์ดู (View Permissions)
 const VIEW_PERMISSIONS: Permission[] = [
-    { id: 'pending_jobs:view', name: 'ดูงานที่รอตรวจสอบ', description: 'ดูรายการงานที่รอการอนุมัติ', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'view' },
-    { id: 'history:view', name: 'ดูประวัติซ่อมบำรุง', description: 'ดูประวัติการซ่อมบำรุงทั้งหมด', roles: ['admin', 'supervisor', 'manager', 'clerk', 'central'], category: 'view' },
-    { id: 'golf_course:view', name: 'ดูข้อมูลสนามและซีเรียล', description: 'ดูข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'central'], category: 'view' },
-    { id: 'users:view', name: 'ดูรายชื่อผู้ใช้งาน', description: 'ดูรายชื่อผู้ใช้ในระบบ', roles: ['admin', 'supervisor', 'manager'], category: 'view' },
-    { id: 'serial_history:view', name: 'ดูประวัติซีเรียล', description: 'ดูประวัติการใช้งานรถแต่ละคัน', roles: ['admin', 'supervisor', 'manager', 'stock', 'central'], category: 'view' },
-    { id: 'stock:view', name: 'ดูระบบสต็อก', description: 'ดูรายการอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'staff', 'central'], category: 'view' },
+    { id: 'pending_jobs:view', name: 'ดูงานที่รอตรวจสอบ', description: 'ดูรายการงานที่รอการอนุมัติ', roles: ['admin', 'supervisor', 'manager', 'central', 'stock', 'clerk', 'staff', 'technician', 'viewer'], category: 'view' },
+    { id: 'history:view', name: 'ดูประวัติซ่อมบำรุง', description: 'ดูประวัติการซ่อมบำรุงทั้งหมด', roles: ['admin', 'supervisor', 'manager', 'clerk', 'central', 'stock', 'staff', 'technician', 'viewer'], category: 'view' },
+    { id: 'golf_course:view', name: 'ดูข้อมูลสนามและซีเรียล', description: 'ดูข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'central', 'staff', 'technician', 'viewer'], category: 'view' },
+    { id: 'users:view', name: 'ดูรายชื่อผู้ใช้งาน', description: 'ดูรายชื่อผู้ใช้ในระบบ', roles: ['admin', 'supervisor', 'manager', 'central', 'stock', 'clerk'], category: 'view' },
+    { id: 'serial_history:view', name: 'ดูประวัติซีเรียล', description: 'ดูประวัติการใช้งานรถแต่ละคัน', roles: ['admin', 'supervisor', 'manager', 'stock', 'central', 'clerk', 'staff', 'technician', 'viewer'], category: 'view' },
+    { id: 'stock:view', name: 'ดูระบบสต็อก', description: 'ดูรายการอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'staff', 'central', 'technician', 'viewer'], category: 'view' },
 ];
 
 // สิทธิ์แก้ไข/ดำเนินการ (Action Permissions)
 const ACTION_PERMISSIONS: Permission[] = [
-    { id: 'pending_jobs:approve', name: 'อนุมัติ/ปฏิเสธงาน', description: 'สามารถอนุมัติหรือปฏิเสธงานที่รอตรวจสอบ', roles: ['admin', 'supervisor', 'manager'], category: 'action', relatedTo: 'pending_jobs:view' },
-    { id: 'central_job:create', name: 'สร้างงานซ่อม-ส่วนกลาง', description: 'สร้างงานซ่อมสำหรับทุกสนาม', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'action' },
-    { id: 'multi_assign:manage', name: 'มอบหมายงานหลายคน', description: 'มอบหมายงานให้หลายคนพร้อมกัน', roles: ['admin', 'supervisor', 'manager'], category: 'action' },
-    { id: 'history:edit', name: 'แก้ไขประวัติซ่อมบำรุง', description: 'แก้ไขข้อมูลประวัติการซ่อมบำรุง', roles: ['admin', 'supervisor'], category: 'action', relatedTo: 'history:view' },
-    { id: 'golf_course:edit', name: 'แก้ไขข้อมูลสนามและซีเรียล', description: 'เพิ่ม แก้ไข ลบข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock'], category: 'action', relatedTo: 'golf_course:view' },
+    { id: 'pending_jobs:approve', name: 'อนุมัติ/ปฏิเสธงาน', description: 'สามารถอนุมัติหรือปฏิเสธงานที่รอตรวจสอบ', roles: ['admin', 'supervisor', 'manager', 'central', 'stock'], category: 'action', relatedTo: 'pending_jobs:view' },
+    { id: 'central_job:create', name: 'สร้างงานซ่อม-ส่วนกลาง', description: 'สร้างงานซ่อมสำหรับทุกสนาม', roles: ['admin', 'supervisor', 'manager', 'central', 'stock'], category: 'action' },
+    { id: 'multi_assign:manage', name: 'มอบหมายงานหลายคน', description: 'มอบหมายงานให้หลายคนพร้อมกัน', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'action' },
+    { id: 'history:edit', name: 'แก้ไขประวัติซ่อมบำรุง', description: 'แก้ไขข้อมูลประวัติการซ่อมบำรุง', roles: ['admin', 'supervisor', 'manager', 'clerk'], category: 'action', relatedTo: 'history:view' },
+    { id: 'golf_course:edit', name: 'แก้ไขข้อมูลสนามและซีเรียล', description: 'เพิ่ม แก้ไข ลบข้อมูลสนามและรถกอล์ฟ', roles: ['admin', 'supervisor', 'manager', 'stock', 'central'], category: 'action', relatedTo: 'golf_course:view' },
     { id: 'users:edit', name: 'แก้ไขผู้ใช้งาน', description: 'เพิ่ม แก้ไข และลบผู้ใช้งาน', roles: ['admin', 'supervisor', 'manager'], category: 'action', relatedTo: 'users:view' },
-    { id: 'system:manage', name: 'จัดการระบบ', description: 'ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง', roles: ['admin'], category: 'action' },
-    { id: 'part_request:approve', name: 'อนุมัติใบเบิกอะไหล่', description: 'สามารถอนุมัติหรือปฏิเสธใบเบิกอะไหล่ (MWR)', roles: ['admin', 'supervisor', 'stock'], category: 'action', relatedTo: 'stock:view' },
-    { id: 'stock:edit', name: 'แก้ไขระบบสต็อก', description: 'เพิ่ม แก้ไข ลบอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'stock'], category: 'action', relatedTo: 'stock:view' },
+    { id: 'system:manage', name: 'จัดการระบบ', description: 'ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง', roles: ['admin', 'supervisor'], category: 'action' },
+    { id: 'part_request:approve', name: 'อนุมัติใบเบิกอะไหล่', description: 'สามารถอนุมัติหรือปฏิเสธใบเบิกอะไหล่ (MWR)', roles: ['admin', 'supervisor', 'stock', 'manager', 'central', 'clerk'], category: 'action', relatedTo: 'stock:view' },
+    { id: 'stock:edit', name: 'แก้ไขระบบสต็อก', description: 'เพิ่ม แก้ไข ลบอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'stock', 'supervisor', 'manager', 'central', 'clerk'], category: 'action', relatedTo: 'stock:view' },
+    { id: 'stock:deduct', name: 'อนุมัติ รอตัดบัญชีสต๊อก', description: 'สามารถดำเนินการตัดสต๊อกสำหรับงานที่รอการตัดบัญชี', roles: ['admin', 'stock', 'supervisor', 'manager', 'central', 'clerk'], category: 'action', relatedTo: 'stock:view' },
 ];
 
 // รวมทั้งหมด
@@ -128,8 +129,11 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
         setShowPermissionModal(true);
     };
 
-    const handleRoleChange = (userId: number, newRole: UserRole) => {
-        // อัพเดทบทบาทของผู้ใช้
+    const handleRoleChange = async (userId: string | number, newRole: UserRole) => {
+        const userToUpdate = users.find(u => u.id === userId);
+        if (!userToUpdate) return;
+
+        // อัพเดทบทบาทของผู้ใช้ (Optimistic Update)
         const updatedUsers = users.map(user =>
             user.id === userId ? { ...user, role: newRole } : user
         );
@@ -143,6 +147,33 @@ const AdminManagementScreen = ({ setView, users, setUsers, updateUserPermissions
                 .filter(permission => permission.roles.includes(newRole))
                 .map(permission => permission.id);
             setCurrentUserPermissions(permissions);
+        }
+
+        try {
+            // ส่งข้อมูลไปบันทึกที่ Backend
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: userToUpdate.code,
+                    username: userToUpdate.username,
+                    name: userToUpdate.name,
+                    role: newRole,
+                    golf_course_id: userToUpdate.golf_course_id,
+                    golf_course_name: userToUpdate.golf_course_name,
+                    managed_golf_courses: userToUpdate.managed_golf_courses || []
+                })
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.message || 'บันทึกตำแหน่งไม่สำเร็จ');
+            }
+        } catch (error) {
+            console.error('Error saving role:', error);
+            alert(`เกิดข้อผิดพลาดในการเปลี่ยนตำแหน่ง: ${error instanceof Error ? error.message : 'Unknown'}`);
+            // ดึงข้อมูลกลับแบบเดิมถ้าพัง
+            setUsers(users);
         }
     };
 

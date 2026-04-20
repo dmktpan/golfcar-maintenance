@@ -123,6 +123,22 @@ const JobCard = ({ job, user, vehicles, golfCourses, users, partsUsageLog = [], 
             );
         }
 
+        // ปุ่มแก้ไขสำหรับ admin/supervisor/central ที่สร้างงาน pending เอง
+        if ((user.role === 'supervisor' || user.role === 'admin' || user.role === 'central') &&
+            job.status === 'pending' &&
+            job.user_id === user.id.toString() &&
+            onFillJobForm) {
+            buttons.push(
+                <button
+                    key="edit-pending"
+                    className={`${styles.actionButton} ${styles.secondary}`}
+                    onClick={() => onFillJobForm(job)}
+                >
+                    <span className="btn-icon">✏️</span> แก้ไข
+                </button>
+            );
+        }
+
         // ปุ่มดูและแก้ไขสำหรับหัวหน้างานและผู้ดูแลระบบในงานที่มอบหมายแล้ว
         if ((user.role === 'supervisor' || user.role === 'admin') &&
             (job.status === 'assigned' || job.status === 'in_progress' || job.status === 'completed') &&

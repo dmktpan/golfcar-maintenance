@@ -14,7 +14,8 @@ export async function POST(request: Request) {
             equals: identifier,
             mode: 'insensitive'
           },
-          role: 'staff'
+          role: 'staff',
+          is_active: true
         }
       });
 
@@ -25,6 +26,22 @@ export async function POST(request: Request) {
           data: user
         });
       } else {
+        // Check if user exists but is suspended locally
+        const suspendedUser = await prisma.user.findFirst({
+          where: {
+            code: { equals: identifier, mode: 'insensitive' },
+            role: 'staff',
+            is_active: false
+          }
+        });
+
+        if (suspendedUser) {
+          return NextResponse.json({
+            success: false,
+            message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ'
+          }, { status: 403 });
+        }
+
         return NextResponse.json({
           success: false,
           message: 'ไม่พบรหัสพนักงานในระบบ'
@@ -38,7 +55,8 @@ export async function POST(request: Request) {
             { code: { equals: identifier, mode: 'insensitive' } },
             { username: { equals: identifier, mode: 'insensitive' } }
           ],
-          role: { in: ['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'] }
+          role: { in: ['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'] },
+          is_active: true
         }
       });
 
@@ -57,6 +75,25 @@ export async function POST(request: Request) {
           }, { status: 401 });
         }
       } else {
+        // Check if user exists but is suspended
+        const suspendedUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { code: { equals: identifier, mode: 'insensitive' } },
+              { username: { equals: identifier, mode: 'insensitive' } }
+            ],
+            role: { in: ['admin', 'supervisor', 'central', 'manager', 'stock', 'clerk'] },
+            is_active: false
+          }
+        });
+
+        if (suspendedUser) {
+          return NextResponse.json({
+            success: false,
+            message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ'
+          }, { status: 403 });
+        }
+
         return NextResponse.json({
           success: false,
           message: 'ไม่พบชื่อผู้ใช้ในระบบผู้ดูแล'

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
 import { generateMWRCode } from '@/lib/utils/mwr-generator';
-import { approvePartRequest, consumeStockForJob, StockError } from '@/lib/stock';
+import { consumeStockForJob, StockError } from '@/lib/stock';
 
 export const dynamic = 'force-dynamic';
 
@@ -355,18 +355,24 @@ export async function PUT(request: Request) {
       }, { status: 400 });
     }
 
-    if (status && !['pending', 'in_progress', 'completed', 'assigned', 'approved', 'rejected'].includes(status)) {
+    if (status && !['pending', 'in_progress', 'completed', 'assigned', 'approved', 'rejected', 'stock_pending'].includes(status)) {
       return NextResponse.json({
         success: false,
-        message: 'Status must be pending, in_progress, completed, assigned, approved, or rejected'
+        message: 'Status must be pending, in_progress, completed, assigned, approved, rejected, or stock_pending'
       }, { status: 400 });
+    }
+
+    // สำหรับ PART_REQUEST (MWR) ถ้าส่งมาเป็น approved ให้เปลี่ยนสถานะเป็น stock_pending แทน
+    let finalStatus = status;
+    if (type === 'PART_REQUEST' && status === 'approved') {
+      finalStatus = 'stock_pending';
     }
 
     // สร้างข้อมูลสำหรับอัพเดท
     const updateData: any = {};
 
     if (type !== undefined) updateData.type = type;
-    if (status !== undefined) updateData.status = status;
+    if (finalStatus !== undefined) updateData.status = finalStatus;
     if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id;
     if (vehicle_number !== undefined) updateData.vehicle_number = vehicle_number?.trim();
     if (golf_course_id !== undefined) updateData.golf_course_id = golf_course_id;
@@ -381,12 +387,12 @@ export async function PUT(request: Request) {
     if (partsNotes !== undefined) updateData.partsNotes = partsNotes?.trim();
     if (images !== undefined) updateData.images = images;
 
-    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเป็น approved หรือ rejected
-    if (status === 'approved' || status === 'rejected') {
+    // เพิ่มข้อมูลผู้อนุมัติเมื่อสถานะเปลี่ยนเป็นการอนุมัติขั้นต้น หรือถูกปฏิเสธ
+    if (finalStatus === 'approved' || finalStatus === 'stock_pending' || finalStatus === 'rejected') {
       updateData.approved_by_id = approved_by_id || null;
       updateData.approved_by_name = approved_by_name?.trim() || null;
       updateData.approved_at = new Date();
-      if (status === 'rejected') {
+      if (finalStatus === 'rejected') {
         updateData.rejection_reason = rejection_reason?.trim() || null;
       }
     }
@@ -405,12 +411,11 @@ export async function PUT(request: Request) {
         throw new Error('Job not found');
       }
 
-      // Check for Approval & execute Stock Logic
-      if (status === 'approved' && existingJob.status !== 'approved') {
+      // Check for Approval & execute Stock Logic (เฉพาะงานประเภทอื่นที่ไม่ใช่ PART_REQUEST)
+      if (finalStatus === 'approved' && existingJob.status !== 'approved') {
         if ((existingJob.type as string) === 'PART_REQUEST') {
-          // 1. MWR Approval -> Standard Stock Transfer (Central -> Site)
-          // We use the existing job ID. Logic inside approvePartRequest will check items
-          await approvePartRequest(id, user_id || existingJob.user_id, tx);
+          // [UPDATED FLOW]: ไม่ทำการตัดสต๊อกตรงนี้แล้ว ปล่อยให้สถานะเป็น stock_pending เพื่อให้ฝ่ายสต๊อกทำงานต่อ
+          // แจ้งเตือนหรือดำเนินการอะไรเพิ่มเติมได้ (แต่อย่าตัดสต๊อกทันที)
         } else {
           // 2. Regular Job Approval -> Consume Stock (Site -> Used)
           // Use updated parts if provided, otherwise existing parts
@@ -443,6 +448,26 @@ export async function PUT(request: Request) {
         }
       }
 
+      // อัพเดทอะไหล่ (parts) — ลบของเก่าแล้วสร้างใหม่ทั้งหมดถ้ามีส่งมา
+      if (parts !== undefined && Array.isArray(parts)) {
+        // ลบอะไหล่เก่า
+        await tx.jobPart.deleteMany({
+          where: { jobId: id }
+        });
+
+        // สร้างอะไหล่ใหม่ (ถ้ามี)
+        if (parts.length > 0) {
+          await tx.jobPart.createMany({
+            data: parts.map((part: any) => ({
+              jobId: id,
+              part_id: part.part_id,
+              part_name: part.part_name || '',
+              quantity_used: part.quantity_used || 1
+            }))
+          });
+        }
+      }
+
       // อัพเดทงาน
       const updatedJob = await tx.job.update({
         where: { id: id },
@@ -450,8 +475,8 @@ export async function PUT(request: Request) {
         include: { parts: true }
       });
 
-      // บันทึก Serial History เฉพาะสถานะสำคัญ: assigned (ส่งงาน) และ approved (อนุมัติ) เท่านั้น
-      if (status && status !== existingJob.status && (status === 'assigned' || status === 'approved')) {
+      // บันทึก Serial History เฉพาะสถานะสำคัญ: assigned (ส่งงาน), approved (อนุมัติ), และ stock_pending โดยเปลี่ยนเป็น log status เดิมไปแทนก่อน
+      if (finalStatus && finalStatus !== existingJob.status && (finalStatus === 'assigned' || finalStatus === 'approved' || finalStatus === 'stock_pending')) {
         let vehicle = null;
         if (updatedJob.vehicle_id) {
           vehicle = await tx.vehicle.findUnique({
@@ -460,14 +485,18 @@ export async function PUT(request: Request) {
         }
 
         if (vehicle) {
-          // เตรียมข้อมูลอะไหล่สำหรับ Serial History (เฉพาะเมื่อ approved)
-          const partsUsed = status === 'approved' && parts && Array.isArray(parts) && parts.length > 0
+          // เตรียมข้อมูลอะไหล่สำหรับ Serial History (เฉพาะเมื่อ approved หรือ stock_pending)
+          const isApprovedPhase = finalStatus === 'approved' || finalStatus === 'stock_pending';
+          const partsUsed = isApprovedPhase && parts && Array.isArray(parts) && parts.length > 0
             ? parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used || 1})`)
-            : status === 'approved' && updatedJob.parts && updatedJob.parts.length > 0
+            : isApprovedPhase && updatedJob.parts && updatedJob.parts.length > 0
               ? updatedJob.parts.map((part: any) => `${part.part_name} (จำนวน: ${part.quantity_used})`)
               : [];
 
-          const actionDescription = status === 'assigned' ? 'ส่งงาน' : 'อนุมัติงาน';
+          let actionDescription = 'อัพเดทสถานะงาน';
+          if (finalStatus === 'assigned') actionDescription = 'ส่งงาน';
+          else if (finalStatus === 'approved') actionDescription = 'อนุมัติงาน';
+          else if (finalStatus === 'stock_pending') actionDescription = 'อนุมัติและรอโอนคลัง (Stock Pending)';
 
           await tx.serialHistoryEntry.create({
             data: {
@@ -477,7 +506,7 @@ export async function PUT(request: Request) {
               action_date: new Date(),
               details: `${actionDescription} ${updatedJob.type}${assigned_to ? ` - ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
               is_active: true,
-              status: status,
+              status: finalStatus,
               job_type: updatedJob.type,
               golf_course_name: vehicle.golf_course_name,
               parts_used: partsUsed,
@@ -497,7 +526,7 @@ export async function PUT(request: Request) {
               action_date: new Date().toISOString(),
               details: `${actionDescription} ${updatedJob.type}${assigned_to ? ` - ผู้รับผิดชอบ: ${assigned_to}` : ''}`,
               is_active: true,
-              status: status,
+              status: finalStatus,
               job_type: updatedJob.type,
               golf_course_name: vehicle.golf_course_name,
               parts_used: partsUsed,

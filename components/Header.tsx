@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { User, View, Part } from '@/lib/data';
+import { User, View, Part, Job } from '@/lib/data';
 import { AdminDashboardIcon, GolfCartIcon, HistoryIcon, LogoutIcon, PendingJobsIcon, ProfileIcon, StockIcon } from './icons';
 import styles from './Header.module.css';
 
@@ -10,16 +10,79 @@ interface HeaderProps {
     onLogout: () => void;
     setView: (view: View) => void;
     parts: Part[];
+    jobs?: Job[];
 }
 
-const Header = ({ user, onLogout, setView, parts }: HeaderProps) => {
-    const isAdminOrSuper = user.role === 'admin' || user.role === 'supervisor';
-    const isCentral = user.role === 'central';
-    
-    const lowStockParts = useMemo(() => {
-         return parts.filter(part => part.stock_qty <= part.min_qty);
+const Header = ({ user, onLogout, setView, parts, jobs = [] }: HeaderProps) => {
+    // === Permission Logic (Synchronized with AdminDashboard) ===
+    const getDefaultPermissions = (role: string): string[] => {
+        switch (role) {
+            case 'admin':
+                return [
+                    'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
+                    'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
+                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
+                ];
+            case 'supervisor':
+                return [
+                    'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
+                    'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                ];
+            case 'manager':
+                return [
+                    'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
+                    'history:view', 'golf_course:view', 'golf_course:edit',
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                ];
+            case 'central':
+                return [
+                    'pending_jobs:view', 'central_job:create', 'history:view',
+                    'golf_course:view', 'serial_history:view', 'stock:view'
+                ];
+            case 'stock':
+                return [
+                    'golf_course_management', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
+                ];
+            case 'clerk':
+                return [
+                    'history:view', 'golf_course:view', 'stock:view'
+                ];
+            case 'staff':
+                return [];
+            default:
+                return [];
+        }
+    };
+
+    const effectivePermissions = (user.permissions && user.permissions.length > 0)
+        ? user.permissions
+        : getDefaultPermissions(user.role);
+
+    const hasPermission = (permissionId: string): boolean => {
+        return effectivePermissions.includes(permissionId);
+    };
+
+    // === Permission Flags ===
+    const canViewAdminDashboard = effectivePermissions.some(p => 
+        ['pending_jobs', 'history', 'golf_course', 'users', 'system', 'serial_history'].some(area => p.startsWith(area))
+    );
+    const canViewPendingJobs = hasPermission('pending_jobs:view');
+    const canViewStock = hasPermission('stock:view');
+    const canViewHistory = hasPermission('history:view');
+
+    // === Notification Logic ===
+    const lowStockPartsCount = useMemo(() => {
+         return parts.filter(part => part.stock_qty <= (part.min_qty || 0)).length;
      }, [parts]);
 
+    const pendingStockJobsCount = useMemo(() => {
+        return jobs.filter(j => j.type === 'PART_REQUEST' && j.status === 'stock_pending').length;
+    }, [jobs]);
+
+    const totalStockNotifications = lowStockPartsCount + pendingStockJobsCount;
+
+    // === Event Handlers ===
     const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, view: View) => {
         e.preventDefault();
         setView(view);
@@ -34,93 +97,67 @@ const Header = ({ user, onLogout, setView, parts }: HeaderProps) => {
         <header className={styles.header}>
             <div 
                 className={styles.headerTitle} 
-                onClick={() => setView(isAdminOrSuper || isCentral ? 'admin_dashboard' : 'dashboard')} 
+                onClick={() => setView('dashboard')} 
                 style={{ cursor: 'pointer' }}
             >
                 <GolfCartIcon />
                 <span>GolfCart Maintenance</span>
             </div>
+            
             <div className={styles.userInfo}>
-                {isCentral ? (
-                    <nav className={styles.headerNav}>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์">
-                            <ProfileIcon /> <span>โปรไฟล์</span>
-                        </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'central_create_job')} title="สร้างงานส่วนกลาง">
-                            <AdminDashboardIcon /> <span>สร้างงานส่วนกลาง</span>
-                        </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัติการซ่อมบำรุง">
-                            <HistoryIcon /> <span>ประวัติซ่อมบำรุง</span>
-                        </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'stock_management')} title="จัดการสต็อกอะไหล่">
-                            <StockIcon /> 
-                            <span>
-                                จัดการสต็อก
-                                {lowStockParts.length > 0 && (
-                                    <span 
-                                        style={{
-                                            marginLeft: '4px',
-                                            backgroundColor: '#FFD1DC',
-                                            color: '#FF0000',
-                                            padding: '2px 6px',
-                                            borderRadius: '12px',
-                                            fontSize: '12px',
-                                            fontWeight: 'bold'
-                                        }}
-                                    >
-                                        ({lowStockParts.length})
-                                    </span>
-                                )}
-                            </span>
-                        </a>
-                        <a href="#" onClick={handleLogoutClick} title="ออกจากระบบ">
-                            <LogoutIcon /> <span>ออกจากระบบ ({user.name})</span>
-                        </a>
-                    </nav>
-                ) : isAdminOrSuper ? (
-                    <nav className={styles.headerNav}>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์">
-                            <ProfileIcon /> <span>โปรไฟล์</span>
-                        </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'admin_dashboard')} title="แดชบอร์ดผู้ดูแล">
+                <nav className={styles.headerNav}>
+                    {/* 1. Profile - Available to everyone */}
+                    <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์" className={styles.navLink}>
+                        <ProfileIcon /> <span>โปรไฟล์</span>
+                    </a>
+
+                    {/* 2. Admin Dashboard - Based on permissions */}
+                    {canViewAdminDashboard && (
+                        <a href="#" onClick={(e) => handleNavClick(e, 'admin_dashboard')} title="แดชบอร์ดผู้ดูแล" className={styles.navLink}>
                             <AdminDashboardIcon /> <span>แดชบอร์ดผู้ดูแล</span>
                         </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'supervisor_pending_jobs')} title="งานที่รอตรวจสอบ">
+                    )}
+
+                    {/* 3. Pending Jobs - Based on permissions */}
+                    {canViewPendingJobs && (
+                        <a href="#" onClick={(e) => handleNavClick(e, 'supervisor_pending_jobs')} title="งานที่รอตรวจสอบ" className={styles.navLink}>
                             <PendingJobsIcon /> <span>งานที่รอตรวจสอบ</span>
                         </a>
-                        <a href="#" onClick={(e) => handleNavClick(e, 'stock_management')} title="จัดการสต็อกอะไหล่">
+                    )}
+
+                    {/* 4. Stock Management - Based on permissions */}
+                    {canViewStock && (
+                        <a href="#" onClick={(e) => handleNavClick(e, 'stock_management')} title="จัดการสต็อกอะไหล่" className={styles.navLink}>
                             <StockIcon /> 
                             <span>
                                 จัดการสต็อก
-                                {lowStockParts.length > 0 && (
+                                {totalStockNotifications > 0 && (
                                     <span 
+                                        className={styles.notificationBadge}
                                         style={{
-                                            marginLeft: '4px',
-                                            backgroundColor: '#FFD1DC',
-                                            color: '#FF0000',
-                                            padding: '2px 6px',
-                                            borderRadius: '12px',
-                                            fontSize: '12px',
-                                            fontWeight: 'bold'
+                                            backgroundColor: pendingStockJobsCount > 0 ? '#f59e0b' : '#ef4444',
                                         }}
+                                        title={pendingStockJobsCount > 0 ? `รอตัดจ่าย: ${pendingStockJobsCount} รายการ` : `อะไหล่เหลือน้อย: ${lowStockPartsCount} รายการ`}
                                     >
-                                        ({lowStockParts.length})
+                                        {totalStockNotifications}
                                     </span>
                                 )}
                             </span>
                         </a>
-                        <a href="#" onClick={handleLogoutClick} title="ออกจากระบบ">
-                            <LogoutIcon /> <span>ออกจากระบบ ({user.name})</span>
+                    )}
+
+                    {/* 5. Maintenance History - Based on permissions */}
+                    {canViewHistory && (
+                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัติการซ่อมบำรุง" className={styles.navLink}>
+                            <HistoryIcon /> <span>ประวัติซ่อมบำรุง</span>
                         </a>
-                    </nav>
-                ) : (
-                    <>
-                        <span>สวัสดี, <strong>{user.name}</strong></span>
-                        <button onClick={onLogout} className={styles.logoutButton}>
-                            ออกจากระบบ
-                        </button>
-                    </>
-                )}
+                    )}
+
+                    {/* 6. Logout */}
+                    <a href="#" onClick={handleLogoutClick} title="ออกจากระบบ" className={styles.logoutLink}>
+                        <LogoutIcon /> <span>ออกจากระบบ ({user.name})</span>
+                    </a>
+                </nav>
             </div>
         </header>
     );

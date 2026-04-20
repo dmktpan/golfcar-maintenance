@@ -23,7 +23,7 @@ export type View =
   | 'agreements_management'
   | 'profile';
 export type JobType = 'PM' | 'BM' | 'Recondition' | 'PART_REQUEST';
-export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected';
+export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected' | 'stock_pending';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
 
 // Interfaces
@@ -122,9 +122,11 @@ export interface Job {
   vehicle_id?: string;
   vehicle_number?: string;
   golf_course_id: string;
+  golf_course_name?: string;
   type: JobType;
   status: JobStatus;
   created_at: string;
+  createdAt?: string;
   updated_at?: string;
   battery_serial?: string;
   parts?: SelectedPart[];
@@ -139,6 +141,8 @@ export interface Job {
   images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
   mwr_code?: string; // รหัสใบเบิกอะไหล่ (สำหรับ PART_REQUEST)
   prrNumber?: string; // เลขที่ใบเบิกอะไหล่
+  bplus_code?: string; // รหัสอ้างอิง BPLUS
+  notes?: string; // โน้ต
   // ข้อมูลการอนุมัติ
   approved_by_id?: string;
   approved_by_name?: string;
@@ -243,7 +247,7 @@ export interface SerialHistoryEntry {
   job_type?: JobType;
   system?: string;
   parts_used?: string[];
-  status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned';
+  status?: 'completed' | 'pending' | 'in_progress' | 'approved' | 'assigned' | 'stock_pending';
   battery_serial?: string; // เพิ่มฟิลด์สำหรับเก็บซีเรียลแบตที่พนักงานกรอก
   // เพิ่มฟิลด์สำหรับบันทึกการเปลี่ยนแปลง
   previous_data?: any;

@@ -59,6 +59,34 @@ export async function GET() {
   }
 }
 
+// --- กำหนดค่า Permission เริ่มต้น ---
+const VIEW_PERMISSIONS = [
+    { id: 'pending_jobs:view', roles: ['admin', 'supervisor', 'manager', 'central'] },
+    { id: 'history:view', roles: ['admin', 'supervisor', 'manager', 'clerk', 'central'] },
+    { id: 'golf_course:view', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'central'] },
+    { id: 'users:view', roles: ['admin', 'supervisor', 'manager'] },
+    { id: 'serial_history:view', roles: ['admin', 'supervisor', 'manager', 'stock', 'central'] },
+    { id: 'stock:view', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'staff', 'central'] },
+];
+
+const ACTION_PERMISSIONS = [
+    { id: 'pending_jobs:approve', roles: ['admin', 'supervisor', 'manager'] },
+    { id: 'central_job:create', roles: ['admin', 'supervisor', 'manager', 'central'] },
+    { id: 'multi_assign:manage', roles: ['admin', 'supervisor', 'manager'] },
+    { id: 'history:edit', roles: ['admin', 'supervisor'] },
+    { id: 'golf_course:edit', roles: ['admin', 'supervisor', 'manager', 'stock'] },
+    { id: 'users:edit', roles: ['admin', 'supervisor', 'manager'] },
+    { id: 'system:manage', roles: ['admin'] },
+    { id: 'part_request:approve', roles: ['admin', 'supervisor', 'stock'] },
+    { id: 'stock:edit', roles: ['admin', 'stock'] },
+];
+
+const ALL_PERMISSIONS = [...VIEW_PERMISSIONS, ...ACTION_PERMISSIONS];
+
+function getDefaultPermissions(role: string): string[] {
+    return ALL_PERMISSIONS.filter(p => p.roles.includes(role)).map(p => p.id);
+}
+
 // POST - สร้างผู้ใช้ใหม่
 export async function POST(request: Request) {
   try {
@@ -100,7 +128,8 @@ export async function POST(request: Request) {
         role,
         golf_course_id: golf_course_id,
         golf_course_name: golf_course_name.trim(),
-        managed_golf_courses: managed_golf_courses || []
+        managed_golf_courses: managed_golf_courses || [],
+        permissions: getDefaultPermissions(role)
       };
 
       // เพิ่ม password หากมี
@@ -123,6 +152,7 @@ export async function POST(request: Request) {
         golf_course_id: golf_course_id,
         golf_course_name: golf_course_name.trim(),
         managed_golf_courses: managed_golf_courses || [],
+        permissions: getDefaultPermissions(role),
         createdAt: currentTime,
         updatedAt: currentTime
       };

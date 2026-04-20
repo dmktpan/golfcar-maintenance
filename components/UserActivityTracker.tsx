@@ -17,7 +17,7 @@ export default function UserActivityTracker() {
                     return;
                 }
 
-                await fetch("/api/auth/heartbeat", {
+                const response = await fetch("/api/auth/heartbeat", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -28,6 +28,13 @@ export default function UserActivityTracker() {
                         username: user.username
                     }),
                 });
+
+                if (response.status === 403) {
+                    console.warn('UserActivityTracker: User is suspended. Logging out...');
+                    localStorage.removeItem("currentUser");
+                    localStorage.removeItem("currentView");
+                    window.location.href = '/'; // Force redirect to login
+                }
             } catch (error) {
                 console.error("Heartbeat failed", error);
             }

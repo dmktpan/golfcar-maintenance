@@ -51,7 +51,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const historyJobs = jobs.filter(job =>
         job.status === 'completed' ||
         job.status === 'approved' ||
-        job.status === 'rejected'
+        job.status === 'rejected' ||
+        job.status === 'stock_pending'
     );
 
     // ฟังก์ชันดึงข้อมูล parts usage logs
@@ -312,7 +313,8 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         const statusMap: Record<string, string> = {
             'completed': 'เสร็จสิ้น',
             'approved': 'อนุมัติแล้ว',
-            'rejected': 'ไม่อนุมัติ'
+            'rejected': 'ไม่อนุมัติ',
+            'stock_pending': 'รอตัดสต๊อก (MWR)'
         };
         return statusMap[status] || status;
     };
@@ -420,7 +422,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     'ประเภทงาน': job.type,
                     'ระบบ': job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-',
                     'อะไหล่ที่ใช้': partsText,
-                    'บันทึกอะไหล่': job.partsNotes || '-',
+                    'หมายเหตุอะไหล่': job.partsNotes || '-',
                     'ผู้ดำเนินการ': job.userName,
                     'สถานะ': getStatusText(job.status),
                     'ผู้อนุมัติ': job.approved_by_name || '-',
@@ -445,7 +447,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 { wch: 12 }, // ประเภทงาน
                 { wch: 20 }, // ระบบ
                 { wch: 35 }, // อะไหล่ที่ใช้
-                { wch: 25 }, // บันทึกอะไหล่
+                { wch: 25 }, // หมายเหตุอะไหล่
                 { wch: 20 }, // ผู้ดำเนินการ
                 { wch: 12 }, // สถานะ
                 { wch: 20 }, // ผู้อนุมัติ
@@ -924,21 +926,44 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                         </div>
 
                                                         {(() => {
-                                                            const jobParts = partsData.get(job.id) || [];
-                                                            if (jobParts.length > 0) {
+                                                            const jobPartsFromLog = partsData.get(job.id) || [];
+                                                            const hasLogParts = jobPartsFromLog.length > 0;
+                                                            const hasPartsObj = job.parts && job.parts.length > 0;
+                                                            const hasPartsUsed = (job as any).parts_used && Array.isArray((job as any).parts_used) && (job as any).parts_used.length > 0;
+
+                                                            if (hasLogParts || hasPartsObj || hasPartsUsed || job.partsNotes) {
                                                                 return (
-                                                                    <div className="detail-section">
-                                                                        <h4>อะไหล่ที่ใช้</h4>
-                                                                        <ul className="parts-list">
-                                                                            {jobParts.map((part) => (
-                                                                                <li key={part.id}>
-                                                                                    {part.partName} (จำนวน {part.quantityUsed})
-                                                                                </li>
-                                                                            ))}
-                                                                        </ul>
+                                                                    <div className="detail-section" style={{ flex: '1 1 100%' }}>
+                                                                        <h4>อะไหล่ที่ใช้ / หมายเหตุ</h4>
+                                                                        
+                                                                        {hasLogParts ? (
+                                                                            <ul className="parts-list">
+                                                                                {jobPartsFromLog.map((part) => (
+                                                                                    <li key={part.id}>
+                                                                                        {part.partName} (จำนวน {part.quantityUsed})
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        ) : hasPartsObj ? (
+                                                                            <ul className="parts-list">
+                                                                                {job.parts!.map((p) => (
+                                                                                    <li key={p.part_id}>
+                                                                                        {p.part_name || 'อะไหล่'} (จำนวน {p.quantity_used})
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        ) : hasPartsUsed && (
+                                                                            <ul className="parts-list">
+                                                                                {(job as any).parts_used.map((pu: string, idx: number) => (
+                                                                                    <li key={idx}>{pu}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        )}
+
                                                                         {job.partsNotes && (
-                                                                            <div className="detail-item">
-                                                                                <strong>บันทึกอะไหล่:</strong> {job.partsNotes}
+                                                                            <div className="detail-item parts-notes-box" style={{ marginTop: '0.75rem', background: '#eff6ff', padding: '0.75rem', borderRadius: '0.375rem', borderLeft: '4px solid #3b82f6', width: '100%', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                                <span style={{ color: '#1e40af', fontWeight: 600 }}>หมายเหตุอะไหล่ / รหัสใบเบิกอ้างอิง:</span>
+                                                                                <span style={{ color: '#1e3a8a', whiteSpace: 'pre-wrap', display: 'block' }}>{job.partsNotes}</span>
                                                                             </div>
                                                                         )}
                                                                     </div>

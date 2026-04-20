@@ -40,6 +40,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
+    const [selectedMWRs, setSelectedMWRs] = useState<string[]>([]); // สำหรับเลือกใบเบิก
 
     // State for dynamic parts
     const [partsBySystem, setPartsBySystem] = useState<PartsBySystem>({
@@ -84,7 +85,8 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         }
         // รีเซ็ต remarks เมื่อเปลี่ยนเป็น BM หรือ RC
         if (jobType === 'BM' || jobType === 'Recondition') {
-            setRemarks('');
+            // ไม่ควรไปรีเซ็ต remarks เพราะผู้ใช้อาจจะพิมพ์หมายเหตุไปแล้วแล้วค่อยเปลี่ยนประเภทงาน
+            // setRemarks('');
         }
         // รีเซ็ต bmCause เมื่อไม่ใช่ BM
         if (jobType !== 'BM') {
@@ -138,6 +140,45 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
     };
+
+    const availableMWRs = React.useMemo(() => {
+        return jobs.filter(j => 
+            j.type === 'PART_REQUEST' && 
+            j.status === 'completed' && 
+            j.golf_course_id === user.golf_course_id &&
+            j.bplus_code
+        );
+    }, [jobs, user.golf_course_id]);
+
+    const getMwrFilteredParts = () => {
+        if (selectedMWRs.length === 0) return [];
+        
+        const mwrPartsMap = new Map<string, CategorizedPart>();
+        const allParts = Object.values(partsBySystem).flat();
+        
+        selectedMWRs.forEach(code => {
+            const mwr = availableMWRs.find(j => j.bplus_code === code);
+            if (mwr && mwr.parts) {
+                mwr.parts.forEach(p => {
+                    const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
+                    if (systemPart && !mwrPartsMap.has(systemPart.id.toString())) {
+                        mwrPartsMap.set(systemPart.id.toString(), systemPart);
+                    }
+                });
+            }
+        });
+        
+        const partsList = Array.from(mwrPartsMap.values());
+        if (!partsSearchTerm.trim()) {
+            return partsList;
+        }
+        const searchTerm = partsSearchTerm.toLowerCase().trim();
+        return partsList.filter(part =>
+            part.name.toLowerCase().includes(searchTerm) ||
+            (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
+        );
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmitting) return; // ป้องกันการกดซ้ำ
@@ -248,7 +289,8 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             'steering': 'ระบบบังคับเลี้ยว',
             'motor': 'ระบบมอเตอร์/เพื่อขับ',
             'electric': 'ระบบไฟฟ้า',
-            'other': 'อื่นๆ'
+            'other': 'อื่นๆ',
+            'mwr': 'รายการในใบเบิก'
         };
         return tabNames[tab] || tab;
     };
@@ -641,7 +683,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 </button>
                                 {isDropdownOpen && (
                                     <div className="header-category-dropdown-menu">
-                                        {Object.keys(partsBySystem).map(tab => (
+                                        {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
                                             <div
                                                 key={tab}
                                                 className={`header-category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
@@ -657,7 +699,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
                         {/* Desktop Tabs */}
                         <div className="modal-tabs">
-                            {Object.keys(partsBySystem).map(tab => (
+                            {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
                                 <button
                                     key={tab}
                                     type="button"
@@ -681,7 +723,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             </button>
                             {isDropdownOpen && (
                                 <div className="category-dropdown-menu">
-                                    {Object.keys(partsBySystem).map(tab => (
+                                    {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
                                         <div
                                             key={tab}
                                             className={`category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
@@ -717,13 +759,35 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                         </div>
 
                         <div className="modal-body">
+                            {activePartsTab === 'mwr' && (
+                                <div className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100/50 shadow-sm">
+                                    <label className="block text-sm font-semibold text-indigo-900 mb-2 whitespace-nowrap">เลือกใบเบิก (MWR) ที่ต้องการดึงอะไหล่:</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {availableMWRs.length === 0 ? (
+                                            <span className="text-sm text-gray-500">ไม่มีใบเบิกที่สามารถใช้งานได้ หรือยังไม่มีใบเบิกที่ได้รับการอนุมัติ/โอนคลัง</span>
+                                        ) : availableMWRs.map(mwr => (
+                                            <button
+                                                key={mwr.id}
+                                                type="button"
+                                                onClick={() => setSelectedMWRs(prev => prev.includes(mwr.bplus_code!) ? prev.filter(c => c !== mwr.bplus_code) : [...prev, mwr.bplus_code!])}
+                                                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 active:scale-[0.98] ${selectedMWRs.includes(mwr.bplus_code!) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-indigo-50 hover:border-indigo-200'}`}
+                                            >
+                                                {mwr.bplus_code || mwr.id.slice(-6)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {selectedMWRs.length === 0 && availableMWRs.length > 0 && <p className="text-xs text-indigo-500 mt-3">* กรุณาคลิกเลือกเลขที่ใบเบิกเพื่อแสดงรายการอะไหล่</p>}
+                                </div>
+                            )}
+
+
                             {isLoadingParts ? (
                                 <div className="loading-parts" style={{ textAlign: 'center', padding: '20px' }}>
                                     <p>กำลังโหลดข้อมูลอะไหล่...</p>
                                 </div>
                             ) : (
                                 <div className="parts-grid">
-                                    {getFilteredParts().map(part => {
+                                    {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).map(part => {
                                         const selectedPart = selectedParts.find(p => p.id === part.id);
                                         return (
                                             <div
@@ -748,7 +812,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                     })}
 
                                     {/* แสดงข้อความเมื่อไม่พบผลลัพธ์ */}
-                                    {getFilteredParts().length === 0 && (
+                                    {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).length === 0 && (
                                         <div className="no-parts-found">
                                             <p>ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;</p>
                                             <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
@@ -769,7 +833,16 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             <button
                                 type="button"
                                 className="btn-primary"
-                                onClick={() => setShowPartsModal(false)}
+                                onClick={() => {
+                                    setShowPartsModal(false);
+                                    if (activePartsTab === 'mwr' && selectedMWRs.length > 0) {
+                                        // Auto inject MWR tag to parts notes
+                                        const tag = `[ใช้จากใบเบิก: ${selectedMWRs.join(', ')}]`;
+                                        if (!partsNotes.includes(tag)) {
+                                            setPartsNotes(prev => prev ? `${prev}\n${tag}` : tag);
+                                        }
+                                    }
+                                }}
                             >
                                 เพิ่มอะไหล่ที่เลือก
                             </button>

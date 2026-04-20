@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Part, User, GolfCourse, PartsUsageLog, Job } from '@/lib/data';
 import StockHistoryModal from './StockHistoryModal'; // New Import
+import PendingMWRModal from './PendingMWRModal'; // New Import
+import MWRTrackingModal from './MWRTrackingModal'; // New Import
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -11,14 +13,14 @@ import {
   TrashIcon,
   DocumentArrowDownIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
   XMarkIcon,
   DocumentArrowUpIcon,
-  ClipboardDocumentListIcon,
   BuildingStorefrontIcon,
   ChartBarIcon,
   ArrowsRightLeftIcon,
-  ClockIcon // Added ClockIcon
+  ClockIcon, // Added ClockIcon
+  DocumentTextIcon, // Added for MWR Tracker
+  BellIcon
 } from '@heroicons/react/24/outline';
 
 interface StockManagementScreenProps {
@@ -45,9 +47,15 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
   const [selectedHubCourse, setSelectedHubCourse] = useState<string | null>(null);
   // New Tabs for Stock Hub
   const [stockHubTab, setStockHubTab] = useState<'outgoing' | 'incoming' | 'stock'>('outgoing');
-  // Permission Check
+  // Permission Hooks
   const canEditStock = useMemo(() => {
+    if (user?.role === 'admin') return true;
     return user?.permissions?.includes('stock:edit') || false;
+  }, [user]);
+
+  const canApproveDeduction = useMemo(() => {
+    if (user?.role === 'admin') return true;
+    return user?.permissions?.includes('stock:deduct') || false;
   }, [user]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,6 +66,8 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
   const [showBreakdownModal, setShowBreakdownModal] = useState(false); // New State
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false); // New State
+  const [showMWRTracker, setShowMWRTracker] = useState(false); // New State
+  const [showPendingMwr, setShowPendingMwr] = useState(false); // New State
   const [selectedPartForHistory, setSelectedPartForHistory] = useState<Part | null>(null); // New State
   const [transferQty, setTransferQty] = useState('');
   const [transferDestination, setTransferDestination] = useState('');
@@ -78,6 +88,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
   const [loading, setLoading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [duplicatePartNumbers, setDuplicatePartNumbers] = useState<string[]>([]);
+  const [selectedJobForDetails, setSelectedJobForDetails] = useState<Job | null>(null);
 
   const [formData, setFormData] = useState<PartFormData>({
     name: '',
@@ -101,14 +112,19 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     ).length;
     const categories = Array.from(new Set(parts.map(part => part.category).filter(Boolean))).length;
 
+    const pendingMwrCount = jobs.filter(j => 
+      j.type === 'PART_REQUEST' && j.status === 'stock_pending'
+    ).length;
+
     return {
       totalParts,
       totalStock,
       lowStockParts,
       highStockParts,
-      categories
+      categories,
+      pendingMwrCount
     };
-  }, [parts]);
+  }, [parts, jobs]);
 
   // กรองข้อมูล
   const filteredParts = useMemo(() => {
@@ -467,15 +483,14 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
     XLSX.writeFile(wb, `stock - parts - ${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  // ฟังก์ชันสำหรับกำหนดสี stock level
   const getStockLevelColor = (part: Part) => {
     if (part.stock_qty <= part.min_qty) {
-      return 'text-red-600 bg-red-50';
+      return 'text-red-600 bg-red-50 border-red-200';
     }
     if (part.stock_qty >= part.max_qty) {
-      return 'text-orange-600 bg-orange-50';
+      return 'text-orange-600 bg-orange-50 border-orange-200';
     }
-    return 'text-green-600 bg-green-50';
+    return 'text-green-600 bg-green-50 border-green-200';
   };
 
   const getStockLevelText = (part: Part) => {
@@ -490,6 +505,57 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{ padding: '2rem', maxWidth: '1600px', margin: '0 auto' }}>
+      
+      {/* Proactive Notification Banner */}
+      {canEditStock && statistics.pendingMwrCount > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+          color: 'white',
+          padding: '1.25rem 2rem',
+          borderRadius: '20px',
+          marginBottom: '2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 10px 40px rgba(245, 158, 11, 0.2)',
+          zIndex: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.2)', 
+              borderRadius: '50%', 
+              padding: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ExclamationTriangleIcon style={{ width: '28px', height: '28px' }} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700 }}>ตรวจพบงานค้างตัดสต็อก ({statistics.pendingMwrCount})</h4>
+              <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '0.925rem' }}>
+                มีรายการเบิกอะไหล่ (MWR) ที่ได้รับอนุมัติแล้ว แต่ยังไม่ได้ตัดจ่ายออกจากคลัง
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowPendingMwr(true)}
+            style={{
+              padding: '0.875rem 1.75rem',
+              background: 'white',
+              color: '#d97706',
+              border: 'none',
+              borderRadius: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+            }}
+          >
+            จัดการทันที
+          </button>
+        </div>
+      )}
       {/* Enhanced Header */}
       <div style={{
         background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
@@ -502,6 +568,56 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
         position: 'relative',
         overflow: 'hidden'
       }}>
+        {/* Notification Bell Button (Top Right) */}
+        {canEditStock && (
+          <div style={{
+            position: 'absolute',
+            top: '1.5rem',
+            right: '1.5rem',
+            zIndex: 10
+          }}>
+            <button
+              onClick={() => setShowPendingMwr(true)}
+              style={{
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '0.75rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                transition: 'all 0.2s',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1) rotate(10deg)';
+                e.currentTarget.style.boxShadow = '0 6px 12px rgba(245, 158, 11, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
+              }}
+            >
+              <BellIcon style={{ 
+                width: '24px', 
+                height: '24px', 
+                color: statistics.pendingMwrCount > 0 ? '#f59e0b' : '#64748b',
+                transition: 'all 0.3s'
+              }} />
+              {statistics.pendingMwrCount > 0 && (
+                <span className="flex h-5 w-5 items-center justify-center absolute -top-1 -right-1">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-[10px] items-center justify-center font-bold border-2 border-white">
+                    {statistics.pendingMwrCount}
+                  </span>
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Background Pattern */}
         <div style={{
           position: 'absolute',
@@ -581,8 +697,22 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
               border: '1px solid rgba(245, 101, 101, 0.2)'
             }}>
               <span style={{ fontSize: '1.2rem' }}>⚠️</span>
-              <span style={{ fontSize: '0.875rem', color: '#dc2626', fontWeight: '600' }}>Stock ต่ำ: {statistics.lowStockParts} รายการ</span>
+              <span style={{ fontSize: '0.875rem', color: '#dc2626', fontWeight: '600' }}>Stock ต่ำ: {statistics.lowStockParts}</span>
             </div>
+            {statistics.pendingMwrCount > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: 'rgba(245, 158, 11, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(245, 158, 11, 0.2)'
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>🚚</span>
+                <span style={{ fontSize: '0.875rem', color: '#b45309', fontWeight: '600' }}>รอตัดจ่าย: {statistics.pendingMwrCount}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -755,6 +885,72 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
+              {/* Pending MWR Button */}
+              {canApproveDeduction && jobs && jobs.some(j => j.type === 'PART_REQUEST' && j.status === 'stock_pending') && (
+                <button
+                  onClick={() => setShowPendingMwr(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 1.5rem',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(245, 158, 11, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.2)';
+                  }}
+                >
+                  <DocumentArrowUpIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+                  งานรอโอนคลัง ({jobs.filter(j => j.type === 'PART_REQUEST' && j.status === 'stock_pending').length})
+                </button>
+              )}
+
+              {/* MWR Tracker Button */}
+              {canEditStock && (
+                <button
+                  onClick={() => setShowMWRTracker(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 1.5rem',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.2)';
+                  }}
+                >
+                  <DocumentTextIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+                  เช็คสถานะเบิก (MWR)
+                </button>
+              )}
+
               {/* Stock Hub Button */}
               {canEditStock && (
                 <button
@@ -1095,23 +1291,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                   </td>
                   {/* สถานะ */}
                   <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      minWidth: '80px',
-                      justifyContent: 'center',
-                      backgroundColor: part.stock_qty <= part.min_qty ? '#fef2f2' :
-                        part.stock_qty >= part.max_qty ? '#fff7ed' : '#f0fdf4',
-                      color: part.stock_qty <= part.min_qty ? '#dc2626' :
-                        part.stock_qty >= part.max_qty ? '#ea580c' : '#16a34a',
-                      border: `1px solid ${part.stock_qty <= part.min_qty ? '#fecaca' :
-                        part.stock_qty >= part.max_qty ? '#fed7aa' : '#bbf7d0'
-                        } `
-                    }}>
+                    <div className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold min-w-[80px] border ${getStockLevelColor(part)}`}>
                       {part.stock_qty <= part.min_qty && <span style={{ marginRight: '4px' }}>⚠️</span>}
                       {part.stock_qty > part.min_qty && part.stock_qty < part.max_qty && <span style={{ marginRight: '4px' }}>✅</span>}
                       {part.stock_qty >= part.max_qty && <span style={{ marginRight: '4px' }}>📈</span>}
@@ -3417,6 +3597,28 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
           }}
         />
       )}
+
+      {/* Pending MWR Modal */}
+      {showPendingMwr && (
+        <PendingMWRModal
+           jobs={jobs}
+           user={user}
+           onClose={() => setShowPendingMwr(false)}
+           onSuccess={() => {
+             setShowPendingMwr(false);
+             onPartsUpdate();
+           }}
+        />
+      )}
+
+      {/* MWR Tracker Modal */}
+      <MWRTrackingModal 
+        isOpen={showMWRTracker}
+        onClose={() => setShowMWRTracker(false)}
+        jobs={jobs}
+        parts={parts}
+        golfCourses={golfCourses}
+      />
 
     </div>
   );

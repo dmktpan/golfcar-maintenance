@@ -33,6 +33,30 @@ export async function POST(request: NextRequest) {
       const data = await response.json();
       console.log('✅ External API success');
 
+      // ตรวจสอบว่า User ถูกระงับในฐานข้อมูลท้องถิ่นหรือไม่
+      if (data.data && data.data.code) {
+        try {
+          const localUser = await prisma.user.findUnique({
+            where: { code: data.data.code },
+            select: { is_active: true, code: true }
+          });
+
+          if (localUser && localUser.is_active === false) {
+            console.log('❌ Blocking login: User is locally suspended:', localUser.code);
+            return NextResponse.json(
+              {
+                success: false,
+                message: 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+                data: null
+              },
+              { status: 403 }
+            );
+          }
+        } catch (dbError) {
+          console.error('⚠️ Could not verify local status:', dbError);
+        }
+      }
+
       // Update isOnline and lastActive in local Prisma DB if user exists
       if (data.data && (data.data.id || data.data.code)) {
         try {

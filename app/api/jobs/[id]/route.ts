@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { Prisma } from '@prisma/client';
 import { isValidObjectId } from '@/lib/utils/validation';
-import { approvePartRequest, consumeStockForJob } from '@/lib/stock';
+import { consumeStockForJob } from '@/lib/stock';
 
 const EXTERNAL_API_BASE = process.env.EXTERNAL_API_BASE_URL || 'http://golfcar.go2kt.com:8080/api';
 
@@ -159,11 +159,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }, { status: 400 });
     }
 
-    if (status && !['pending', 'in_progress', 'completed', 'assigned', 'approved', 'rejected'].includes(status)) {
+    if (status && !['pending', 'in_progress', 'completed', 'assigned', 'approved', 'rejected', 'stock_pending'].includes(status)) {
       console.log('Validation failed: Invalid status:', status);
       return NextResponse.json({
         success: false,
-        message: 'Status must be pending, in_progress, completed, assigned, approved, or rejected'
+        message: 'Status must be pending, in_progress, completed, assigned, approved, rejected, or stock_pending'
       }, { status: 400 });
     }
 
@@ -201,9 +201,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       });
 
       // ใช้ข้อมูลเดิมหากไม่มีข้อมูลใหม่
+      let finalStatus = status || oldJob.status;
+      if ((type || oldJob.type) === 'PART_REQUEST' && finalStatus === 'approved') {
+        finalStatus = 'stock_pending';
+      }
+
       const finalData = {
         type: type || oldJob.type,
-        status: status || oldJob.status,
+        status: finalStatus,
         vehicle_id: vehicle_id || oldJob.vehicle_id,
         vehicle_number: vehicle_number?.trim() || oldJob.vehicle_number,
         golf_course_id: golf_course_id || oldJob.golf_course_id,
@@ -219,10 +224,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         images: images || oldJob.images || [],
 
         // Approval fields logic
-        approved_by_id: (status === 'approved' || status === 'rejected') ? (approved_by_id || null) : oldJob.approved_by_id,
-        approved_by_name: (status === 'approved' || status === 'rejected') ? (approved_by_name?.trim() || null) : oldJob.approved_by_name,
-        approved_at: (status === 'approved' || status === 'rejected') ? new Date() : oldJob.approved_at,
-        rejection_reason: (status === 'rejected') ? (rejection_reason?.trim() || null) : (status === 'approved' ? null : oldJob.rejection_reason)
+        approved_by_id: (finalStatus === 'approved' || finalStatus === 'stock_pending' || status === 'rejected') ? (approved_by_id || null) : oldJob.approved_by_id,
+        approved_by_name: (finalStatus === 'approved' || finalStatus === 'stock_pending' || status === 'rejected') ? (approved_by_name?.trim() || null) : oldJob.approved_by_name,
+        approved_at: (finalStatus === 'approved' || finalStatus === 'stock_pending' || status === 'rejected') ? new Date() : oldJob.approved_at,
+        rejection_reason: (status === 'rejected') ? (rejection_reason?.trim() || null) : ((finalStatus === 'approved' || finalStatus === 'stock_pending') ? null : oldJob.rejection_reason)
       };
 
       console.log('Final update data:', finalData);
@@ -250,9 +255,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
         try {
           if (finalData.type === 'PART_REQUEST') {
-            // MWR: ย้ายของจากส่วนกลาง -> สนาม
-            // Approve Part Request Logic
-            await approvePartRequest(id, user_id || 'system', tx);
+            // MWR now bypasses automatic stock deduction and waits for stock_pending step
+            console.log('ℹ️ Job is PART_REQUEST, waiting for manual stock confirmation (stock_pending)');
           } else if (['PM', 'BM', 'Recondition'].includes(finalData.type)) {
             // งานซ่อม: ตัดของจากสนาม
             console.log('📉 Consuming stock for Maintenance Job... id:', id);
@@ -328,9 +332,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         }
       }
 
-      // บันทึก Serial History เฉพาะการเปลี่ยนแปลงสถานะสำคัญ: assigned และ approved เท่านั้น
+      // บันทึก Serial History เฉพาะการเปลี่ยนแปลงสถานะสำคัญ: assigned และ approved หรือ stock_pending เท่านั้น
       const statusChanged = oldJob.status !== updatedJob.status;
-      const isImportantStatusChange = statusChanged && (updatedJob.status === 'assigned' || updatedJob.status === 'approved');
+      const isImportantStatusChange = statusChanged && (updatedJob.status === 'assigned' || updatedJob.status === 'approved' || updatedJob.status === 'stock_pending');
 
       if (isImportantStatusChange) {
         // ดึงข้อมูลรถเพื่อใช้ใน Serial History

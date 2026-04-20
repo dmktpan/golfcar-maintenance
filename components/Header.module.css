@@ -40,64 +40,78 @@
   gap: 1.2rem;
 }
 
-.headerNav a {
+.headerNav a, .navLink, .logoutLink {
   color: white;
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  opacity: 0.95;
-  transition: all 0.3s ease;
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 0.5rem;
+  opacity: 0.9;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
 }
 
-.headerNav a:hover {
+.headerNav a:hover, .navLink:hover, .logoutLink:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.logoutLink {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.logoutLink:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.notificationBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  border-radius: 9999px;
+  margin-left: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .headerNav svg {
-  position: relative;
-  top: -1px;
-}
-
-.logoutButton {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.logoutButton:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
 }
 
 /* Responsive Design */
-@media (max-width: 992px) {
+@media (max-width: 1100px) {
   .headerNav span {
     display: none;
   }
   
-  .headerNav {
-    gap: 0.8rem;
+  .headerNav a, .navLink, .logoutLink {
+    padding: 0.6rem;
+    aspect-ratio: 1;
   }
 }
 
@@ -105,13 +119,11 @@
   .header {
     padding: 0.75rem 1rem;
     flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    gap: 0.75rem;
   }
 
   .headerTitle {
-    font-size: 1.25rem;
-    justify-content: center;
+    font-size: 1.2rem;
   }
 
   .userInfo {
@@ -121,57 +133,7 @@
 
   .headerNav {
     gap: 0.5rem;
-    justify-content: space-around;
-    flex-wrap: wrap;
-  }
-
-  .headerNav a {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-    min-height: 44px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-  }
-  
-  .logoutButton {
     width: 100%;
-    margin-top: 0.5rem;
-    min-height: 44px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header {
-    padding: 0.5rem;
-  }
-  
-  .headerTitle {
-    font-size: 1.1rem;
-  }
-  
-  .headerTitle svg {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .headerNav {
-    gap: 0.25rem;
-  }
-  
-  .headerNav a {
-    padding: 0.5rem 0.25rem;
-    font-size: 0.75rem;
-    min-height: 48px;
-  }
-  
-  .headerNav svg {
-    width: 16px;
-    height: 16px;
+    justify-content: center;
   }
 }

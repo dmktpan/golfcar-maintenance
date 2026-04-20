@@ -27,15 +27,17 @@ fi
 if [ -d "public" ]; then
     echo "📁 Copying public directory to standalone..."
     
-    # 1. Copy ทุกอย่างใน public ไปก่อน (แต่ยกเว้น uploads/maintenance ถ้าทำได้ แต่ cp -r มันแยกยาก)
+    # 1. Copy ทุกอย่างใน public ไปก่อน
     cp -r public .next/standalone/
     
-    # 2. ลบโฟลเดอร์ maintenance ที่เพิ่ง copy ไป (เพราะเราไม่อยากได้สำเนา)
-    rm -rf .next/standalone/public/uploads/maintenance
+    # 2. ลบโฟลเดอร์ uploads ทั้งหมดที่เพิ่ง copy ไป (เพราะเราไม่อยากได้สำเนาที่เสี่ยงต่อการโดน overwrite)
+    rm -rf .next/standalone/public/uploads
     
-    # 3. สร้าง Symlink ชี้กลับมาที่โฟลเดอร์จริง (ที่เรา Mount ไว้)
-    # หมายเหตุ: ใช้ path เต็ม (/home/...) หรือ path สัมพัทธ์ก็ได้ แต่ path เต็มชัวร์สุด
-    ln -s /home/administrator/golfcar-maintenance/public/uploads/maintenance .next/standalone/public/uploads/maintenance
+    # 3. สร้างโฟลเดอร์เป้าหมายเตรียมไว้ (ถ้ายังไม่มี)
+    mkdir -p $(pwd)/public/uploads
+    
+    # 4. สร้าง Symlink ตัวใหม่ที่ครอบคลุม 'ทุกอย่าง' ใน uploads แบบอัตโนมัติ
+    ln -s $(pwd)/public/uploads .next/standalone/public/uploads
     
     echo "✅ Public files copied and Symlink created successfully"
 else

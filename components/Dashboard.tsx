@@ -47,7 +47,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
             return jobs.filter(job =>
                 job.user_id === user.id.toString() && job.status === 'approved'
             ).sort((a, b) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime()
             );
         }
 
@@ -61,7 +61,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
             : userJobs.filter(job => job.status === filter);
 
         return filtered.sort((a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime()
         );
     }, [jobs, user, activeTab, filter]);
 
@@ -106,7 +106,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
         return jobs.filter(job =>
             job.user_id === user.id.toString() &&
             job.type === 'PART_REQUEST'
-        ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        ).sort((a, b) => new Date(b.createdAt || b.created_at).getTime() - new Date(a.createdAt || a.created_at).getTime());
     }, [jobs, user, activeTab]);
 
     // Filter Site Stock for Parts Stock Tab
@@ -214,7 +214,7 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                         </div>
                     </>
                 )}
-                {(['supervisor', 'admin', 'manager', 'stock', 'clerk', 'central'].includes(user.role)) && (
+                {(['supervisor', 'admin', 'manager', 'stock', 'clerk', 'central'].includes(user.role) || (user.permissions && user.permissions.length > 0)) && (
                     <>
                         <button
                             className={styles.adminButton}
@@ -296,99 +296,141 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                 <div className={styles.partsStockContainer} style={{ padding: '1rem', background: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
 
                     {/* Section 1: My MWR Requests */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <h3 style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#1e293b' }}>
-                            📋 ประวัติการเบิกอะไหล่ (My Requests)
-                        </h3>
+                    <div className="mb-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/50 p-2.5 rounded-lg">
+                                <span className="text-xl">📋</span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">ประวัติการเบิกอะไหล่</h3>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">รายการเบิกอะไหล่ทั้งหมดของคุณ (My Requests)</p>
+                            </div>
+                        </div>
+
                         {myMWRRequests.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', background: '#f8fafc', borderRadius: '0.5rem' }}>
-                                ยังไม่มีรายการเบิกอะไหล่
+                            <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-all duration-200 hover:shadow-md">
+                                <span className="text-4xl mb-4 block opacity-50">📂</span>
+                                <p className="text-zinc-500 dark:text-zinc-400 font-medium">ยังไม่มีรายการเบิกอะไหล่</p>
                             </div>
                         ) : (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.875rem' }}>
-                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>MWR Code</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>วันที่</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>สนามปลายทาง</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>ความเร่งด่วน</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>รายการ</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>สถานะ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {myMWRRequests.map(job => (
-                                            <tr key={job.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                <td
-                                                    style={{ padding: '0.75rem', fontWeight: 'bold', color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
-                                                    onClick={() => setSelectedMWR(job)}
-                                                >
-                                                    {job.mwr_code || 'N/A'}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#64748b' }}>
-                                                    {new Date(job.created_at).toLocaleDateString('th-TH')}
-                                                </td>
-                                                <td style={{ padding: '0.75rem' }}>
-                                                    {golfCourses.find(gc => gc.id === job.golf_course_id)?.name || '-'}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                    {job.remarks?.includes('เร่งด่วนมาก') ? '🚨 มาก' :
-                                                        job.remarks?.includes('เร่งด่วน') ? '⚠️ ด่วน' : 'ปกติ'}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                    {job.parts?.length || 0} รายการ
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                    <span style={{
-                                                        padding: '0.25rem 0.75rem',
-                                                        borderRadius: '1rem',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 'bold',
-                                                        background: job.status === 'approved' ? '#dcfce7' : job.status === 'rejected' ? '#fee2e2' : '#fef9c3',
-                                                        color: job.status === 'approved' ? '#166534' : job.status === 'rejected' ? '#991b1b' : '#854d0e'
-                                                    }}>
-                                                        {job.status === 'approved' ? 'อนุมัติแล้ว' : job.status === 'rejected' ? 'ไม่อนุมัติ' : 'รอตรวจสอบ'}
-                                                    </span>
-                                                </td>
+                            <div className="bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="bg-zinc-50 dark:bg-zinc-900/80 border-b border-zinc-200/50 dark:border-zinc-800/50">
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">MWR Code</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">วันที่</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">สนามปลายทาง</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-center">ความเร่งด่วน</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-center">รายการ</th>
+                                                <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-center">สถานะ</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50">
+                                            {myMWRRequests.map(job => (
+                                                <tr key={job.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors duration-200">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-1.5 items-start">
+                                                            <button 
+                                                                onClick={() => setSelectedMWR(job)}
+                                                                className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline decoration-indigo-300 underline-offset-4 transition-all duration-200 text-left"
+                                                            >
+                                                                {job.mwr_code || job.id.slice(-6).toUpperCase()}
+                                                            </button>
+                                                            {job.bplus_code ? (
+                                                                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 inline-flex items-center gap-1 shadow-sm">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> BPLUS: {job.bplus_code}
+                                                                </span>
+                                                            ) : (
+                                                                (job.status === 'stock_pending' || job.status === 'completed') && (
+                                                                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500 italic bg-white dark:bg-transparent px-1 border border-transparent">
+                                                                        รอระบุเลข BPLUS...
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                                                            {new Date(job.createdAt || job.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+                                                            {golfCourses.find(gc => gc.id === job.golf_course_id)?.name || '-'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                                            job.remarks?.includes('เร่งด่วนมาก') ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800' :
+                                                            job.remarks?.includes('เร่งด่วน') ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800' : 
+                                                            'bg-zinc-50 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                                                        }`}>
+                                                            {job.remarks?.includes('เร่งด่วนมาก') ? '🚨 ด่วนมาก' :
+                                                             job.remarks?.includes('เร่งด่วน') ? '⚠️ ด่วน' : 'ปกติ'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">{job.parts?.length || 0} รายการ</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm ${
+                                                            job.status === 'completed' ? 'bg-emerald-500 text-white border border-emerald-600 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-700' : 
+                                                            job.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 
+                                                            job.status === 'rejected' ? 'bg-red-50 text-red-600 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' : 
+                                                            job.status === 'stock_pending' ? 'bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20' :
+                                                            'bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                                                        }`}>
+                                                            {job.status === 'completed' ? 'เบิกจ่ายเสร็จสิ้น' : 
+                                                             job.status === 'approved' ? 'อนุมัติแล้ว' : 
+                                                             job.status === 'rejected' ? 'ไม่อนุมัติ' : 
+                                                             job.status === 'stock_pending' ? 'รอฝ่ายสต๊อกตัดจ่าย' :
+                                                             'รอตรวจสอบ'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </div>
 
                     {/* Section 2: Site Stock */}
                     <div>
-                        <h3 style={{ borderBottom: '2px solid #e2e8f0', paddingBottom: '0.5rem', marginBottom: '1rem', color: '#1e293b' }}>
-                            🏭 สต็อกอะไหล่ประจำสนาม ({golfCourses.find(gc => gc.id.toString() === user.golf_course_id?.toString())?.name || 'ไม่ระบุ'})
-                        </h3>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-emerald-100 dark:bg-emerald-900/50 p-2.5 rounded-lg">
+                                <span className="text-xl">🏭</span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">สต็อกอะไหล่ประจำสนาม</h3>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">{golfCourses.find(gc => gc.id.toString() === user.golf_course_id?.toString())?.name || 'ไม่ระบุ'}</p>
+                            </div>
+                        </div>
+
                         {siteStock.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', background: '#f8fafc', borderRadius: '0.5rem' }}>
-                                ไม่พบข้อมูลสต็อกในสนามนี้ หรือ สต็อกเป็นศูนย์
+                            <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-sm transition-all duration-200">
+                                <span className="text-4xl mb-4 block opacity-50">🗄️</span>
+                                <p className="text-zinc-500 dark:text-zinc-400 font-medium">ไม่พบข้อมูลสต็อกในสนามนี้ หรือ สต็อกเป็นศูนย์</p>
                             </div>
                         ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {siteStock.map((part: any) => (
-                                    <div key={part.id} style={{
-                                        padding: '1rem',
-                                        borderRadius: '0.5rem',
-                                        border: '1px solid #e2e8f0',
-                                        background: part.siteStock < 5 ? '#fff1f2' : 'white',
-                                        position: 'relative'
-                                    }}>
-                                        <div style={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '0.25rem' }}>{part.name}</div>
-                                        <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '0.5rem' }}>#{part.part_number || '-'}</div>
+                                    <div key={part.id} className={`group p-5 rounded-xl border shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md ${
+                                        part.siteStock < 5 
+                                        ? 'bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900/50' 
+                                        : 'bg-white border-zinc-200/50 dark:bg-zinc-900 dark:border-zinc-800/50'
+                                    }`}>
+                                        <div className="font-semibold text-zinc-900 dark:text-zinc-50 mb-1 group-hover:text-indigo-600 transition-colors">{part.name}</div>
+                                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 font-mono">#{part.part_number || '-'}</div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                                            <span style={{ fontSize: '0.875rem', color: '#475569' }}>คงเหลือ:</span>
-                                            <span style={{
-                                                fontSize: '1.25rem',
-                                                fontWeight: 'bold',
-                                                color: part.siteStock < 5 ? '#dc2626' : '#059669'
-                                            }}>
-                                                {part.siteStock} {part.unit}
+                                        <div className="flex justify-between items-end mt-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">คงเหลือ</span>
+                                            <span className={`text-2xl font-bold tracking-tight ${
+                                                part.siteStock < 5 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
+                                            }`}>
+                                                {part.siteStock} <span className="text-sm font-medium opacity-70 ml-0.5">{part.unit}</span>
                                             </span>
                                         </div>
                                     </div>

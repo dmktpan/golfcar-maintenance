@@ -15,6 +15,7 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
         approved: { text: 'อนุมัติแล้ว', className: 'approved' },
         rejected: { text: 'ไม่อนุมัติ', className: 'rejected' },
         assigned: { text: 'มอบหมายแล้ว', className: 'assigned' },
+        stock_pending: { text: 'รอตัดสต๊อก (MWR)', className: 'assigned' },
     };
     const {text, className} = statusMap[status] || { text: 'Unknown', className: 'rejected' };
     return <span className={`status-badge ${className}`}>{text}</span>;

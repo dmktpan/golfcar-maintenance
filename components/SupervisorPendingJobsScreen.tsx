@@ -16,6 +16,7 @@ interface SupervisorPendingJobsScreenProps {
     vehicles: Vehicle[];
     onUpdateStatus: (jobId: string, status: JobStatus) => void;
     setView: (view: View) => void; // เพิ่ม setView prop
+    onFillJobForm?: (job: Job) => void; // เพิ่มสำหรับแก้ไขงาน pending
 }
 
 function SupervisorPendingJobsScreen({
@@ -25,7 +26,8 @@ function SupervisorPendingJobsScreen({
     users,
     vehicles,
     onUpdateStatus,
-    setView // เพิ่ม setView ใน destructuring
+    setView, // เพิ่ม setView ใน destructuring
+    onFillJobForm // เพิ่มสำหรับแก้ไขงาน pending
 }: SupervisorPendingJobsScreenProps) {
     const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
     const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -505,6 +507,12 @@ function SupervisorPendingJobsScreen({
                                             {isMWR ? 'เบิกอะไหล่' : job.type}
                                         </span>
                                         <StatusBadge status={job.status} />
+                                        {/* SN รถ (จุดที่วงสีแดงไว้) */}
+                                        {!isMWR && vehicleInfo?.serial_number && (
+                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '0.5rem', fontWeight: 500 }}>
+                                                (SN: {vehicleInfo.serial_number})
+                                            </span>
+                                        )}
                                     </div>
                                     <div className={styles.jobHeaderRight}>
                                         <span className={styles.jobDate}>
@@ -582,14 +590,27 @@ function SupervisorPendingJobsScreen({
                                         </div>
                                     )}
 
+                                    {job.partsNotes && (
+                                        <div className={styles.detailItem} style={{ marginTop: '0.5rem', background: '#eff6ff', padding: '0.65rem', borderRadius: '0.375rem', borderLeft: '4px solid #3b82f6', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <span className={styles.detailLabel} style={{ color: '#1e40af', width: 'auto' }}>หมายเหตุอะไหล่ / รหัสใบเบิกอ้างอิง:</span>
+                                            <span className={styles.detailValue} style={{ color: '#1e3a8a', fontWeight: '600', whiteSpace: 'pre-wrap' }}>
+                                                {job.partsNotes}
+                                            </span>
+                                        </div>
+                                    )}
+
                                     {job.remarks && (
-                                        <div className={styles.detailItem} style={{ marginTop: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem' }}>
+                                        <div className={styles.detailItem} style={{ marginTop: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.5rem', display: 'flex', gap: '1rem' }}>
                                             <span className={styles.detailLabel}>หมายเหตุ:</span>
                                             <span className={styles.detailValue}>
                                                 {job.remarks}
                                             </span>
                                         </div>
                                     )}
+                                    
+                                    <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', color: '#cbd5e1', textAlign: 'right' }}>
+                                        Ref ID: {job.id.slice(0,8).toUpperCase()}
+                                    </div>
                                 </div>
 
                                 <div className={styles.actionButtons}>
@@ -610,6 +631,17 @@ function SupervisorPendingJobsScreen({
                                                 ไม่อนุมัติ
                                             </button>
                                         </>
+                                    )}
+                                    {/* ปุ่มแก้ไข: แสดงเฉพาะงานที่ผู้ใช้คนนี้สร้างเอง */}
+                                    {onFillJobForm && job.user_id === user.id.toString() && !isMWR && (
+                                        <button
+                                            className={`${styles.actionButton} ${styles.detailsButton}`}
+                                            onClick={() => onFillJobForm(job)}
+                                            style={{ background: '#f59e0b', color: '#fff' }}
+                                        >
+                                            <span className={styles.buttonIcon}>✏️</span>
+                                            แก้ไข
+                                        </button>
                                     )}
                                     <button
                                         className={`${styles.actionButton} ${styles.detailsButton}`}
@@ -910,6 +942,20 @@ function SupervisorPendingJobsScreen({
                                             ไม่อนุมัติ
                                         </button>
                                     </>
+                                )}
+                                {/* ปุ่มแก้ไขใน modal: แสดงเฉพาะงานที่ผู้ใช้คนนี้สร้างเอง */}
+                                {onFillJobForm && selectedJobForDetails.user_id === user.id.toString() && selectedJobForDetails.type !== 'PART_REQUEST' && (
+                                    <button
+                                        className={`${styles.actionButton} ${styles.approveButton}`}
+                                        style={{ background: '#f59e0b' }}
+                                        onClick={() => {
+                                            onFillJobForm(selectedJobForDetails);
+                                            closeDetailsModal();
+                                        }}
+                                    >
+                                        <span className={styles.buttonIcon}>✏️</span>
+                                        แก้ไข
+                                    </button>
                                 )}
                                 <button
                                     className={`${styles.actionButton} ${styles.cancelButton}`}
