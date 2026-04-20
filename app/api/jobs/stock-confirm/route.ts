@@ -92,12 +92,26 @@ export async function POST(request: Request) {
            if (actualQty <= 0) continue; // ถ้าให้แค่ 0 ก็ไม่ต้องหักของ
 
            // --- ตัดสต๊อกจาก Central ---
-           const centralInv = await tx.inventory.findFirst({
+           let centralInv = await tx.inventory.findFirst({
                where: {
                    part_id: partId,
                    golf_course_id: null // ส่วนกลาง
                }
            });
+
+           if (!centralInv) {
+               // Fallback: หากยังไม่มีแถวของ Central Inventory ให้สร้างใหม่โดยดึงจาก Part.stock_qty (Legacy data support)
+               const partInfo = await tx.part.findUnique({ where: { id: partId } });
+               if (partInfo) {
+                   centralInv = await tx.inventory.create({
+                       data: {
+                           part_id: partId,
+                           golf_course_id: null,
+                           quantity: partInfo.stock_qty || 0,
+                       }
+                   });
+               }
+           }
 
            if (!centralInv || centralInv.quantity < actualQty) {
               const currentQty = centralInv ? centralInv.quantity : 0;
