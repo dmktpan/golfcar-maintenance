@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Job, Vehicle, Part, PARTS_BY_SYSTEM_DISPLAY, User, GolfCourse } from '@/lib/data';
 import RequisitionModal from './RequisitionModal';
 import StatusBadge from './StatusBadge';
+import MWRDetailsModal from './MWRDetailsModal';
 import * as XLSX from 'xlsx';
 
 interface HistoryScreenProps {
@@ -45,6 +46,10 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
     const [isRequisitionOpen, setIsRequisitionOpen] = useState(false);
     const [selectedJobForRequisition, setSelectedJobForRequisition] = useState<Job | null>(null);
     const [isGeneratingRequisition, setIsGeneratingRequisition] = useState(false);
+
+    // MWR Details Modal
+    const [isMWRModalOpen, setIsMWRModalOpen] = useState(false);
+    const [selectedMWR, setSelectedMWR] = useState<Job | null>(null);
 
     // ใช้ข้อมูลงานจากระบบแทนข้อมูล mock
     // กรองเฉพาะงานที่เสร็จสิ้นแล้วหรืออนุมัติแล้วเพื่อแสดงในประวัติ
@@ -516,6 +521,16 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
         setSelectedJobForRequisition(null);
     };
 
+    const openMWRModal = (job: Job) => {
+        setSelectedMWR(job);
+        setIsMWRModalOpen(true);
+    };
+
+    const closeMWRModal = () => {
+        setIsMWRModalOpen(false);
+        setSelectedMWR(null);
+    };
+
     // Parts Modal Component
     const PartsModal = ({ isOpen, onClose, parts, allParts }: {
         isOpen: boolean,
@@ -841,7 +856,36 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                             </>
                                         ) : (
                                             <>
-                                                <td style={{ fontWeight: '600', color: '#2563eb' }}>{(job as any).mwr_code || '-'}</td>
+                                                <td>
+                                                    <button 
+                                                        onClick={() => openMWRModal(job)}
+                                                        style={{ 
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            padding: '0.25rem 0.75rem',
+                                                            borderRadius: '0.5rem',
+                                                            fontSize: '0.8rem',
+                                                            fontWeight: '600',
+                                                            background: '#eef2ff', 
+                                                            color: '#4f46e5', 
+                                                            border: '1px solid #e0e7ff',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                                                        }}
+                                                        onMouseOver={(e) => {
+                                                            e.currentTarget.style.background = '#e0e7ff';
+                                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                                        }}
+                                                        onMouseOut={(e) => {
+                                                            e.currentTarget.style.background = '#eef2ff';
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                        }}
+                                                    >
+                                                        {(job as any).mwr_code || '-'}
+                                                    </button>
+                                                </td>
                                                 <td>{getGolfCourseName(job.golf_course_id)}</td>
                                                 <td>
                                                     <span style={{
@@ -1034,6 +1078,14 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 vehicles={vehicles}
                 golfCourses={golfCourses}
                 jobParts={selectedJobForRequisition ? partsData.get(selectedJobForRequisition.id) || [] : []}
+            />
+
+            {/* MWR Details Modal */}
+            <MWRDetailsModal
+                isOpen={isMWRModalOpen}
+                onClose={closeMWRModal}
+                job={selectedMWR}
+                golfCourses={golfCourses}
             />
 
             <style jsx>{`

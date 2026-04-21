@@ -138,27 +138,83 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         return jobs.filter(j => 
             j.type === 'PART_REQUEST' && 
             j.status === 'completed' && 
-            j.golf_course_id === user.golf_course_id &&
+            j.golf_course_id === job.golf_course_id &&
             j.bplus_code
         );
-    }, [jobs, user.golf_course_id]);
+    }, [jobs, job.golf_course_id]);
+
+    // หา job ที่เคยใช้อะไหล่จากใบเบิกเหล่านี้ไปแล้ว
+    const consumedByJobs = React.useMemo(() => {
+        return jobs.filter(j =>
+            (j.type === 'PM' || j.type === 'BM' || j.type === 'Recondition') &&
+            j.partsNotes && j.partsNotes.includes('[ใช้จากใบเบิก:')
+        );
+    }, [jobs]);
 
     const getMwrFilteredParts = () => {
         if (selectedMWRs.length === 0) return [];
         
-        const mwrPartsMap = new Map<string, CategorizedPart>();
+        const mwrPartsMap = new Map<string, CategorizedPart & { mwr_qty?: number; mwr_used?: number; mwr_remaining?: number }>();
         const allParts = Object.values(partsBySystem).flat();
         
+        // --- ขั้น 1: รวมยอดขอเบิกจาก MWR ที่เลือก ---
         selectedMWRs.forEach(code => {
             const mwr = availableMWRs.find(j => j.bplus_code === code);
-            if (mwr && mwr.parts) {
-                mwr.parts.forEach(p => {
-                    const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
-                    if (systemPart && !mwrPartsMap.has(systemPart.id.toString())) {
-                        mwrPartsMap.set(systemPart.id.toString(), systemPart);
+            if (mwr) {
+                // ใช้ mwrVehicleItems เป็นหลัก (ถ้ามี) เพราะเป็นข้อมูลแยกคัน
+                // ถ้าไม่มี ค่อย fallback ไปใช้ mwr.parts
+                const hasMwrItems = (mwr as any).mwrVehicleItems && (mwr as any).mwrVehicleItems.length > 0;
+                
+                if (hasMwrItems) {
+                    (mwr as any).mwrVehicleItems.forEach((p: any) => {
+                        const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
+                        if (systemPart) {
+                            const existing = mwrPartsMap.get(systemPart.id.toString());
+                            const qty = parseInt(p.quantity || p.quantity_used || '0', 10);
+                            if (existing) {
+                                existing.mwr_qty = (existing.mwr_qty || 0) + qty;
+                            } else {
+                                mwrPartsMap.set(systemPart.id.toString(), { ...systemPart, mwr_qty: qty, mwr_used: 0, mwr_remaining: qty });
+                            }
+                        }
+                    });
+                } else if (mwr.parts) {
+                    mwr.parts.forEach((p: any) => {
+                        const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
+                        if (systemPart) {
+                            const existing = mwrPartsMap.get(systemPart.id.toString());
+                            const qty = parseInt(p.quantity_used || p.quantity || '0', 10);
+                            if (existing) {
+                                existing.mwr_qty = (existing.mwr_qty || 0) + qty;
+                            } else {
+                                mwrPartsMap.set(systemPart.id.toString(), { ...systemPart, mwr_qty: qty, mwr_used: 0, mwr_remaining: qty });
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        // --- ขั้น 2: หักยอดที่ถูกใช้ไปแล้วจาก job อื่น ---
+        selectedMWRs.forEach(code => {
+            const relatedJobs = consumedByJobs.filter(cj => cj.partsNotes?.includes(code));
+            relatedJobs.forEach(rj => {
+                rj.parts?.forEach(jp => {
+                    const key = jp.part_id.toString();
+                    const existing = mwrPartsMap.get(key);
+                    if (existing) {
+                        existing.mwr_used = (existing.mwr_used || 0) + jp.quantity_used;
                     }
                 });
-            }
+            });
+        });
+
+        // --- ขั้น 3: คำนวณยอดคงเหลือ ---
+        mwrPartsMap.forEach((part) => {
+            const requested = part.mwr_qty || 0;
+            const used = Math.min(part.mwr_used || 0, requested);
+            part.mwr_used = used;
+            part.mwr_remaining = requested - used;
         });
         
         const partsList = Array.from(mwrPartsMap.values());
@@ -170,6 +226,13 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
             part.name.toLowerCase().includes(searchTerm) ||
             (part.part_number && part.part_number.toLowerCase().includes(searchTerm))
         );
+    };
+
+    const getMaxAllowedQty = (partId: string | number) => {
+        if (selectedMWRs.length === 0) return Infinity; // No MWR selected, no restriction
+        const mwrParts = getMwrFilteredParts();
+        const mwrPart = mwrParts.find(p => p.id === partId);
+        return mwrPart && (mwrPart as any).mwr_remaining !== undefined ? (mwrPart as any).mwr_remaining : Infinity;
     };
 
     const handleSubTaskChange = (task: string, isChecked: boolean) => {
@@ -187,15 +250,25 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
         setAdditionalSubTasks(prev => prev.filter(task => task !== taskToRemove));
     };
 
-    const handlePartSelection = (part: CategorizedPart) => {
+    const handlePartSelection = (part: CategorizedPart & { mwr_qty?: number }) => {
         const existingPart = selectedParts.find(p => p.id === part.id);
+        const maxAllowed = getMaxAllowedQty(part.id);
+        
         if (existingPart) {
-            // ถ้ามีอะไหล่นี้แล้ว ให้เพิ่มจำนวน
+            const newQty = existingPart.quantity + 1;
+            if (newQty > maxAllowed) {
+                alert(`ไม่สามารถระบุจำนวนเกินกว่าที่เบิกมาได้ (สูงสุด ${maxAllowed})`);
+                return;
+            }
             setSelectedParts(prev => prev.map(p =>
-                p.id === part.id ? { ...p, quantity: p.quantity + 1 } : p
+                p.id === part.id ? { ...p, quantity: newQty } : p
             ));
         } else {
-            // ถ้ายังไม่มี ให้เพิ่มใหม่
+            // ถ้าพึ่งเพิ่มชิ้นแรก ก็ต้องเช็ค limit
+            if (1 > maxAllowed) {
+                alert(`ไม่มีจำนวนอะไหล่นี้คงเหลือในใบเบิกที่เลือก`);
+                return;
+            }
             setSelectedParts(prev => [...prev, { ...part, quantity: 1 }]);
         }
     };
@@ -207,11 +280,18 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
     const handlePartQuantityChange = (partId: string | number, quantity: number) => {
         if (quantity <= 0) {
             setSelectedParts(prev => prev.filter(p => p.id !== partId));
-        } else {
-            setSelectedParts(prev => prev.map(p =>
-                p.id === partId ? { ...p, quantity } : p
-            ));
+            return;
         }
+        
+        const maxAllowed = getMaxAllowedQty(partId);
+        if (quantity > maxAllowed) {
+            alert(`ไม่สามารถระบุจำนวนเกินกว่าที่เบิกมาได้ (สูงสุด ${maxAllowed})`);
+            quantity = maxAllowed;
+        }
+
+        setSelectedParts(prev => prev.map(p =>
+            p.id === partId ? { ...p, quantity } : p
+        ));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -708,7 +788,40 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                             </button>
                                         ))}
                                     </div>
-                                    {selectedMWRs.length === 0 && availableMWRs.length > 0 && <p className="text-xs text-indigo-500 mt-3">* กรุณาคลิกเลือกเลขที่ใบเบิกเพื่อแสดงรายการอะไหล่</p>}
+                                    
+                                    {selectedMWRs.length === 0 && availableMWRs.length > 0 && (
+                                        <p className="text-xs text-indigo-500 mt-3">* กรุณาคลิกเลือกเลขที่ใบเบิกเพื่อแสดงรายการอะไหล่</p>
+                                    )}
+
+                                    {/* กล่องสรุปรายการอะไหล่ที่ได้จากใบเบิกที่เลือก */}
+                                    {selectedMWRs.length > 0 && (
+                                        <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+                                            <div className="text-xs font-semibold text-indigo-900 mb-2 border-b border-indigo-50 pb-2 flex items-center justify-between">
+                                                <span>สรุปโควตาอะไหล่จากใบเบิกที่เลือก</span>
+                                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px]">{getMwrFilteredParts().length} รายการ</span>
+                                            </div>
+                                            <div className="flex flex-col gap-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                                                {getMwrFilteredParts().map(part => (
+                                                    <div key={part.id} className="flex justify-between items-center text-xs py-0.5">
+                                                        <div className="flex items-center gap-1.5 overflow-hidden">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></div>
+                                                            {part.part_number && (
+                                                                <span className="text-zinc-500 font-mono text-[10px] bg-zinc-100 px-1.5 py-0.5 rounded flex-shrink-0">{part.part_number}</span>
+                                                            )}
+                                                            <span className="font-medium text-zinc-700 truncate">{part.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                                            <span className="text-zinc-400 text-[10px]">เบิก {(part as any).mwr_qty}</span>
+                                                            {(part as any).mwr_used > 0 && <span className="text-orange-500 text-[10px]">ใช้แล้ว {(part as any).mwr_used}</span>}
+                                                            <span className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${(part as any).mwr_remaining > 0 ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
+                                                                คงเหลือ {(part as any).mwr_remaining} {part.unit}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -731,6 +844,14 @@ const AssignedJobFormScreen = ({ user, job, onJobUpdate, setView, vehicles, golf
                                                         )}
                                                         <span>({part.unit})</span>
                                                     </div>
+                                                    
+                                                    {/* แสดงโควตาคงเหลือจากใบเบิก */}
+                                                    {(part as any).mwr_qty !== undefined && (
+                                                        <div style={{ fontSize: '0.8rem', marginBottom: '6px', fontWeight: 500, color: (part as any).mwr_remaining > 0 ? '#059669' : '#ef4444' }}>
+                                                            คงเหลือ {(part as any).mwr_remaining}/{(part as any).mwr_qty} {part.unit}
+                                                        </div>
+                                                    )}
+
                                                     {selectedPart && (
                                                         <div className="selected-quantity">
                                                             เลือกแล้ว: {selectedPart.quantity} {part.unit}

@@ -60,11 +60,23 @@ export default function MWRDetailsModal({ isOpen, onClose, job, golfCourses }: M
 
     const getStatusConfig = (status: string) => {
         switch (status) {
+            case 'completed':
+                return {
+                    label: 'เบิกจ่ายเสร็จสิ้น',
+                    badgeClass: styles.statusApproved,
+                    Icon: CheckCircle2
+                };
             case 'approved':
                 return {
                     label: 'อนุมัติแล้ว',
                     badgeClass: styles.statusApproved,
                     Icon: CheckCircle2
+                };
+            case 'stock_pending':
+                return {
+                    label: 'รอฝ่ายสต๊อกตัดจ่าย',
+                    badgeClass: styles.statusPending,
+                    Icon: PackageSearch
                 };
             case 'rejected':
                 return {
@@ -216,21 +228,21 @@ export default function MWRDetailsModal({ isOpen, onClose, job, golfCourses }: M
                     </div>
 
                     {/* Section: Approval Info */}
-                    {(job.status === 'approved' || job.status === 'rejected') && (
-                        <div className={`${styles.approvalCard} ${job.status === 'approved' ? styles.approvalCardApproved : styles.approvalCardRejected}`}>
-                            <h3 className={`${styles.approvalCardTitle} ${job.status === 'approved' ? styles.approvalCardTitleApproved : styles.approvalCardTitleRejected}`}>
+                    {(['approved', 'stock_pending', 'completed', 'rejected'].includes(job.status)) && (
+                        <div className={`${styles.approvalCard} ${job.status !== 'rejected' ? styles.approvalCardApproved : styles.approvalCardRejected}`}>
+                            <h3 className={`${styles.approvalCardTitle} ${job.status !== 'rejected' ? styles.approvalCardTitleApproved : styles.approvalCardTitleRejected}`}>
                                 <ShieldCheck size={16} /> ข้อมูลการพิจารณา
                             </h3>
                             <div className={styles.approvalGrid}>
                                 <div className={styles.approvalInfo}>
-                                    <span className={`${styles.approvalLabel} ${job.status === 'approved' ? styles.approvalLabelApproved : styles.approvalLabelRejected}`}>ผู้อนุมัติ / ผู้ตรวจสอบ</span>
-                                    <p className={`${styles.approvalValue} ${job.status === 'approved' ? styles.approvalValueApproved : styles.approvalValueRejected}`}>
+                                    <span className={`${styles.approvalLabel} ${job.status !== 'rejected' ? styles.approvalLabelApproved : styles.approvalLabelRejected}`}>ผู้อนุมัติ / ผู้ตรวจสอบ</span>
+                                    <p className={`${styles.approvalValue} ${job.status !== 'rejected' ? styles.approvalValueApproved : styles.approvalValueRejected}`}>
                                         {job.approved_by_name || '-'}
                                     </p>
                                 </div>
                                 <div className={styles.approvalInfo}>
-                                    <span className={`${styles.approvalLabel} ${job.status === 'approved' ? styles.approvalLabelApproved : styles.approvalLabelRejected}`}>วันที่พิจารณา</span>
-                                    <p className={`${styles.approvalValue} ${job.status === 'approved' ? styles.approvalValueApproved : styles.approvalValueRejected}`}>
+                                    <span className={`${styles.approvalLabel} ${job.status !== 'rejected' ? styles.approvalLabelApproved : styles.approvalLabelRejected}`}>วันที่พิจารณา</span>
+                                    <p className={`${styles.approvalValue} ${job.status !== 'rejected' ? styles.approvalValueApproved : styles.approvalValueRejected}`}>
                                         {formatDate(job.approved_at)}
                                     </p>
                                 </div>

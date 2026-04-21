@@ -837,43 +837,23 @@ export default function HomePage() {
         throw new Error('ไม่สามารถอ่านข้อมูลตอบกลับจากเซิร์ฟเวอร์ได้');
       }
 
-      if (!response.ok || !result.success) {
-        const errorMessage = result?.message || result?.details || `HTTP ${response.status}: ${response.statusText}`;
-        console.error('❌ API update failed:', {
-          message: errorMessage,
-          jobId: currentJob.id,
-          attemptedStatus: status,
-          originalStatus: currentJob.status,
-          responseStatus: response.status,
-          result
-        });
-
-        // หากการอัปเดตใน API ล้มเหลว ให้กลับสถานะเดิม
-        setJobs(prevJobs =>
-          prevJobs.map(job =>
-            job.id === jobId
-              ? { ...job, status: currentJob.status } // กลับสถานะเดิม
-              : job
-          )
-        );
-
-        // แสดงข้อความ error ที่เข้าใจง่าย
-        if (response.status === 404) {
-          alert('ไม่พบงานที่ต้องการอัปเดตในฐานข้อมูล กรุณาลองรีเฟรชหน้าเว็บ');
-        } else if (response.status >= 500 && !result.error && !errorMessage) {
-          alert('เซิร์ฟเวอร์ขัดข้อง กรุณาลองใหม่อีกครั้ง');
-        } else {
-          // If there's an error from the backend (like StockError), display it!
-          alert(`เกิดข้อผิดพลาดในการอัปเดตสถานะงาน: ${result.error || errorMessage || 'ไม่ทราบสาเหตุ'}`);
-        }
-        return;
-      } else {
+      if (result.success && result.data) {
+        const updatedJobFromServer = result.data as Job;
         console.log('✅ Job status updated successfully in database', {
-          jobId: currentJob.id,
+          jobId: updatedJobFromServer.id,
           oldStatus: currentJob.status,
-          newStatus: status,
+          requestedStatus: status,
+          finalStatusFromServer: updatedJobFromServer.status,
           timestamp: new Date().toISOString()
         });
+
+        // อัปเดต jobs state อีกครั้งด้วยข้อมูลจริงจาก Server (ป้องกันกรณี Server แอบเปลี่ยนสถานะ เช่น PART_REQUEST)
+        setJobs(prevJobs =>
+          prevJobs.map(job =>
+            job.id === updatedJobFromServer.id ? updatedJobFromServer : job
+          )
+        );
+      } else if (!response.ok || !result.success) {
 
         // เพิ่ม Log การใช้อะไหล่และ Serial History เมื่องานได้รับการอนุมัติ
         if (status === 'approved') {

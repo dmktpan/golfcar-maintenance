@@ -377,14 +377,14 @@ const Dashboard = ({ user, jobs, vehicles, golfCourses, users, partsUsageLog = [
                                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm ${
                                                             job.status === 'completed' ? 'bg-emerald-500 text-white border border-emerald-600 dark:bg-emerald-600 dark:text-emerald-50 dark:border-emerald-700' : 
                                                             job.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 
+                                                            job.status === 'stock_pending' ? 'bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : 
                                                             job.status === 'rejected' ? 'bg-red-50 text-red-600 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' : 
-                                                            job.status === 'stock_pending' ? 'bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20' :
-                                                            'bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                                                            'bg-zinc-50 text-zinc-600 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
                                                         }`}>
                                                             {job.status === 'completed' ? 'เบิกจ่ายเสร็จสิ้น' : 
                                                              job.status === 'approved' ? 'อนุมัติแล้ว' : 
-                                                             job.status === 'rejected' ? 'ไม่อนุมัติ' : 
                                                              job.status === 'stock_pending' ? 'รอฝ่ายสต๊อกตัดจ่าย' :
+                                                             job.status === 'rejected' ? 'ไม่อนุมัติ' : 
                                                              'รอตรวจสอบ'}
                                                         </span>
                                                     </td>
