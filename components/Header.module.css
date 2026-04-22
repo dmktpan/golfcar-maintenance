@@ -1,16 +1,17 @@
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(15, 23, 42, 0.8); /* Darker, more premium glass look */
   color: white;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 1000;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .headerTitle {
@@ -66,14 +67,87 @@
 }
 
 .logoutLink {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.05);
   border-color: rgba(239, 68, 68, 0.2);
 }
 
 .logoutLink:hover {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
 }
+
+/* === Themed Nav Buttons === */
+
+.profileLink {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+.profileLink svg { color: #60a5fa; opacity: 1; }
+.profileLink:hover {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+.profileLink:hover svg { color: white; opacity: 1; }
+
+.adminLink {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+.adminLink svg { color: #818cf8; opacity: 1; }
+.adminLink:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  border-color: #6366f1;
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+.adminLink:hover svg { color: white; opacity: 1; }
+
+.pendingLink {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+.pendingLink svg { color: #f59e0b; opacity: 1; }
+.pendingLink:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #f59e0b;
+  color: white;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+.pendingLink:hover svg { color: white; opacity: 1; }
+
+.stockLink {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.2);
+  color: #fdba74;
+}
+.stockLink svg { color: #f97316; opacity: 1; }
+.stockLink:hover {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-color: #f97316;
+  color: white;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+}
+.stockLink:hover svg { color: white; opacity: 1; }
+
+.historyLink {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+.historyLink svg { color: #94a3b8; opacity: 1; }
+.historyLink:hover {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  border-color: #64748b;
+  color: white;
+  box-shadow: 0 4px 15px rgba(100, 116, 139, 0.3);
+}
+.historyLink:hover svg { color: white; opacity: 1; }
 
 .notificationBadge {
   display: inline-flex;

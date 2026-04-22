@@ -549,21 +549,16 @@ function SupervisorPendingJobsScreen({
                         const vehicleInfo = getVehicleInfo(job.vehicle_id);
                         const isMWR = job.type === 'PART_REQUEST';
 
-                        // MWR Custom Style overrides
-                        const cardStyle = isMWR ? { borderLeft: '4px solid #3b82f6' } : {};
-                        const titleStyle = isMWR ? { color: '#1d4ed8' } : {};
-                        const typeBadgeStyle = isMWR ? { background: '#dbeafe', color: '#1e40af' } : {};
-
                         return (
-                            <div key={job.id} className={styles.jobCardEnhanced} style={cardStyle}>
+                            <div key={job.id} className={`${styles.jobCardEnhanced} ${isMWR ? styles.mwrCard : styles.maintenanceCard}`}>
                                 <div className={styles.jobCardHeader}>
                                     <div className={styles.jobHeaderLeft}>
-                                        <h3 className={styles.vehicleNumber} style={titleStyle}>
+                                        <h3 className={styles.vehicleNumber}>
                                             {isMWR
                                                 ? `MWR: ${job.mwr_code || 'รอสร้างรหัส'}`
                                                 : `รถเบอร์ ${job.vehicle_number}`}
                                         </h3>
-                                        <span className={styles.jobTypeLabel} style={typeBadgeStyle}>
+                                        <span className={styles.jobTypeLabel}>
                                             {isMWR ? 'เบิกอะไหล่' : job.type}
                                         </span>
                                         <StatusBadge status={job.status} />

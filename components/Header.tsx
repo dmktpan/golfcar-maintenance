@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { User, View, Part, Job } from '@/lib/data';
-import { AdminDashboardIcon, GolfCartIcon, HistoryIcon, LogoutIcon, PendingJobsIcon, ProfileIcon, StockIcon } from './icons';
+import { AdminDashboardIcon, GolfCartIcon, HistoryIcon, LogoutIcon, PendingJobsIcon, ProfileIcon, StockIcon, ChecklistIcon } from './icons';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -107,28 +107,28 @@ const Header = ({ user, onLogout, setView, parts, jobs = [] }: HeaderProps) => {
             <div className={styles.userInfo}>
                 <nav className={styles.headerNav}>
                     {/* 1. Profile - Available to everyone */}
-                    <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์" className={styles.navLink}>
+                    <a href="#" onClick={(e) => handleNavClick(e, 'profile')} title="โปรไฟล์" className={`${styles.navLink} ${styles.profileLink}`}>
                         <ProfileIcon /> <span>โปรไฟล์</span>
                     </a>
 
                     {/* 2. Admin Dashboard - Based on permissions */}
                     {canViewAdminDashboard && (
-                        <a href="#" onClick={(e) => handleNavClick(e, 'admin_dashboard')} title="แดชบอร์ดผู้ดูแล" className={styles.navLink}>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'admin_dashboard')} title="แดชบอร์ดผู้ดูแล" className={`${styles.navLink} ${styles.adminLink}`}>
                             <AdminDashboardIcon /> <span>แดชบอร์ดผู้ดูแล</span>
                         </a>
                     )}
 
                     {/* 3. Pending Jobs - Based on permissions */}
                     {canViewPendingJobs && (
-                        <a href="#" onClick={(e) => handleNavClick(e, 'supervisor_pending_jobs')} title="งานที่รอตรวจสอบ" className={styles.navLink}>
-                            <PendingJobsIcon /> <span>งานที่รอตรวจสอบ</span>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'supervisor_pending_jobs')} title="งานที่รอตรวจสอบ" className={`${styles.navLink} ${styles.pendingLink}`}>
+                            <ChecklistIcon /> <span>งานที่รอตรวจสอบ</span>
                         </a>
                     )}
 
                     {/* 4. Stock Management - Based on permissions */}
                     {canViewStock && (
-                        <a href="#" onClick={(e) => handleNavClick(e, 'stock_management')} title="จัดการสต็อกอะไหล่" className={styles.navLink}>
-                            <StockIcon /> 
+                        <a href="#" onClick={(e) => handleNavClick(e, 'stock_management')} title="จัดการสต็อกอะไหล่" className={`${styles.navLink} ${styles.stockLink}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
                             <span>
                                 จัดการสต็อก
                                 {totalStockNotifications > 0 && (
@@ -148,7 +148,7 @@ const Header = ({ user, onLogout, setView, parts, jobs = [] }: HeaderProps) => {
 
                     {/* 5. Maintenance History - Based on permissions */}
                     {canViewHistory && (
-                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัติการซ่อมบำรุง" className={styles.navLink}>
+                        <a href="#" onClick={(e) => handleNavClick(e, 'history')} title="ประวัติการซ่อมบำรุง" className={`${styles.navLink} ${styles.historyLink}`}>
                             <HistoryIcon /> <span>ประวัติซ่อมบำรุง</span>
                         </a>
                     )}

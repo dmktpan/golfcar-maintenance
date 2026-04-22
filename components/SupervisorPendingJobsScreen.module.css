@@ -514,31 +514,48 @@
 
 /* Enhanced Job Card */
 .jobCardEnhanced {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 16px;
     padding: 24px;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     overflow: hidden;
-    animation: slideIn 0.3s ease-out;
-}
-
-.jobCardEnhanced:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-    border-color: #667eea;
+    animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jobCardEnhanced::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.6s ease-in-out;
+    z-index: 1;
+}
+
+.jobCardEnhanced:hover::before {
+    left: 100%;
+}
+
+.jobCardEnhanced:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.12);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.mwrCard {
+    border-left: 6px solid #6366f1;
+    background: linear-gradient(to bottom right, rgba(245, 247, 255, 0.8), #ffffff);
+}
+
+.maintenanceCard {
+    border-left: 6px solid #10b981;
+    background: linear-gradient(to bottom right, rgba(240, 253, 244, 0.8), #ffffff);
 }
 
 .jobCardEnhanced.statusPending {
@@ -589,21 +606,22 @@
 
 .vehicleNumber {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 800;
-    color: #0f172a;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: #1e293b;
+    letter-spacing: -0.02em;
 }
 
 .jobTypeLabel {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+    padding: 6px 14px;
+    border-radius: 99px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .jobHeaderRight {
@@ -833,39 +851,36 @@
 }
 
 .approveButton {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
 }
 
 .approveButton:hover {
-    background: linear-gradient(135deg, #059669, #047857);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
 .rejectButton {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.39);
 }
 
 .rejectButton:hover {
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
 }
 
 .detailsButton {
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
 }
 
 .detailsButton:hover {
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
 }
 
 .btnSuccess,

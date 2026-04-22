@@ -142,6 +142,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="ตรวจสอบและอนุมัติงานซ่อมบำรุง"
                         buttonText="ดูงานที่รอ"
                         onClick={() => setView('supervisor_pending_jobs')}
+                        className={styles.amberCard}
                     />
                 )}
 
@@ -155,7 +156,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="สร้างงานซ่อมบำรุงสำหรับรถในสนามต่างๆ"
                         buttonText="สร้างงาน"
                         onClick={() => setView('central_create_job')}
-                        className={styles.greenGradientCard}
+                        className={styles.emeraldCard}
                     />
                 )}
 
@@ -167,6 +168,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="มอบหมายงานให้พนักงานหลายคนพร้อมกัน"
                         buttonText="มอบหมายงาน"
                         onClick={() => setView('multi_assign')}
+                        className={styles.cyanCard}
                     />
                 )}
 
@@ -178,6 +180,19 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="ดูประวัติการซ่อมบำรุงทั้งหมดของระบบ"
                         buttonText="ดูประวัติ"
                         onClick={() => setView('history')}
+                        className={styles.slateCard}
+                    />
+                )}
+
+                {/* 10. Analytics Dashboard - Moved Up */}
+                {canViewAnalytics && (
+                    <AdminDashboardCard
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
+                        title="ภาพรวมและวิเคราะห์"
+                        description="โหลดงาน, Lemon Car, แจ้งเตือนการสั่งอะไหล่"
+                        buttonText="ดูรายงาน"
+                        onClick={() => setView('analytics_dashboard')}
+                        className={styles.skyCard}
                     />
                 )}
 
@@ -189,6 +204,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="จัดการข้อมูลสนามและซีเรียลรถกอล์ฟ"
                         buttonText="จัดการข้อมูล"
                         onClick={() => setView('golf_course_management')}
+                        className={styles.blueCard}
                     />
                 )}
 
@@ -203,6 +219,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="เพิ่ม แก้ไข และจัดการสิทธิ์ผู้ใช้งาน"
                         buttonText="จัดการผู้ใช้"
                         onClick={() => setView('manage_users')}
+                        className={styles.indigoCard}
                     />
                 )}
 
@@ -214,6 +231,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="ตั้งค่าระบบและจัดการสิทธิ์ขั้นสูง"
                         buttonText="จัดการระบบ"
                         onClick={() => setView('admin_management')}
+                        className={styles.violetCard}
                     />
                 )}
 
@@ -225,6 +243,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="ดูประวัติการใช้งานและซ่อมบำรุงของรถแต่ละคัน"
                         buttonText="ดูประวัติ"
                         onClick={() => setView('serial_history')}
+                        className={styles.slateCard}
                     />
                 )}
 
@@ -236,20 +255,10 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="จัดการอะไหล่และวัสดุสิ้นเปลือง"
                         buttonText="จัดการสต็อก"
                         onClick={() => setView('stock_management')}
+                        className={styles.orangeCard}
                     />
                 )}
 
-                {/* 10. Analytics Dashboard */}
-                {canViewAnalytics && (
-                    <AdminDashboardCard
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
-                        title="ภาพรวมและวิเคราะห์"
-                        description="โหลดงาน, Lemon Car, แจ้งเตือนการสั่งอะไหล่"
-                        buttonText="ดูรายงาน"
-                        onClick={() => setView('analytics_dashboard')}
-                        className={styles.blueGradientCard || ''}
-                    />
-                )}
 
                 {/* 11. เบิกอะไหล่ (MWR Request) */}
                 <div style={{ position: 'relative' }}>
@@ -259,7 +268,7 @@ const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboa
                         description="สร้างใบเบิกอะไหล่ใหม่ (เบิกซ่อม/สแปร)"
                         buttonText="สร้างใบเบิก ▾"
                         onClick={() => setShowRequisitionDropdown(!showRequisitionDropdown)}
-                        className={styles.purpleGradientCard || ''}
+                        className={styles.roseCard}
                     />
                     {showRequisitionDropdown && (
                         <div style={{
