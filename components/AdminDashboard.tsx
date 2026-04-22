@@ -32,9 +32,11 @@ interface AdminDashboardProps {
     setView: (view: View) => void;
     user: User;
     jobs: Job[];
+    onOpenPartRequest?: (mode: 'repair' | 'spare') => void;
 }
 
-const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
+const AdminDashboard = ({ setView, user, jobs, onOpenPartRequest }: AdminDashboardProps) => {
+    const [showRequisitionDropdown, setShowRequisitionDropdown] = React.useState(false);
     // คำนวณจำนวนงานที่รอตรวจสอบ
     const pendingJobsCount = jobs.filter(job => job.status === 'pending').length;
 
@@ -238,7 +240,6 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                 )}
 
                 {/* 10. Analytics Dashboard */}
-                {/* 10. Analytics Dashboard */}
                 {canViewAnalytics && (
                     <AdminDashboardCard
                         icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
@@ -249,6 +250,67 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                         className={styles.blueGradientCard || ''}
                     />
                 )}
+
+                {/* 11. เบิกอะไหล่ (MWR Request) */}
+                <div style={{ position: 'relative' }}>
+                    <AdminDashboardCard
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>}
+                        title="เบิกอะไหล่ (MWR)"
+                        description="สร้างใบเบิกอะไหล่ใหม่ (เบิกซ่อม/สแปร)"
+                        buttonText="สร้างใบเบิก ▾"
+                        onClick={() => setShowRequisitionDropdown(!showRequisitionDropdown)}
+                        className={styles.purpleGradientCard || ''}
+                    />
+                    {showRequisitionDropdown && (
+                        <div style={{
+                            position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 50,
+                            background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0',
+                            boxShadow: '0 -10px 25px rgba(0,0,0,0.15)', overflow: 'hidden',
+                            marginBottom: '0.5rem', padding: '0.5rem'
+                        }}>
+                            <button
+                                onClick={() => {
+                                    setShowRequisitionDropdown(false);
+                                    if (onOpenPartRequest) onOpenPartRequest('repair');
+                                }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%',
+                                    padding: '0.75rem 1rem', border: 'none', background: 'white',
+                                    cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
+                                    borderRadius: '0.5rem', transition: 'background 0.15s'
+                                }}
+                                onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                                onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+                            >
+                                <span style={{ fontSize: '1.25rem' }}>🔧</span>
+                                <div>
+                                    <div style={{ fontWeight: '600', color: '#1e293b' }}>เบิกซ่อม</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ระบุเบอร์รถที่ต้องการซ่อม</div>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowRequisitionDropdown(false);
+                                    if (onOpenPartRequest) onOpenPartRequest('spare');
+                                }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%',
+                                    padding: '0.75rem 1rem', border: 'none', background: 'white',
+                                    cursor: 'pointer', fontSize: '0.9rem', textAlign: 'left',
+                                    borderRadius: '0.5rem', transition: 'background 0.15s'
+                                }}
+                                onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                                onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+                            >
+                                <span style={{ fontSize: '1.25rem' }}>📦</span>
+                                <div>
+                                    <div style={{ fontWeight: '600', color: '#1e293b' }}>สแปร์</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>เบิกสำรองไม่ระบุเบอร์รถ</div>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

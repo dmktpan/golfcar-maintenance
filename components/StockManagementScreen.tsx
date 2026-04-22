@@ -30,6 +30,7 @@ interface StockManagementScreenProps {
   jobs?: Job[];
   onPartsUpdate: () => void;
   user: User | null;
+  onOpenPartRequest?: (mode: 'repair' | 'spare') => void;
 }
 
 interface PartFormData {
@@ -42,7 +43,7 @@ interface PartFormData {
   max_qty: number;
 }
 
-const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, golfCourses = [], partsUsageLog = [], jobs = [], onPartsUpdate, user }) => {
+const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, golfCourses = [], partsUsageLog = [], jobs = [], onPartsUpdate, user, onOpenPartRequest }) => {
   const [stockHubSearch, setStockHubSearch] = useState('');
   const [selectedHubCourse, setSelectedHubCourse] = useState<string | null>(null);
   // New Tabs for Stock Hub
@@ -89,6 +90,7 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [duplicatePartNumbers, setDuplicatePartNumbers] = useState<string[]>([]);
   const [selectedJobForDetails, setSelectedJobForDetails] = useState<Job | null>(null);
+  const [requisitionDropdownOpen, setRequisitionDropdownOpen] = useState(false);
 
   const [formData, setFormData] = useState<PartFormData>({
     name: '',
@@ -950,6 +952,112 @@ const StockManagementScreen: React.FC<StockManagementScreenProps> = ({ parts, go
                   เช็คสถานะเบิก (MWR)
                 </button>
               )}
+
+              {/* New Requisition Dropdown Button */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setRequisitionDropdownOpen(!requisitionDropdownOpen)}
+                  onBlur={() => setTimeout(() => setRequisitionDropdownOpen(false), 200)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.875rem 1.5rem',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.2)';
+                  }}
+                >
+                  <PlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+                  เบิกอะไหล่ ▾
+                </button>
+
+                {requisitionDropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '0.5rem',
+                    background: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    minWidth: '200px',
+                    zIndex: 100,
+                    overflow: 'hidden'
+                  }}>
+                    <button
+                      onClick={() => {
+                        setRequisitionDropdownOpen(false);
+                        if (onOpenPartRequest) onOpenPartRequest('repair');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        width: '100%',
+                        padding: '1rem',
+                        border: 'none',
+                        background: 'white',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        textAlign: 'left',
+                        borderBottom: '1px solid #f1f5f9',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>🔧</span>
+                      <div>
+                        <div style={{ fontWeight: '700', color: '#1e293b' }}>เบิกซ่อม</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ระบุเบอร์รถ</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRequisitionDropdownOpen(false);
+                        if (onOpenPartRequest) onOpenPartRequest('spare');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        width: '100%',
+                        padding: '1rem',
+                        border: 'none',
+                        background: 'white',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        textAlign: 'left',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>📦</span>
+                      <div>
+                        <div style={{ fontWeight: '700', color: '#1e293b' }}>สแปร์</div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>ไม่ระบุเบอร์รถ</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Stock Hub Button */}
               {canEditStock && (

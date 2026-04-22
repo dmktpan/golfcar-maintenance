@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Job, JobStatus, User, GolfCourse, Vehicle, View } from '@/lib/data';
 import StatusBadge from './StatusBadge';
 import styles from './SupervisorPendingJobsScreen.module.css';
@@ -344,6 +344,32 @@ function SupervisorPendingJobsScreen({
         setSelectedJobForDetails(null);
     };
 
+    // คำนวณจำนวนงานที่รออนุมัติแยกตามประเภท (ใช้สำหรับแสดงที่ Tabs)
+    const pendingCounts = useMemo(() => {
+        let accessible = jobs.filter(job => job.status === 'pending');
+
+        // กรองตามสิทธิ์เข้าถึงสนามกอล์ฟ
+        if (user.role !== 'admin') {
+            if (user.managed_golf_courses && user.managed_golf_courses.length > 0) {
+                accessible = accessible.filter(job =>
+                    user.managed_golf_courses!.includes(String(job.golf_course_id))
+                );
+            } else if (user.golf_course_id) {
+                accessible = accessible.filter(job => String(job.golf_course_id) === user.golf_course_id);
+            }
+        }
+
+        // กรองตามสนามที่เลือกจาก Dropdown
+        if (selectedCourseId) {
+            accessible = accessible.filter(job => String(job.golf_course_id) === selectedCourseId);
+        }
+
+        return {
+            maintenance: accessible.filter(j => j.type !== 'PART_REQUEST').length,
+            partRequest: accessible.filter(j => j.type === 'PART_REQUEST').length
+        };
+    }, [jobs, user, selectedCourseId]);
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -401,10 +427,27 @@ function SupervisorPendingJobsScreen({
                         fontWeight: activeTab === 'maintenance' ? 600 : 400,
                         cursor: 'pointer',
                         fontSize: '1rem',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                     }}
                 >
                     🔧 อนุมัติงานซ่อม
+                    {pendingCounts.maintenance > 0 && (
+                        <span style={{
+                            backgroundColor: activeTab === 'maintenance' ? '#3b82f6' : '#94a3b8',
+                            color: 'white',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            minWidth: '20px',
+                            textAlign: 'center'
+                        }}>
+                            {pendingCounts.maintenance}
+                        </span>
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('part_request')}
@@ -417,10 +460,27 @@ function SupervisorPendingJobsScreen({
                         fontWeight: activeTab === 'part_request' ? 600 : 400,
                         cursor: 'pointer',
                         fontSize: '1rem',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                     }}
                 >
                     📦 อนุมัติการเบิกอะไหล่
+                    {pendingCounts.partRequest > 0 && (
+                        <span style={{
+                            backgroundColor: activeTab === 'part_request' ? '#3b82f6' : '#94a3b8',
+                            color: 'white',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            minWidth: '20px',
+                            textAlign: 'center'
+                        }}>
+                            {pendingCounts.partRequest}
+                        </span>
+                    )}
                 </button>
             </div>
 

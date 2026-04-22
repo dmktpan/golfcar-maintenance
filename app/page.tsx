@@ -1535,10 +1535,22 @@ export default function HomePage() {
             jobs={jobs}
             onPartsUpdate={() => forceRefreshAllData()}
             user={user}
+            onOpenPartRequest={(mode: 'repair' | 'spare') => {
+              setPartRequestMode(mode);
+              setIsPartRequestModalOpen(true);
+            }}
           />
         )}
         {view === 'admin_dashboard' && (
-          <AdminDashboard setView={handleSetView} user={user} jobs={jobs} />
+          <AdminDashboard 
+            setView={handleSetView} 
+            user={user} 
+            jobs={jobs} 
+            onOpenPartRequest={(mode: 'repair' | 'spare') => {
+              setPartRequestMode(mode);
+              setIsPartRequestModalOpen(true);
+            }}
+          />
         )}
         {view === 'manage_users' && (user.role === 'admin' || user.role === 'supervisor') && (
           <ManageUsersScreen

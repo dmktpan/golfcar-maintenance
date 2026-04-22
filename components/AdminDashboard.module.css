@@ -226,3 +226,37 @@
     padding: 1.25rem;
   }
 }
+
+.blueGradientCard {
+  background: linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%);
+  border: 1px solid #bae6fd;
+}
+
+.blueGradientCard .cardTitle {
+  color: #0369a1;
+}
+
+.blueGradientCard .cardIcon {
+  color: #0ea5e9;
+}
+
+.blueGradientCard .cardButton {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.purpleGradientCard {
+  background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);
+  border: 1px solid #e9d5ff;
+}
+
+.purpleGradientCard .cardTitle {
+  color: #7e22ce;
+}
+
+.purpleGradientCard .cardIcon {
+  color: #a855f7;
+}
+
+.purpleGradientCard .cardButton {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+}
