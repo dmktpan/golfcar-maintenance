@@ -21,24 +21,24 @@ const Header = ({ user, onLogout, setView, parts, jobs = [] }: HeaderProps) => {
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
+                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct', 'analytics:view'
                 ];
             case 'supervisor':
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'manager':
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'central':
                 return [
                     'pending_jobs:view', 'central_job:create', 'history:view',
-                    'golf_course:view', 'serial_history:view', 'stock:view'
+                    'golf_course:view', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'stock':
                 return [

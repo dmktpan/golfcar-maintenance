@@ -30,6 +30,7 @@ const VIEW_PERMISSIONS: Permission[] = [
     { id: 'users:view', name: 'ดูรายชื่อผู้ใช้งาน', description: 'ดูรายชื่อผู้ใช้ในระบบ', roles: ['admin', 'supervisor', 'manager', 'central', 'stock', 'clerk'], category: 'view' },
     { id: 'serial_history:view', name: 'ดูประวัติซีเรียล', description: 'ดูประวัติการใช้งานรถแต่ละคัน', roles: ['admin', 'supervisor', 'manager', 'stock', 'central', 'clerk', 'staff', 'technician', 'viewer'], category: 'view' },
     { id: 'stock:view', name: 'ดูระบบสต็อก', description: 'ดูรายการอะไหล่และวัสดุสิ้นเปลือง', roles: ['admin', 'supervisor', 'manager', 'stock', 'clerk', 'staff', 'central', 'technician', 'viewer'], category: 'view' },
+    { id: 'analytics:view', name: 'ดูหน้าภาพรวมและการวิเคราะห์', description: 'ดูรายงานสรุปและสถิติการซ่อมบำรุง', roles: ['admin', 'supervisor', 'manager', 'central'], category: 'view' },
 ];
 
 // สิทธิ์แก้ไข/ดำเนินการ (Action Permissions)

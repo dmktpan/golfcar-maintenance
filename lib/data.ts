@@ -21,6 +21,7 @@ export type View =
   | 'supervisor_pending_jobs'
   | 'create_part_request'
   | 'agreements_management'
+  | 'analytics_dashboard'
   | 'profile';
 export type JobType = 'PM' | 'BM' | 'Recondition' | 'PART_REQUEST';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected' | 'stock_pending';

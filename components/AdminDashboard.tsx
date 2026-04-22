@@ -48,24 +48,24 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct'
+                    'users:view', 'users:edit', 'system:manage', 'serial_history:view', 'stock:view', 'stock:edit', 'stock:deduct', 'analytics:view'
                 ];
             case 'supervisor':
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'history:edit', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'manager':
                 return [
                     'pending_jobs:view', 'pending_jobs:approve', 'central_job:create', 'multi_assign:manage',
                     'history:view', 'golf_course:view', 'golf_course:edit',
-                    'users:view', 'users:edit', 'serial_history:view', 'stock:view'
+                    'users:view', 'users:edit', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'central':
                 return [
                     'pending_jobs:view', 'central_job:create', 'history:view',
-                    'golf_course:view', 'serial_history:view', 'stock:view'
+                    'golf_course:view', 'serial_history:view', 'stock:view', 'analytics:view'
                 ];
             case 'stock':
                 return [
@@ -102,6 +102,7 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
     const canManageSystem = hasPermission('system:manage');
     const canViewSerialHistory = hasPermission('serial_history:view');
     const canViewStock = hasPermission('stock:view');
+    const canViewAnalytics = hasPermission('analytics:view');
 
     return (
         <div className={styles.adminDashboard}>
@@ -233,6 +234,19 @@ const AdminDashboard = ({ setView, user, jobs }: AdminDashboardProps) => {
                         description="จัดการอะไหล่และวัสดุสิ้นเปลือง"
                         buttonText="จัดการสต็อก"
                         onClick={() => setView('stock_management')}
+                    />
+                )}
+
+                {/* 10. Analytics Dashboard */}
+                {/* 10. Analytics Dashboard */}
+                {canViewAnalytics && (
+                    <AdminDashboardCard
+                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
+                        title="ภาพรวมและวิเคราะห์"
+                        description="โหลดงาน, Lemon Car, แจ้งเตือนการสั่งอะไหล่"
+                        buttonText="ดูรายงาน"
+                        onClick={() => setView('analytics_dashboard')}
+                        className={styles.blueGradientCard || ''}
                     />
                 )}
             </div>

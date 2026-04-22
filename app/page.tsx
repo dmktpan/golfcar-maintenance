@@ -27,6 +27,7 @@ import AgreementManagementScreen from '@/components/AgreementManagementScreen';
 
 import EmployeeHistoryScreen from '@/components/EmployeeHistoryScreen';
 import ProfileScreen from '@/components/ProfileScreen';
+import AnalyticsDashboardScreen from '@/components/AnalyticsDashboardScreen';
 
 // เพิ่มอินเตอร์เฟซสำหรับสิทธิ์ของผู้ใช้
 export interface UserPermission {
@@ -1092,6 +1093,16 @@ export default function HomePage() {
           u.id === userId ? { ...u, permissions } : u
         ));
 
+        // อัปเดต user state ของตัวเองถ้ามีการเปลี่ยนสิทธิ์ของตัวเอง
+        if (user && user.id === userId) {
+          const updatedUser = { ...user, permissions };
+          setUser(updatedUser);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          }
+          console.log('👤 Current user state updated with new permissions');
+        }
+
         return true;
       } else {
         console.error('❌ Failed to save permissions:', result);
@@ -1507,6 +1518,12 @@ export default function HomePage() {
             setView={handleSetView}
             vehicles={vehicles}
             golfCourses={golfCourses}
+          />
+        )}
+        {view === 'analytics_dashboard' && (
+          <AnalyticsDashboardScreen
+            golfCourses={golfCourses}
+            setView={handleSetView}
           />
         )}
         {/* หน้าจัดการสต็อกอะไหล่ */}
