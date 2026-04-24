@@ -26,6 +26,8 @@ export type View =
 export type JobType = 'PM' | 'BM' | 'Recondition' | 'PART_REQUEST';
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'approved' | 'rejected' | 'stock_pending';
 export type BMCause = 'breakdown' | 'accident' | 'wear' | 'other';
+export type RepairAction = 'replace' | 'adjust' | 'clean' | 'tighten' | 'software' | 'other';
+export type BMSymptom = 'wont_start' | 'strange_noise' | 'performance_drop' | 'control_issue' | 'physical_damage' | 'other';
 
 // Interfaces
 export interface User {
@@ -139,6 +141,9 @@ export interface Job {
   assigned_by_name?: string;
   assigned_to?: string;
   bmCause?: BMCause;
+  bmSymptom?: BMSymptom;
+  repairActions?: RepairAction[];
+  systems?: string[];
   images?: string[]; // เพิ่มฟิลด์สำหรับรูปภาพ
   mwr_code?: string; // รหัสใบเบิกอะไหล่ (สำหรับ PART_REQUEST)
   prrNumber?: string; // เลขที่ใบเบิกอะไหล่

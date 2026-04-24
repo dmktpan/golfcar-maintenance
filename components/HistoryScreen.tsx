@@ -27,6 +27,23 @@ interface PartsUsageLog {
     usedDate: string;
 }
 
+const SYMPTOM_MAP: Record<string, string> = {
+    'wont_start': 'สตาร์ทไม่ติด / วิ่งไม่ได้',
+    'strange_noise': 'มีเสียงดังผิดปกติ',
+    'performance_drop': 'ไม่มีกำลัง / แบตหมดเร็ว',
+    'control_issue': 'บังคับเลี้ยวไม่ได้ / เบรกไม่อยู่',
+    'physical_damage': 'แตกหัก / เสียรูปจากภายนอก',
+    'other': 'อื่นๆ'
+};
+
+const ACTION_MAP: Record<string, string> = {
+    'replace': 'เปลี่ยนชิ้นส่วน',
+    'adjust': 'ปรับตั้ง/คาลิเบรต',
+    'clean': 'ทำความสะอาด',
+    'tighten': 'ขันแน่น',
+    'software': 'รีเซ็ตระบบ'
+};
+
 const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScreenProps) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [historyTab, setHistoryTab] = useState<'repair' | 'parts'>('repair');
@@ -425,7 +442,10 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                     'Serial แบต': job.battery_serial || (job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-'),
                     'สนาม': getGolfCourseName(job.golf_course_id),
                     'ประเภทงาน': job.type,
-                    'ระบบ': job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-',
+                    'สาเหตุ BM': job.type === 'BM' && job.bmCause ? (job.bmCause === 'breakdown' ? 'เสีย' : job.bmCause === 'accident' ? 'อุบัติเหตุ' : 'อื่นๆ') : '-',
+                    'อาการเสีย': job.type === 'BM' && job.bmSymptom ? SYMPTOM_MAP[job.bmSymptom] || job.bmSymptom : '-',
+                    'วิธีแก้ไข': job.type === 'BM' && job.repairActions && job.repairActions.length > 0 ? job.repairActions.map(a => ACTION_MAP[a] || a).join(', ') : '-',
+                    'ระบบ': job.type === 'BM' && job.systems && job.systems.length > 0 ? job.systems.map(s => getSystemDisplayName(s)).join(', ') : (job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'),
                     'อะไหล่ที่ใช้': partsText,
                     'หมายเหตุอะไหล่': job.partsNotes || '-',
                     'ผู้ดำเนินการ': job.userName,
@@ -450,6 +470,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                 { wch: 15 }, // Serial แบต
                 { wch: 20 }, // สนาม
                 { wch: 12 }, // ประเภทงาน
+                { wch: 15 }, // สาเหตุ BM
                 { wch: 20 }, // ระบบ
                 { wch: 35 }, // อะไหล่ที่ใช้
                 { wch: 25 }, // หมายเหตุอะไหล่
@@ -836,7 +857,7 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                         {job.type}
                                                     </span>
                                                 </td>
-                                                <td>{job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-'}</td>
+                                                <td>{job.type === 'BM' && job.systems && job.systems.length > 0 ? job.systems.map(s => getSystemDisplayName(s)).join(', ') : (job.type === 'BM' ? 'ซ่อมด่วน' : job.type === 'Recondition' ? 'ปรับสภาพ' : job.system ? getSystemDisplayName(job.system) : '-')}</td>
                                                 <td className="parts-summary">
                                                     {(() => {
                                                         const jobParts = partsData.get(job.id) || [];
@@ -932,6 +953,26 @@ const HistoryScreen = ({ vehicles, jobs, users, golfCourses, parts }: HistoryScr
                                                             <div className="detail-item">
                                                                 <strong>Serial แบต:</strong> {job.battery_serial || (job.vehicle_id ? getVehicleSerial(job.vehicle_id) : '-')}
                                                             </div>
+                                                            {job.type === 'BM' && job.bmCause && (
+                                                                <div className="detail-item">
+                                                                    <strong>สาเหตุ BM:</strong> {job.bmCause === 'breakdown' ? 'เสีย' : job.bmCause === 'accident' ? 'อุบัติเหตุ' : 'อื่นๆ'}
+                                                                </div>
+                                                            )}
+                                                            {job.type === 'BM' && job.bmSymptom && (
+                                                                <div className="detail-item">
+                                                                    <strong>อาการเสียเบื้องต้น:</strong> {SYMPTOM_MAP[job.bmSymptom] || job.bmSymptom}
+                                                                </div>
+                                                            )}
+                                                            {job.type === 'BM' && job.repairActions && job.repairActions.length > 0 && (
+                                                                <div className="detail-item">
+                                                                    <strong>วิธีแก้ไข:</strong> {job.repairActions.map(a => ACTION_MAP[a] || a).join(', ')}
+                                                                </div>
+                                                            )}
+                                                            {job.type === 'BM' && job.systems && job.systems.length > 0 && (
+                                                                <div className="detail-item">
+                                                                    <strong>ระบบที่เสีย:</strong> {job.systems.map(s => getSystemDisplayName(s)).join(', ')}
+                                                                </div>
+                                                            )}
                                                             {job.subTasks && job.subTasks.length > 0 && (
                                                                 <div className="detail-item">
                                                                     <strong>งานย่อย:</strong> {job.subTasks.join(', ')}

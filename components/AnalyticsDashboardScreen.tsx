@@ -29,6 +29,23 @@ interface AnalyticsDashboardScreenProps {
   setView: (view: View) => void;
 }
 
+const SYMPTOM_MAP: Record<string, string> = {
+  'wont_start': 'สตาร์ทไม่ติด / วิ่งไม่ได้',
+  'strange_noise': 'มีเสียงดังผิดปกติ',
+  'performance_drop': 'ไม่มีกำลัง / แบตหมดเร็ว',
+  'control_issue': 'บังคับเลี้ยวไม่ได้ / เบรกไม่อยู่',
+  'physical_damage': 'แตกหัก / เสียรูปจากภายนอก',
+  'other': 'อื่นๆ'
+};
+
+const ACTION_MAP: Record<string, string> = {
+  'replace': 'เปลี่ยนชิ้นส่วน',
+  'adjust': 'ปรับตั้ง/คาลิเบรต',
+  'clean': 'ทำความสะอาด',
+  'tighten': 'ขันแน่น',
+  'software': 'รีเซ็ตระบบ'
+};
+
 // === Loading Skeleton ===
 const AnalyticsLoadingSkeleton = ({ setView }: { setView: (view: View) => void }) => {
   const [progress, setProgress] = useState(0);
@@ -387,9 +404,11 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
   const [activeChartTab, setActiveChartTab] = useState<'bar' | 'area' | 'radar'>('bar');
   const [showInactiveCourses, setShowInactiveCourses] = useState<boolean>(false);
   const [donutChartType, setDonutChartType] = useState<'PM' | 'BM' | 'Recondition'>('PM');
+  const [bmBreakdownType, setBmBreakdownType] = useState<'system' | 'cause' | 'symptom' | 'action'>('cause');
   const [selectedRadarCourses, setSelectedRadarCourses] = useState<string[]>([]);
   const [isRadarDropdownOpen, setIsRadarDropdownOpen] = useState<boolean>(false);
   const [historyModalCourseId, setHistoryModalCourseId] = useState<string | null>(null);
+  const [historyModalTab, setHistoryModalTab] = useState<'parts' | 'jobs'>('parts');
 
   // PM Health Rings State
   const [healthCourseId, setHealthCourseId] = useState<string>('all');
@@ -542,6 +561,12 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
         return acc;
       }, {} as Record<string, number>);
 
+      const bmCauseCount = bm.reduce((acc, job) => {
+        const cause = job.bmCause || 'other';
+        acc[cause] = (acc[cause] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
       const partUsageCounts = courseLogs.reduce((acc, log) => {
         acc[log.partId] = (acc[log.partId] || 0) + log.quantityUsed;
         return acc;
@@ -567,8 +592,10 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
         reconditionCount: recon.length,
         totalJobs: courseJobs.length,
         pmBreakdown: systemsCount,
+        bmBreakdown: bmCauseCount,
         topParts,
-        allLogs
+        allLogs,
+        allJobs: [...courseJobs].sort((a, b) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime())
       };
     }).sort((a, b) => b.totalJobs - a.totalJobs);
   }, [workingGolfCourses, filteredJobs, filteredLogs, vehicles, parts]);
@@ -589,13 +616,55 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
 
   const systemPieData = useMemo(() => {
     const totals = filteredJobs.filter(j => j.type === donutChartType).reduce((acc, job) => {
-      const sys = job.system || 'other';
-      const safeName = SYSTEM_NAME_MAP[sys] || sys;
-      acc[safeName] = (acc[safeName] || 0) + 1;
+      if (donutChartType === 'BM') {
+        if (bmBreakdownType === 'cause') {
+          const cause = job.bmCause || 'other';
+          const causeMap: Record<string, string> = {
+            'breakdown': 'เสีย',
+            'accident': 'อุบัติเหตุ',
+            'wear': 'สึกหรอ',
+            'other': 'อื่นๆ'
+          };
+          const safeName = causeMap[cause] || cause;
+          acc[safeName] = (acc[safeName] || 0) + 1;
+        } else if (bmBreakdownType === 'symptom') {
+          const symptom = job.bmSymptom || 'other';
+          const safeName = SYMPTOM_MAP[symptom] || (symptom === 'other' ? 'ไม่ได้ระบุ/อื่นๆ' : symptom);
+          acc[safeName] = (acc[safeName] || 0) + 1;
+        } else if (bmBreakdownType === 'action') {
+          if (job.repairActions && job.repairActions.length > 0) {
+            job.repairActions.forEach(action => {
+              const safeName = ACTION_MAP[action] || action;
+              acc[safeName] = (acc[safeName] || 0) + 1;
+            });
+          } else {
+             acc['ไม่ได้ระบุ'] = (acc['ไม่ได้ระบุ'] || 0) + 1;
+          }
+        } else {
+          // system
+          if (job.systems && job.systems.length > 0) {
+            job.systems.forEach(sys => {
+              const safeName = SYSTEM_NAME_MAP[sys] || sys;
+              acc[safeName] = (acc[safeName] || 0) + 1;
+            });
+          } else {
+             const sys = job.system || 'other';
+             const safeName = SYSTEM_NAME_MAP[sys] || sys;
+             acc[safeName] = (acc[safeName] || 0) + 1;
+          }
+        }
+      } else {
+        const sys = job.system || 'other';
+        const safeName = SYSTEM_NAME_MAP[sys] || sys;
+        acc[safeName] = (acc[safeName] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
-    return Object.entries(totals).map(([name, value]) => ({ name, value }));
-  }, [filteredJobs, donutChartType]);
+    
+    return Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredJobs, donutChartType, bmBreakdownType]);
 
   // Radar chart data per course
   const radarCourses = useMemo(() => {
@@ -1031,15 +1100,29 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
               <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium whitespace-nowrap">System Breakdown</p>
             </div>
           </div>
-          <select
-            value={donutChartType}
-            onChange={(e) => setDonutChartType(e.target.value as any)}
-            className="w-full sm:w-auto appearance-none text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg pl-3 pr-8 py-1.5 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-sm transition-all cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:14px_14px] bg-[right_8px_center] bg-no-repeat"
-          >
-            <option value="PM">PM (บำรุงรักษา)</option>
-            <option value="BM">BM (ซ่อมด่วน)</option>
-            <option value="Recondition">RC (ปรับสภาพ)</option>
-          </select>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {donutChartType === 'BM' && (
+              <select
+                value={bmBreakdownType}
+                onChange={(e) => setBmBreakdownType(e.target.value as any)}
+                className="w-full sm:w-auto appearance-none text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg pl-3 pr-8 py-1.5 text-emerald-700 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 shadow-sm transition-all cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20stroke%3D%22%23059669%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:14px_14px] bg-[right_8px_center] bg-no-repeat"
+              >
+                <option value="cause">ดูตาม สาเหตุ (Cause)</option>
+                <option value="system">ดูตาม ระบบ (System)</option>
+                <option value="symptom">ดูตาม อาการ (Symptom)</option>
+                <option value="action">ดูตาม วิธีแก้ (Action)</option>
+              </select>
+            )}
+            <select
+              value={donutChartType}
+              onChange={(e) => setDonutChartType(e.target.value as any)}
+              className="w-full sm:w-auto appearance-none text-xs font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-lg pl-3 pr-8 py-1.5 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-sm transition-all cursor-pointer bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20stroke%3D%22%2371717a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:14px_14px] bg-[right_8px_center] bg-no-repeat"
+            >
+              <option value="PM">PM (บำรุงรักษา)</option>
+              <option value="BM">BM (ซ่อมด่วน)</option>
+              <option value="Recondition">RC (ปรับสภาพ)</option>
+            </select>
+          </div>
         </div>
         <div className="flex-1 px-5 py-3 min-h-[240px]">
           {systemPieData.length > 0 ? (
@@ -1183,7 +1266,7 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
                   </div>
 
                   <div className="p-5 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 gap-6">
                       {/* === PM Breakdown Card === */}
                       <div className="bg-zinc-50/80 dark:bg-zinc-800/30 rounded-xl p-4 border border-zinc-200/40 dark:border-zinc-700/40 space-y-3">
                         <h4 className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-2">
@@ -1211,6 +1294,43 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
                           }
                           {Object.keys(stat.pmBreakdown).length === 0 && (
                             <div className="text-xs text-zinc-400 py-4 text-center">ไม่มีข้อมูล PM ในช่วงเวลานี้</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* === BM Breakdown Card === */}
+                      <div className="bg-zinc-50/80 dark:bg-zinc-800/30 rounded-xl p-4 border border-zinc-200/40 dark:border-zinc-700/40 space-y-3">
+                        <h4 className="text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                          <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded-md">
+                            <Zap size={12} strokeWidth={2} className="text-rose-600 dark:text-rose-400" />
+                          </div>
+                          สาเหตุงานซ่อมด่วน (BM)
+                        </h4>
+                        <div className="space-y-2.5">
+                          {Object.entries(stat.bmBreakdown || {})
+                            .sort((a, b) => b[1] - a[1])
+                            .filter(([, count]) => count > 0)
+                            .map(([cause, count], index) => {
+                              const color = CHART_COLORS[(index + 3) % CHART_COLORS.length];
+                              const causeMap: Record<string, string> = {
+                                'breakdown': 'เสีย',
+                                'accident': 'อุบัติเหตุ',
+                                'wear': 'สึกหรอ',
+                                'other': 'อื่นๆ'
+                              };
+                              return (
+                                <ProgressBar
+                                  key={cause}
+                                  label={causeMap[cause] || cause}
+                                  value={count}
+                                  max={stat.bmCount || 1}
+                                  color={color}
+                                />
+                              );
+                            })
+                          }
+                          {(!stat.bmBreakdown || Object.keys(stat.bmBreakdown).length === 0) && (
+                            <div className="text-xs text-zinc-400 py-4 text-center">ไม่มีข้อมูล BM ในช่วงเวลานี้</div>
                           )}
                         </div>
                       </div>
@@ -1251,15 +1371,26 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
                     </div>
 
                     {/* === View Full History CTA === */}
-                    {stat.allLogs.length > 0 && (
-                      <button
-                        onClick={() => setHistoryModalCourseId(stat.course.id)}
-                        className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/20"
-                      >
-                        <Package size={14} />
-                        ดูประวัติเบิกอะไหล่ทั้งหมด ({stat.allLogs.length} รายการ)
-                      </button>
-                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {stat.allLogs.length > 0 && (
+                        <button
+                          onClick={() => { setHistoryModalTab('parts'); setHistoryModalCourseId(stat.course.id); }}
+                          className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/20"
+                        >
+                          <Package size={14} />
+                          ประวัติเบิกอะไหล่ ({stat.allLogs.length})
+                        </button>
+                      )}
+                      {stat.allJobs.length > 0 && (
+                        <button
+                          onClick={() => { setHistoryModalTab('jobs'); setHistoryModalCourseId(stat.course.id); }}
+                          className="w-full py-2.5 px-4 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold rounded-lg transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm"
+                        >
+                          <Wrench size={14} />
+                          ประวัติงานซ่อม ({stat.allJobs.length})
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1891,12 +2022,12 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
                 <X size={16} strokeWidth={2} />
               </button>
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl shadow-sm shadow-indigo-500/20">
-                  <Package size={20} strokeWidth={1.5} className="text-white" />
+                <div className={cn("p-2.5 rounded-xl shadow-sm", historyModalTab === 'parts' ? "bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/20" : "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20")}>
+                  {historyModalTab === 'parts' ? <Package size={20} strokeWidth={1.5} className="text-white" /> : <Wrench size={20} strokeWidth={1.5} className="text-white" />}
                 </div>
                 <div>
                   <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                    ประวัติการเบิกอะไหล่
+                    {historyModalTab === 'parts' ? 'ประวัติการเบิกอะไหล่' : 'รายละเอียดงานซ่อม'}
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     {historyModalStat.course.name}
@@ -1904,30 +2035,58 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
                 </div>
               </div>
 
-              {/* Summary chips */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {(() => {
-                  const totalQty = historyModalStat.allLogs.reduce((s, l) => s + l.quantityUsed, 0);
-                  const uniqueParts = new Set(historyModalStat.allLogs.map(l => l.partId)).size;
-                  const uniqueVehicles = new Set(historyModalStat.allLogs.map(l => l.vehicleNumber).filter(Boolean)).size;
-                  return (
-                    <>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/40">
-                        <Hash size={11} /> {historyModalStat.allLogs.length} รายการ
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/40">
-                        <Package size={11} /> {uniqueParts} ชนิดอะไหล่
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/40">
-                        <Car size={11} /> {uniqueVehicles} คัน
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/40">
-                        รวม {totalQty} ชิ้น
-                      </span>
-                    </>
-                  );
-                })()}
+              {/* Tabs Toggle */}
+              <div className="flex bg-zinc-100 dark:bg-zinc-800/60 p-1 rounded-xl mt-4 w-fit">
+                <button
+                  onClick={() => setHistoryModalTab('parts')}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all",
+                    historyModalTab === 'parts'
+                      ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  )}
+                >
+                  <Package size={14} /> อะไหล่
+                </button>
+                <button
+                  onClick={() => setHistoryModalTab('jobs')}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all",
+                    historyModalTab === 'jobs'
+                      ? "bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  )}
+                >
+                  <Wrench size={14} /> งานซ่อม
+                </button>
               </div>
+
+              {/* Summary chips */}
+              {historyModalTab === 'parts' && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {(() => {
+                    const totalQty = historyModalStat.allLogs.reduce((s, l) => s + l.quantityUsed, 0);
+                    const uniqueParts = new Set(historyModalStat.allLogs.map(l => l.partId)).size;
+                    const uniqueVehicles = new Set(historyModalStat.allLogs.map(l => l.vehicleNumber).filter(Boolean)).size;
+                    return (
+                      <>
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/40">
+                          <Hash size={11} /> {historyModalStat.allLogs.length} รายการ
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/40">
+                          <Package size={11} /> {uniqueParts} ชนิดอะไหล่
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/40">
+                          <Car size={11} /> {uniqueVehicles} คัน
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/40">
+                          รวม {totalQty} ชิ้น
+                        </span>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* Divider */}
@@ -1935,53 +2094,102 @@ const AnalyticsDashboardScreen: React.FC<AnalyticsDashboardScreenProps> = ({
 
             {/* Body */}
             <div className="p-4 overflow-y-auto flex-1 bg-zinc-50/50 dark:bg-zinc-950/30">
-              <div className="space-y-2">
-                {historyModalStat.allLogs.map((log, logIdx) => {
-                  const partName = log.partName || parts.find(p => p.id === log.partId)?.name || 'ไม่ทราบชื่ออะไหล่';
-                  const jobColor = log.jobType === 'PM'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50'
-                    : log.jobType === 'BM'
-                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200/50 dark:border-rose-800/50'
-                      : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50';
-                  return (
-                    <div key={log.id || logIdx} className="flex items-center gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-[0_1px_2px_rgb(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 group">
-                      {/* Left: part info */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
-                            {partName}
-                          </h3>
-                          <span className={cn("shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border", jobColor)}>
-                            {log.jobType}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          <span className="inline-flex items-center gap-1">
-                            <Car size={11} className="text-zinc-400" />
-                            เบอร์ {log.vehicleNumber || '-'}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <CalendarDays size={11} className="text-zinc-400" />
-                            {log.usedDate
-                              ? format(new Date(log.usedDate), 'dd/MM/yy HH:mm')
-                              : 'ไม่ระบุวันที่'}
-                          </span>
-                          {log.usedBy && (
-                            <span className="text-zinc-400">
-                              โดย {log.usedBy}
+              {historyModalTab === 'parts' ? (
+                <div className="space-y-2">
+                  {historyModalStat.allLogs.map((log, logIdx) => {
+                    const partName = log.partName || parts.find(p => p.id === log.partId)?.name || 'ไม่ทราบชื่ออะไหล่';
+                    const jobColor = log.jobType === 'PM'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50'
+                      : log.jobType === 'BM'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200/50 dark:border-rose-800/50'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50';
+                    return (
+                      <div key={log.id || logIdx} className="flex items-center gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-[0_1px_2px_rgb(0,0,0,0.02)] hover:shadow-sm transition-all duration-200 group">
+                        {/* Left: part info */}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+                              {partName}
+                            </h3>
+                            <span className={cn("shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border", jobColor)}>
+                              {log.jobType}
                             </span>
-                          )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <span className="inline-flex items-center gap-1">
+                              <Car size={11} className="text-zinc-400" />
+                              เบอร์ {log.vehicleNumber || '-'}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <CalendarDays size={11} className="text-zinc-400" />
+                              {log.usedDate
+                                ? format(new Date(log.usedDate), 'dd/MM/yy HH:mm')
+                                : 'ไม่ระบุวันที่'}
+                            </span>
+                            {log.usedBy && (
+                              <span className="text-zinc-400">
+                                โดย {log.usedBy}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Right: qty */}
+                        <div className="shrink-0 flex flex-col items-end">
+                          <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-none">{log.quantityUsed}</span>
+                          <span className="text-[10px] font-medium text-zinc-400 mt-0.5">ชิ้น</span>
                         </div>
                       </div>
-                      {/* Right: qty */}
-                      <div className="shrink-0 flex flex-col items-end">
-                        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400 leading-none">{log.quantityUsed}</span>
-                        <span className="text-[10px] font-medium text-zinc-400 mt-0.5">ชิ้น</span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {historyModalStat.allJobs.map((job) => {
+                    const jobColor = job.type === 'PM'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50'
+                      : job.type === 'BM'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200/50 dark:border-rose-800/50'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200/50 dark:border-blue-800/50';
+                    const isBM = job.type === 'BM';
+                    const causeMap: Record<string, string> = { 'breakdown': 'เสีย', 'accident': 'อุบัติเหตุ', 'wear': 'สึกหรอ', 'other': 'อื่นๆ' };
+                    const bmCauseText = job.bmCause ? causeMap[job.bmCause] || job.bmCause : '';
+                    
+                    return (
+                      <div key={job.id} className="flex items-start gap-3 p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-[0_1px_2px_rgb(0,0,0,0.02)] transition-all duration-200">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className={cn("shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border", jobColor)}>
+                              {job.type}
+                            </span>
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate flex items-center gap-1.5">
+                              {isBM && bmCauseText && <span className="text-rose-600 dark:text-rose-400">[{bmCauseText}]</span>}
+                              {job.system ? (SYSTEM_NAME_MAP[job.system] || job.system) : 'งานทั่วไป'}
+                            </h3>
+                          </div>
+                          <div className="text-xs text-zinc-600 dark:text-zinc-300">
+                            {job.remarks || 'ไม่มีรายละเอียด'}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                            <span className="inline-flex items-center gap-1">
+                              <Car size={11} className="text-zinc-400" />
+                              เบอร์ {job.vehicle_number || '-'}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <CalendarDays size={11} className="text-zinc-400" />
+                              {(job.createdAt || (job as any).created_at)
+                                ? format(new Date(job.createdAt || (job as any).created_at), 'dd/MM/yy')
+                                : '-'}
+                            </span>
+                            {job.userName && (
+                              <span className="text-zinc-400">โดย {job.userName}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

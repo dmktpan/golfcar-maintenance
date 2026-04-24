@@ -2,9 +2,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause } from '@/lib/data';
+import { User, Job, JobType, Vehicle, GolfCourse, MOCK_SYSTEMS, View, BMCause, RepairAction, BMSymptom } from '@/lib/data';
 import { getPartsBySystem, PartsBySystem, CategorizedPart } from '@/lib/partsService';
 import ImageUpload from './ImageUpload';
+import { cn } from '@/lib/utils';
+import { Plus, X, CheckCircle2, MapPin, AlertCircle, Wrench, Search, Info, Car, Battery, Cog, Package, Camera, FileText } from 'lucide-react';
+
 
 // Local interface for selected parts in this component
 interface LocalSelectedPart {
@@ -33,10 +36,14 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     const [remarks, setRemarks] = useState('');
     const [selectedParts, setSelectedParts] = useState<LocalSelectedPart[]>([]);
     const [showPartsModal, setShowPartsModal] = useState(false);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
     const [activePartsTab, setActivePartsTab] = useState('brake');
     const [partsSearchTerm, setPartsSearchTerm] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [bmCause, setBmCause] = useState<BMCause | ''>(''); // เพิ่ม state สำหรับสาเหตุ BM
+    const [bmSymptom, setBmSymptom] = useState<BMSymptom | ''>('');
+    const [repairActions, setRepairActions] = useState<RepairAction[]>([]);
+    const [bmSystems, setBmSystems] = useState<string[]>([]);
     const [batterySerial, setBatterySerial] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false); // ป้องกันการกดซ้ำ
@@ -91,6 +98,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         // รีเซ็ต bmCause เมื่อไม่ใช่ BM
         if (jobType !== 'BM') {
             setBmCause('');
+            setBmSymptom('');
+            setRepairActions([]);
+            setBmSystems([]);
         }
     }, [jobType]);
 
@@ -98,7 +108,25 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         setSubTasks(prev => isChecked ? [...prev, task] : prev.filter(t => t !== task));
     }
 
+    const toggleRepairAction = (action: RepairAction) => {
+        setRepairActions(prev => prev.includes(action) ? prev.filter(a => a !== action) : [...prev, action]);
+    };
 
+    const toggleBmSystem = (sys: string) => {
+        setBmSystems(prev => prev.includes(sys) ? prev.filter(s => s !== sys) : [...prev, sys]);
+    };
+
+    // Auto update 'replace' action
+    useEffect(() => {
+        if (selectedParts.length > 0) {
+            if (!repairActions.includes('replace')) {
+                setRepairActions(prev => [...prev, 'replace']);
+            }
+        } else {
+            setRepairActions(prev => prev.filter(a => a !== 'replace'));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedParts]);
 
     const handlePartSelection = (part: CategorizedPart) => {
         setSelectedParts(prev => {
@@ -142,9 +170,9 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
     };
 
     const availableMWRs = React.useMemo(() => {
-        return jobs.filter(j => 
-            j.type === 'PART_REQUEST' && 
-            j.status === 'completed' && 
+        return jobs.filter(j =>
+            j.type === 'PART_REQUEST' &&
+            j.status === 'completed' &&
             j.golf_course_id === user.golf_course_id &&
             j.bplus_code
         );
@@ -160,10 +188,10 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
 
     const getMwrFilteredParts = () => {
         if (selectedMWRs.length === 0) return [];
-        
+
         const mwrPartsMap = new Map<string, CategorizedPart>();
         const allParts = Object.values(partsBySystem).flat();
-        
+
         // --- ขั้น 1: รวมยอดขอเบิกจาก MWR ที่เลือก ---
         selectedMWRs.forEach(code => {
             const mwr = availableMWRs.find(j => j.bplus_code === code);
@@ -171,7 +199,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 // ใช้ mwrVehicleItems เป็นหลัก (ถ้ามี) เพราะเป็นข้อมูลแยกคัน
                 // ถ้าไม่มี ค่อย fallback ไปใช้ mwr.parts
                 const hasMwrItems = (mwr as any).mwrVehicleItems && (mwr as any).mwrVehicleItems.length > 0;
-                
+
                 if (hasMwrItems) {
                     (mwr as any).mwrVehicleItems.forEach((p: any) => {
                         const systemPart = allParts.find(sp => sp.id.toString() === p.part_id.toString());
@@ -223,7 +251,7 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             part.mwr_used = used;
             part.mwr_remaining = requested - used;
         });
-        
+
         const partsList = Array.from(mwrPartsMap.values());
         if (!partsSearchTerm.trim()) {
             return partsList;
@@ -277,6 +305,11 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             if (!confirmCreate) return;
         }
 
+        // แทนที่จะส่งทันที ให้เปิด Modal สรุปข้อมูล
+        setShowSummaryModal(true);
+    };
+
+    const confirmSubmit = () => {
         try {
             setIsSubmitting(true); // เริ่มส่งงาน
             // สร้างงานใหม่ (ไม่ต้องสร้าง ID เอง ให้ API สร้างให้)
@@ -299,10 +332,22 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                 remarks: remarks,
                 battery_serial: batterySerial, // เก็บซีเรียลแบตที่พนักงานกรอก
                 images: images, // เพิ่มรูปภาพ
-                ...(jobType === 'BM' && bmCause && { bmCause })
+                ...(jobType === 'BM' && bmCause && { bmCause }),
+                ...(jobType === 'BM' && bmSymptom && { bmSymptom }),
+                ...(jobType === 'BM' && repairActions.length > 0 && { repairActions }),
+                ...(jobType === 'BM' && {
+                    systems: Array.from(new Set([
+                        ...bmSystems,
+                        ...selectedParts.map(p => {
+                            const entry = Object.entries(partsBySystem).find(([_, parts]) => (parts as any[]).some(sp => sp.id === p.id));
+                            return entry ? entry[0] : '';
+                        }).filter(s => s !== '')
+                    ]))
+                })
             };
 
             onJobCreate(newJob as Job);
+            setShowSummaryModal(false);
 
         } catch (error) {
             setIsSubmitting(false); // ยกเลิกสถานะ loading
@@ -351,57 +396,107 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
         return tabNames[tab] || tab;
     };
 
-    const handleCategorySelect = (category: string) => {
-        setActivePartsTab(category);
-        setIsDropdownOpen(false);
-    };
 
-    const toggleDropdown = () => {
-        setIsDropdownOpen(!isDropdownOpen);
+
+    const FormRow = ({ label, required, children, id }: { label: React.ReactNode, required?: boolean, children: React.ReactNode, id?: string }) => (
+        <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] md:grid-cols-[240px_1fr] gap-2 sm:gap-6 items-start py-5 border-b border-zinc-200/50 dark:border-zinc-800/50 last:border-0">
+            <label htmlFor={id} className="text-sm font-medium text-zinc-900 dark:text-zinc-50 pt-2 flex items-center gap-1">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <div className="w-full flex flex-col gap-2">
+                {children}
+            </div>
+        </div>
+    );
+
+    const SectionDivider = ({ icon, title, color }: { icon: React.ReactNode, title: string, color: 'blue' | 'emerald' | 'amber' | 'violet' | 'rose' }) => {
+        const colors = {
+            blue: 'border-l-blue-500 bg-gradient-to-r from-blue-50/60 to-transparent dark:from-blue-500/5 dark:to-transparent text-blue-600 dark:text-blue-400',
+            emerald: 'border-l-emerald-500 bg-gradient-to-r from-emerald-50/60 to-transparent dark:from-emerald-500/5 dark:to-transparent text-emerald-600 dark:text-emerald-400',
+            amber: 'border-l-amber-500 bg-gradient-to-r from-amber-50/60 to-transparent dark:from-amber-500/5 dark:to-transparent text-amber-600 dark:text-amber-400',
+            violet: 'border-l-violet-500 bg-gradient-to-r from-violet-50/60 to-transparent dark:from-violet-500/5 dark:to-transparent text-violet-600 dark:text-violet-400',
+            rose: 'border-l-rose-500 bg-gradient-to-r from-rose-50/60 to-transparent dark:from-rose-500/5 dark:to-transparent text-rose-600 dark:text-rose-400',
+        };
+        return (
+            <div className={cn("flex items-center gap-2.5 px-5 py-3 -mx-6 mt-4 first:mt-0 border-l-4", colors[color])}>
+                {icon}
+                <span className="text-xs font-bold uppercase tracking-widest opacity-80">{title}</span>
+            </div>
+        );
     };
 
     return (
-        <div className="card">
-            <div className="page-header">
-                <h2>สร้างงานซ่อมใหม่</h2>
+        <div className="max-w-4xl mx-auto space-y-6 pb-20 animate-fadeIn text-zinc-900 dark:text-zinc-50">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tighter text-zinc-900 dark:text-zinc-50">สร้างงานซ่อมใหม่</h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm">กรอกรายละเอียดเพื่อเปิดใบแจ้งซ่อมใหม่เข้าระบบ</p>
+                </div>
             </div>
 
-            <div className="info-box">
-                <h4>ข้อมูลงาน:</h4>
-                <p><strong>สนาม:</strong> {jobInfo.courseName}</p>
-                <p><strong>Serial Number:</strong> {jobInfo.serialNumber}</p>
-                <p><strong>เบอร์รถ:</strong> {jobInfo.vehicleNumber}</p>
-                <p><strong>ซีเรียลแบต:</strong> {batterySerial || 'ยังไม่ได้กรอก'}</p>
+            {/* Info Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-[0_2px_10px_rgb(0,0,0,0.02)] p-6 overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-4 flex items-center gap-2">
+                    <MapPin size={16} className="text-indigo-500" />
+                    ข้อมูลเบื้องต้น
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1 font-medium">สนาม (ปลายทาง)</span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{jobInfo.courseName}</span>
+                    </div>
+                    <div>
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1 font-medium">Serial Number</span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{jobInfo.serialNumber}</span>
+                    </div>
+                    <div>
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1 font-medium">เบอร์รถ</span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{jobInfo.vehicleNumber}</span>
+                    </div>
+                    <div>
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1 font-medium">ซีเรียลแบต</span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{batterySerial || '-'}</span>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
-                <div className="form-grid">
-                    <div className="form-group">
-                        <label htmlFor="golf-course">ชื่อสนาม (ปลายทาง) *</label>
-                        <input id="golf-course" type="text" value={jobInfo.courseName} disabled />
-                    </div>
+            {/* Main Form */}
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-[0_2px_10px_rgb(0,0,0,0.02)] overflow-hidden">
+                <div className="px-6 py-2">
+                    <SectionDivider icon={<Car size={16} strokeWidth={1.5} />} title="ข้อมูลรถกอล์ฟ" color="blue" />
 
+                    <FormRow label="หมายเลขซีเรียล / เบอร์รถ" required>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <select
+                                value={vehicleId}
+                                onChange={e => setVehicleId(e.target.value)}
+                                required
+                                className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                            >
+                                <option value="" disabled>-- เลือกหมายเลขซีเรียล --</option>
+                                {availableVehicles.map(v => (
+                                    <option key={v.id} value={v.id}>{v.serial_number}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={vehicleId}
+                                onChange={e => setVehicleId(e.target.value)}
+                                required
+                                className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                            >
+                                <option value="" disabled>-- เลือกเบอร์รถ --</option>
+                                {availableVehicles.map(v => (
+                                    <option key={v.id} value={v.id}>{v.vehicle_number}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </FormRow>
 
-                    <div className="form-group">
-                        <label htmlFor="serial-number">หมายเลขซีเรียล *</label>
-                        <select id="serial-number" value={vehicleId} onChange={e => setVehicleId(e.target.value)} required>
-                            <option value="" disabled>-- กรุณาเลือกรถ --</option>
-                            {availableVehicles.map(v => (
-                                <option key={v.id} value={v.id}>{v.serial_number}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="vehicle-number">เบอร์รถ *</label>
-                        <select id="vehicle-number" value={vehicleId} onChange={e => setVehicleId(e.target.value)} required>
-                            <option value="" disabled>-- กรุณาเลือกรถ --</option>
-                            {availableVehicles.map(v => (
-                                <option key={v.id} value={v.id}>{v.vehicle_number}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="battery-serial">ซีเรียลแบต *</label>
+                    <SectionDivider icon={<Battery size={16} strokeWidth={1.5} />} title="ข้อมูลแบตเตอรี่" color="emerald" />
+
+                    <FormRow label="ซีเรียลแบต" required id="battery-serial">
                         <input
                             id="battery-serial"
                             type="text"
@@ -409,458 +504,426 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                             onChange={e => setBatterySerial(e.target.value)}
                             placeholder="กรอกซีเรียลแบต หรือ 'ไม่มีสติ๊กเกอร์' หรือ 'หลุด'"
                             required
+                            className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                         />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="staff-name">ชื่อพนักงาน *</label>
-                        <input id="staff-name" type="text" value={user.name} disabled />
-                    </div>
-                </div>
+                    </FormRow>
 
-                <div className="form-group">
-                    <label htmlFor="job-type">ประเภการบำรุงรักษา *</label>
-                    <select id="job-type" value={jobType} onChange={e => setJobType(e.target.value as JobType)}>
-                        <option value="PM">บำรุงรักษาเชิงป้องกัน (PM)</option>
-                        <option value="BM">ซ่อมด่วน (BM)</option>
-                        <option value="Recondition">ปรับสภาพ (Recondition)</option>
-                    </select>
-                </div>
+                    <SectionDivider icon={<Cog size={16} strokeWidth={1.5} />} title="รายละเอียดงานซ่อม" color="amber" />
 
-                {jobType === 'BM' && (
-                    <div className="form-group">
-                        <label htmlFor="bm-cause">สาเหตุของการเสีย *</label>
-                        <div className="bm-cause-buttons">
-                            <button
-                                type="button"
-                                className={`cause-button ${bmCause === 'breakdown' ? 'selected' : ''}`}
-                                data-cause="breakdown"
-                                onClick={() => setBmCause('breakdown')}
-                            >
-                                ⚠️ เสีย
-                            </button>
-                            <button
-                                type="button"
-                                className={`cause-button ${bmCause === 'accident' ? 'selected' : ''}`}
-                                data-cause="accident"
-                                onClick={() => setBmCause('accident')}
-                            >
-                                💥 อุบัติเหตุ
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {jobType === 'PM' && (
-                    <div className="form-group">
-                        <label htmlFor="system">ระบบที่ต้องการบำรุงรักษา *</label>
-                        <select id="system" value={system} onChange={e => setSystem(e.target.value)} required>
-                            <option value="" disabled>-- กรุณาเลือกระบบ --</option>
-                            <option value="brake">ระบบเบรก/เพื่อห้าม (brake)</option>
-                            <option value="steering">ระบบบังคับเลี้ยว (steering)</option>
-                            <option value="motor">ระบบมอเตอร์/เพื่อขับ (motor)</option>
-                            <option value="electric">ระบบไฟฟ้า (electric)</option>
+                    <FormRow label="ประเภการบำรุงรักษา" required id="job-type">
+                        <select
+                            id="job-type"
+                            value={jobType}
+                            onChange={e => setJobType(e.target.value as JobType)}
+                            className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                        >
+                            <option value="PM">บำรุงรักษาเชิงป้องกัน (PM)</option>
+                            <option value="BM">ซ่อมด่วน (BM)</option>
+                            <option value="Recondition">ปรับสภาพ (Recondition)</option>
                         </select>
-                    </div>
-                )}
+                    </FormRow>
 
-                {jobType === 'PM' && Object.keys(subTaskCategories).length > 0 && (
-                    <div className="form-group">
-                        <label>รายการงานย่อย</label>
-                        <div className="maintenance-categories">
-                            {Object.entries(subTaskCategories).map(([category, tasks]) => (
-                                <div key={category} className="category-section">
-                                    <h4 className="category-title">{getCategoryDisplayName(category)}</h4>
-                                    <div className="task-buttons">
-                                        {(tasks as string[]).map((task: string) => (
-                                            <button
-                                                key={task}
-                                                type="button"
-                                                className={`task-button ${subTasks.includes(task) ? 'selected' : ''}`}
-                                                onClick={() => handleSubTaskChange(task, !subTasks.includes(task))}
-                                            >
-                                                {task}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {jobType === 'PM' && (
-                    <div className="form-group">
-                        <label>งานย่อยที่เลือก:</label>
-                        <div className="display-box">
-                            {subTasks.length > 0 ? subTasks.join(', ') : 'ยังไม่ได้เลือกงานย่อย'}
-                        </div>
-                    </div>
-                )}
-
-                {/* ลบส่วนของ BM และ Recondition ออก */}
-                {/* เพิ่มส่วนสำหรับ BM และ Recondition */}
-                {/* {(jobType === 'BM' || jobType === 'Recondition') && (
-                    <div className="form-group">
-                        <label htmlFor="job-details">รายละเอียดงาน (ไม่บังคับ)</label>
-                        <textarea 
-                            id="job-details" 
-                            value={remarks} 
-                            onChange={e => setRemarks(e.target.value)}
-                            placeholder="กรุณาระบุรายละเอียดของงานที่ต้องการซ่อม..."
-                        />
-                    </div>
-                )} */}
-
-                {/* {(jobType === 'BM' || jobType === 'Recondition') && (
-                    <div className="form-group">
-                        <label>งานย่อยเพิ่มเติม (ไม่บังคับ)</label>
-                        <div className="add-subtask-section">
-                            <div className="add-subtask-input">
-                                <input
-                                    type="text"
-                                    value={newSubTask}
-                                    onChange={(e) => setNewSubTask(e.target.value)}
-                                    placeholder="ระบุงานย่อยที่ต้องการเพิ่ม..."
-                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubTask())}
-                                />
-                                <button 
-                                    type="button" 
-                                    className="btn-add-subtask"
-                                    onClick={handleAddSubTask}
-                                    disabled={!newSubTask.trim()}
+                    {jobType === 'BM' && (
+                        <FormRow label="สาเหตุของการเสีย" required>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setBmCause('breakdown')}
+                                    className={cn(
+                                        "flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 active:scale-[0.98]",
+                                        bmCause === 'breakdown'
+                                            ? "border-red-500 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 ring-2 ring-red-500/20"
+                                            : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                    )}
                                 >
-                                    เพิ่ม
+                                    <AlertCircle size={20} className={bmCause === 'breakdown' ? "text-red-500" : "text-zinc-400"} />
+                                    <span className="font-semibold text-sm">เสีย / เครื่องขัดข้อง</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBmCause('accident')}
+                                    className={cn(
+                                        "flex items-center justify-center gap-3 p-4 rounded-xl border transition-all duration-200 active:scale-[0.98]",
+                                        bmCause === 'accident'
+                                            ? "border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 ring-2 ring-amber-500/20"
+                                            : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                                    )}
+                                >
+                                    <Wrench size={20} className={bmCause === 'accident' ? "text-amber-500" : "text-zinc-400"} />
+                                    <span className="font-semibold text-sm">อุบัติเหตุ / ความเสียหาย</span>
                                 </button>
                             </div>
-                            {subTasks.length > 0 && (
-                                <div className="added-subtasks">
-                                    <h4>งานย่อยที่เพิ่ม:</h4>
-                                    <ul>
-                                        {subTasks.map((task: string, index: number) => (
-                                            <li key={`subtask-${index}-${task.slice(0, 10)}`}>
-                                                {task}
-                                                <button 
-                                                    type="button" 
-                                                    className="remove-subtask-btn"
-                                                    onClick={() => setSubTasks(prev => prev.filter((_, i) => i !== index))}
-                                                >
-                                                    ×
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )} */}
+                        </FormRow>
+                    )}
 
-                {/* แสดงงานย่อยที่เลือกสำหรับ BM และ Recondition */}
-                {/* {(jobType === 'BM' || jobType === 'Recondition') && subTasks.length > 0 && (
-                    <div className="form-group">
-                        <label>งานย่อยที่เลือก:</label>
-                        <div className="display-box">
-                            {subTasks.join(', ')}
-                        </div>
-                    </div>
-                )} */}
+                    {jobType === 'BM' && (
+                        <FormRow label="อาการเสียเบื้องต้น" id="bm-symptom">
+                            <select
+                                id="bm-symptom"
+                                value={bmSymptom}
+                                onChange={e => setBmSymptom(e.target.value as BMSymptom)}
+                                className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                            >
+                                <option value="">-- ระบุอาการเสีย --</option>
+                                <option value="wont_start">สตาร์ทไม่ติด / วิ่งไม่ได้</option>
+                                <option value="strange_noise">มีเสียงดังผิดปกติ</option>
+                                <option value="performance_drop">ไม่มีกำลัง / แบตหมดเร็ว</option>
+                                <option value="control_issue">บังคับเลี้ยวไม่ได้ / เบรกไม่อยู่</option>
+                                <option value="physical_damage">แตกหัก / เสียรูปจากภายนอก</option>
+                                <option value="other">อื่นๆ</option>
+                            </select>
+                        </FormRow>
+                    )}
 
-                <div className="form-group">
-                    <label>รายการอะไหล่ที่เปลี่ยน</label>
-                    <div className="parts-section">
-                        <button
-                            type="button"
-                            className="btn-add-parts"
-                            onClick={() => setShowPartsModal(true)}
-                        >
-                            + เพิ่มอะไหล่
-                        </button>
+                    {jobType === 'BM' && (
+                        <FormRow label="วิธีแก้ไข (Action Taken)">
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {[
+                                    { id: 'replace', label: '🔄 เปลี่ยนชิ้นส่วน' },
+                                    { id: 'adjust', label: '🔧 ปรับตั้ง/คาลิเบรต' },
+                                    { id: 'clean', label: '🧹 ทำความสะอาด' },
+                                    { id: 'tighten', label: '🔩 ขันแน่น' },
+                                    { id: 'software', label: '💻 รีเซ็ตระบบ' },
+                                ].map(action => (
+                                    <button
+                                        key={action.id}
+                                        type="button"
+                                        onClick={() => toggleRepairAction(action.id as RepairAction)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 active:scale-[0.95]",
+                                            repairActions.includes(action.id as RepairAction)
+                                                ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                                                : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-indigo-500 dark:hover:border-indigo-500"
+                                        )}
+                                    >
+                                        {action.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </FormRow>
+                    )}
 
-                        {selectedParts.length > 0 && (
-                            <div className="selected-parts-list">
-                                <div className="parts-table-header">
-                                    <div className="part-name-col">ชื่ออะไหล่</div>
-                                    <div className="quantity-col">ปรับจำนวน</div>
-                                    <div className="remove-col">ยกเลิก</div>
-                                </div>
-                                {selectedParts.map((part) => (
-                                    <div key={part.id} className="selected-part-item three-column">
-                                        <div className="part-name-col">
-                                            <span className="part-name">{part.name}</span>
-                                            <span className="part-unit">({part.unit})</span>
-                                        </div>
-                                        <div className="quantity-col">
-                                            <div className="quantity-controls">
+                    {jobType === 'BM' && selectedParts.length === 0 && (
+                        <FormRow label="ระบบที่เสีย">
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                {[
+                                    { id: 'brake', label: '🔘 เบรก' },
+                                    { id: 'steering', label: '🏎️ บังคับเลี้ยว' },
+                                    { id: 'motor', label: '⚡ มอเตอร์' },
+                                    { id: 'electric', label: '🔌 ไฟฟ้า' },
+                                    { id: 'other', label: '❓ อื่นๆ' },
+                                ].map(sys => (
+                                    <button
+                                        key={sys.id}
+                                        type="button"
+                                        onClick={() => toggleBmSystem(sys.id)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 active:scale-[0.95]",
+                                            bmSystems.includes(sys.id)
+                                                ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                                                : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-indigo-500 dark:hover:border-indigo-500"
+                                        )}
+                                    >
+                                        {sys.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-[10px] text-zinc-400 mt-1">* กรณีไม่ได้เบิกอะไหล่ กรุณาระบุระบบที่เสียเพื่อให้ระบบ Analytics ทำงานได้ถูกต้อง</p>
+                        </FormRow>
+                    )}
+
+                    {jobType === 'PM' && (
+                        <FormRow label="ระบบที่ต้องการบำรุงรักษา" required id="system">
+                            <select
+                                id="system"
+                                value={system}
+                                onChange={e => setSystem(e.target.value)}
+                                required
+                                className="w-full rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+                            >
+                                <option value="" disabled>-- กรุณาเลือกระบบ --</option>
+                                <option value="brake">ระบบเบรก/เพื่อห้าม (brake)</option>
+                                <option value="steering">ระบบบังคับเลี้ยว (steering)</option>
+                                <option value="motor">ระบบมอเตอร์/เพื่อขับ (motor)</option>
+                                <option value="electric">ระบบไฟฟ้า (electric)</option>
+                            </select>
+                        </FormRow>
+                    )}
+
+                    {jobType === 'PM' && Object.keys(subTaskCategories).length > 0 && (
+                        <FormRow label="รายการงานย่อย">
+                            <div className="space-y-4">
+                                {Object.entries(subTaskCategories).map(([category, tasks]) => (
+                                    <div key={category} className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50">
+                                        <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">{getCategoryDisplayName(category)}</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(tasks as string[]).map((task: string) => (
                                                 <button
+                                                    key={task}
                                                     type="button"
-                                                    className="quantity-btn"
-                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                    onClick={() => handleSubTaskChange(task, !subTasks.includes(task))}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-md text-sm transition-all duration-200 flex items-center gap-2",
+                                                        subTasks.includes(task)
+                                                            ? "bg-indigo-600 text-white shadow-sm"
+                                                            : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                                                    )}
                                                 >
-                                                    -
+                                                    {subTasks.includes(task) && <CheckCircle2 size={14} />}
+                                                    {task}
                                                 </button>
-                                                <input
-                                                    type="number"
-                                                    value={part.quantity}
-                                                    onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
-                                                    className="quantity-input"
-                                                    min="1"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="quantity-btn"
-                                                    onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="remove-col">
-                                            <button
-                                                type="button"
-                                                className="remove-part-btn mobile-small-text"
-                                                onClick={() => handleRemovePart(part.id)}
-                                            >
-                                                x
-                                            </button>
+                                            ))}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
-                </div>
+                        </FormRow>
+                    )}
 
-                <div className="form-group">
-                    <label htmlFor="parts-notes">รายการอะไหล่ที่เปลี่ยน (เพิ่มเติม)</label>
-                    <textarea id="parts-notes" value={partsNotes} onChange={e => setPartsNotes(e.target.value)} placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารี..."></textarea>
-                </div>
+                    <SectionDivider icon={<Package size={16} strokeWidth={1.5} />} title="อะไหล่และวัสดุ" color="violet" />
 
-                <div className="form-group">
-                    <label htmlFor="remarks">หมายเหตุ</label>
-                    <textarea id="remarks" value={remarks} onChange={e => setRemarks(e.target.value)}></textarea>
-                </div>
+                    <FormRow label="รายการอะไหล่ที่เปลี่ยน">
+                        <div className="space-y-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowPartsModal(true)}
+                                className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-50 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm"
+                            >
+                                <Plus size={16} />
+                                เพิ่มอะไหล่
+                            </button>
 
-                <div className="form-group">
-                    <label>รูปภาพ</label>
-                    <ImageUpload
-                        images={images}
-                        onImagesChange={setImages}
-                        maxImages={20}
-                    />
-                </div>
-
-                {/* Summary Section */}
-                <div className="form-group summary-section">
-                    <h3>สรุปข้อมูลงาน</h3>
-                    <div className="summary-box">
-                        <div className="summary-item">
-                            <strong>ประเภท:</strong> {
-                                jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน' :
-                                    jobType === 'BM' ? 'ซ่อมด่วน' :
-                                        'ปรับสภาพ'
-                            }
-                        </div>
-                        {jobType === 'BM' && bmCause && (
-                            <div className="summary-item">
-                                <strong>สาเหตุของการเสีย:</strong> {bmCause === 'breakdown' ? 'เสีย' : 'อุบัติเหตุ'}
-                            </div>
-                        )}
-                        {jobType === 'PM' && system && (
-                            <div className="summary-item">
-                                <strong>ระบบที่บำรุงรักษา:</strong> {system === 'brake' ? 'ระบบเบรก/เพื่อห้าม' : system === 'steering' ? 'ระบบบังคับเลี้ยว' : system === 'motor' ? 'ระบบมอเตอร์/เพื่อขับ' : 'ระบบไฟฟ้า'}
-                            </div>
-                        )}
-                        {jobType === 'PM' && subTasks.length > 0 && (
-                            <div className="summary-item">
-                                <strong>งานย่อยที่เลือก:</strong>
-                                <ul className="subtasks-list">
-                                    {subTasks.map((task, index) => (
-                                        <li key={`summary-task-${index}-${task.slice(0, 10)}`}>{task}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                        {(selectedParts.length > 0 || partsNotes.trim()) && (
-                            <div className="summary-item">
-                                <strong>อะไหล่ที่เปลี่ยน:</strong>
-                                <div className="parts-summary">
-                                    {selectedParts.length > 0 && (
-                                        <div>
-                                            <em>อะไหล่ที่เลือกจากระบบ:</em>
-                                            <ul className="parts-list">
-                                                {selectedParts.map((part) => (
-                                                    <li key={part.id}>
-                                                        {part.name} - จำนวน {part.quantity} {part.unit}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                    {partsNotes.trim() && (
-                                        <div>
-                                            <em>อะไหล่เพิ่มเติม:</em>
-                                            <p className="parts-notes">{partsNotes}</p>
-                                        </div>
-                                    )}
+                            {selectedParts.length > 0 && (
+                                <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-zinc-50 dark:bg-zinc-900/50 text-zinc-500 dark:text-zinc-400 font-medium border-b border-zinc-200 dark:border-zinc-800">
+                                            <tr>
+                                                <th className="px-4 py-3">ชื่ออะไหล่</th>
+                                                <th className="px-4 py-3 w-32 text-center">จำนวน</th>
+                                                <th className="px-4 py-3 w-16"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                            {selectedParts.map((part) => (
+                                                <tr key={part.id}>
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-medium text-zinc-900 dark:text-zinc-50">{part.name}</div>
+                                                        <div className="text-xs text-zinc-500">({part.unit})</div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center justify-center gap-2 bg-zinc-50 dark:bg-zinc-900 rounded-md p-1 border border-zinc-200/50 dark:border-zinc-800/50">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handlePartQuantityChange(part.id, part.quantity - 1)}
+                                                                className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-sm transition-all"
+                                                            >
+                                                                -
+                                                            </button>
+                                                            <input
+                                                                type="number"
+                                                                value={part.quantity}
+                                                                onChange={(e) => handlePartQuantityChange(part.id, parseInt(e.target.value) || 0)}
+                                                                className="w-10 text-center bg-transparent border-none focus:ring-0 text-sm font-medium p-0"
+                                                                min="1"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handlePartQuantityChange(part.id, part.quantity + 1)}
+                                                                className="w-6 h-6 flex items-center justify-center rounded text-zinc-500 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-sm transition-all"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemovePart(part.id)}
+                                                            className="text-zinc-400 hover:text-red-500 transition-colors p-1"
+                                                            aria-label="Remove part"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            </div>
-                        )}
-                        {remarks.trim() && (
-                            <div className="summary-item">
-                                <strong>หมายเหตุ:</strong> {remarks}
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    </FormRow>
+
+                    <SectionDivider icon={<FileText size={16} strokeWidth={1.5} />} title="หมายเหตุ" color="rose" />
+
+                    <FormRow label="หมายเหตุอะไหล่เพิ่มเติม" id="parts-notes">
+                        <textarea
+                            id="parts-notes"
+                            value={partsNotes}
+                            onChange={e => setPartsNotes(e.target.value)}
+                            placeholder="เช่น เปลี่ยนหลอดไฟหน้า, อัดจารบี..."
+                            className="w-full min-h-[80px] rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 resize-y"
+                        />
+                    </FormRow>
+
+                    <FormRow label="หมายเหตุอื่นๆ" id="remarks">
+                        <textarea
+                            id="remarks"
+                            value={remarks}
+                            onChange={e => setRemarks(e.target.value)}
+                            className="w-full min-h-[80px] rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 resize-y"
+                        />
+                    </FormRow>
+
+                    <SectionDivider icon={<Camera size={16} strokeWidth={1.5} />} title="แนบรูปภาพ" color="rose" />
+
+                    <FormRow label="แนบรูปภาพ">
+                        <div className="w-full">
+                            <ImageUpload
+                                images={images}
+                                onImagesChange={setImages}
+                                maxImages={20}
+                            />
+                        </div>
+                    </FormRow>
                 </div>
 
-                <div className="form-actions">
-                    <button type="submit" className="btn-success" disabled={isSubmitting}>
-                        {isSubmitting ? 'กำลังส่งงาน...' : 'ส่งงาน'}
+                {/* Footer Actions */}
+                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-6 border-t border-zinc-200/50 dark:border-zinc-800/50 flex flex-col sm:flex-row justify-end gap-3">
+                    <button
+                        type="button"
+                        className="bg-transparent border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg px-6 py-2.5 text-sm font-medium transition-all duration-200 w-full sm:w-auto text-center"
+                        onClick={() => setView('dashboard')}
+                    >
+                        ยกเลิก
                     </button>
-                    <button type="button" className="btn-secondary" onClick={() => setView('dashboard')}>ยกเลิก</button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={cn(
+                            "bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-6 py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] shadow-sm w-full sm:w-auto text-center flex items-center justify-center gap-2",
+                            isSubmitting && "opacity-70 cursor-not-allowed"
+                        )}
+                    >
+                        {isSubmitting ? 'กำลังส่งงาน...' : 'บันทึกสร้างงาน'}
+                    </button>
                 </div>
             </form>
 
             {/* Parts Selection Modal */}
+            {/* Parts Selection Modal */}
+            {/* Parts Selection Modal */}
             {showPartsModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h3>เลือกอะไหล่</h3>
-                            {/* Mobile Category Dropdown in Header */}
-                            <div className="mobile-header-dropdown">
-                                <button
-                                    type="button"
-                                    className={`header-category-dropdown-button ${isDropdownOpen ? 'open' : ''}`}
-                                    onClick={toggleDropdown}
-                                >
-                                    <span>{getTabDisplayName(activePartsTab)}</span>
-                                    <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
-                                </button>
-                                {isDropdownOpen && (
-                                    <div className="header-category-dropdown-menu">
-                                        {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
-                                            <div
-                                                key={tab}
-                                                className={`header-category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
-                                                onClick={() => handleCategorySelect(tab)}
-                                            >
-                                                {getTabDisplayName(tab)}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setShowPartsModal(false)}></div>
+
+                    <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900">
+                            <div>
+                                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">เลือกรายการอะไหล่</h3>
+                                <p className="text-xs text-zinc-500 font-medium">ค้นหาและเลือกอะไหล่ที่ใช้ในการซ่อมครั้งนี้</p>
                             </div>
-                        </div>
-
-                        {/* Desktop Tabs */}
-                        <div className="modal-tabs">
-                            {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
-                                <button
-                                    key={tab}
-                                    type="button"
-                                    className={`tab-button ${activePartsTab === tab ? 'active' : ''}`}
-                                    onClick={() => setActivePartsTab(tab)}
-                                >
-                                    {getTabDisplayName(tab)}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Mobile Dropdown */}
-                        <div className="mobile-category-dropdown">
                             <button
-                                type="button"
-                                className={`category-dropdown-button ${isDropdownOpen ? 'open' : ''}`}
-                                onClick={toggleDropdown}
+                                onClick={() => setShowPartsModal(false)}
+                                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400"
                             >
-                                <span>{getTabDisplayName(activePartsTab)}</span>
-                                <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
+                                <X size={20} />
                             </button>
-                            {isDropdownOpen && (
-                                <div className="category-dropdown-menu">
-                                    {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
-                                        <div
-                                            key={tab}
-                                            className={`category-dropdown-item ${activePartsTab === tab ? 'active' : ''}`}
-                                            onClick={() => handleCategorySelect(tab)}
-                                        >
-                                            {getTabDisplayName(tab)}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
-                        {/* Search Input */}
-                        <div className="parts-search-section">
-                            <div className="search-input-container">
+                        {/* Modal Search & Tabs Section */}
+                        <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-900/30 space-y-4">
+                            <div className="relative group">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
                                 <input
                                     type="text"
-                                    placeholder="ค้นหาอะไหล่..."
+                                    placeholder="ค้นหาชื่ออะไหล่ หรือรหัสอะไหล่..."
                                     value={partsSearchTerm}
                                     onChange={(e) => setPartsSearchTerm(e.target.value)}
-                                    className="parts-search-input"
+                                    className="w-full pl-12 pr-10 py-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
                                 />
                                 {partsSearchTerm && (
                                     <button
-                                        type="button"
-                                        className="clear-search-btn"
                                         onClick={() => setPartsSearchTerm('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 transition-colors"
                                     >
-                                        ×
+                                        <X size={14} />
                                     </button>
                                 )}
                             </div>
+
+                            {/* Mobile Dropdown */}
+                            <div className="block sm:hidden w-full">
+                                <select
+                                    value={activePartsTab}
+                                    onChange={(e) => setActivePartsTab(e.target.value)}
+                                    className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm appearance-none font-medium"
+                                >
+                                    {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
+                                        <option key={tab} value={tab}>{getTabDisplayName(tab)}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Desktop Buttons */}
+                            <div className="hidden sm:flex flex-wrap gap-2">
+                                {[...Object.keys(partsBySystem), 'mwr'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        onClick={() => setActivePartsTab(tab)}
+                                        className={cn(
+                                            "px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200",
+                                            activePartsTab === tab
+                                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                                                : "bg-white dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 border border-zinc-200 dark:border-zinc-700"
+                                        )}
+                                    >
+                                        {getTabDisplayName(tab)}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="modal-body">
+                        {/* Modal Body */}
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
                             {activePartsTab === 'mwr' && (
-                                <div className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100/50 shadow-sm">
-                                    <label className="block text-sm font-semibold text-indigo-900 mb-2 whitespace-nowrap">เลือกใบเบิก (MWR) ที่ต้องการดึงอะไหล่:</label>
+                                <div className="mb-6 p-5 bg-indigo-50 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                                        <label className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-widest">เลือกใบเบิกอะไหล่ (MWR)</label>
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                         {availableMWRs.length === 0 ? (
-                                            <span className="text-sm text-gray-500">ไม่มีใบเบิกที่สามารถใช้งานได้ หรือยังไม่มีใบเบิกที่ได้รับการอนุมัติ/โอนคลัง</span>
+                                            <p className="text-sm text-indigo-500/60 italic py-2 px-1">ไม่พบใบเบิกที่อนุมัติแล้วของพนักงานท่านนี้</p>
                                         ) : availableMWRs.map(mwr => (
                                             <button
                                                 key={mwr.id}
                                                 type="button"
                                                 onClick={() => setSelectedMWRs(prev => prev.includes(mwr.bplus_code!) ? prev.filter(c => c !== mwr.bplus_code) : [...prev, mwr.bplus_code!])}
-                                                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 active:scale-[0.98] ${selectedMWRs.includes(mwr.bplus_code!) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-indigo-50 hover:border-indigo-200'}`}
+                                                className={cn(
+                                                    "px-4 py-2.5 rounded-xl text-sm font-bold border transition-all duration-200",
+                                                    selectedMWRs.includes(mwr.bplus_code!)
+                                                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                                                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 hover:border-indigo-400"
+                                                )}
                                             >
                                                 {mwr.bplus_code || mwr.id.slice(-6)}
                                             </button>
                                         ))}
                                     </div>
-                                    
-                                    {selectedMWRs.length === 0 && availableMWRs.length > 0 && (
-                                        <p className="text-xs text-indigo-500 mt-3">* กรุณาคลิกเลือกเลขที่ใบเบิกเพื่อแสดงรายการอะไหล่</p>
-                                    )}
 
-                                    {/* กล่องสรุปรายการอะไหล่ที่ได้จากใบเบิกที่เลือก */}
                                     {selectedMWRs.length > 0 && (
-                                        <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
-                                            <div className="text-xs font-semibold text-indigo-900 mb-2 border-b border-indigo-50 pb-2 flex items-center justify-between">
-                                                <span>สรุปโควตาอะไหล่จากใบเบิกที่เลือก</span>
-                                                <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px]">{getMwrFilteredParts().length} รายการ</span>
-                                            </div>
-                                            <div className="flex flex-col gap-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                                        <div className="p-4 bg-white/50 dark:bg-zinc-950/50 rounded-xl border border-indigo-100/50 dark:border-indigo-500/10">
+                                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mb-2">สรุปโควตาจากใบเบิกที่เลือก</p>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
                                                 {getMwrFilteredParts().map(part => (
-                                                    <div key={part.id} className="flex justify-between items-center text-xs py-0.5">
-                                                        <div className="flex items-center gap-1.5 overflow-hidden">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></div>
-                                                            {part.part_number && (
-                                                                <span className="text-zinc-500 font-mono text-[10px] bg-zinc-100 px-1.5 py-0.5 rounded flex-shrink-0">{part.part_number}</span>
-                                                            )}
-                                                            <span className="font-medium text-zinc-700 truncate">{part.name}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <span className="text-zinc-400 text-[10px]">เบิก {(part as any).mwr_qty}</span>
-                                                            {(part as any).mwr_used > 0 && <span className="text-orange-500 text-[10px]">ใช้แล้ว {(part as any).mwr_used}</span>}
-                                                            <span className={`font-semibold px-2 py-0.5 rounded-full text-[10px] ${(part as any).mwr_remaining > 0 ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
-                                                                คงเหลือ {(part as any).mwr_remaining} {part.unit}
-                                                            </span>
-                                                        </div>
+                                                    <div key={part.id} className="flex justify-between items-center text-xs">
+                                                        <span className="text-zinc-600 dark:text-zinc-400 truncate pr-4">{part.name}</span>
+                                                        <span className="font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                                                            คงเหลือ {(part as any).mwr_remaining} {part.unit}
+                                                        </span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -869,77 +932,193 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
                                 </div>
                             )}
 
-
                             {isLoadingParts ? (
-                                <div className="loading-parts" style={{ textAlign: 'center', padding: '20px' }}>
-                                    <p>กำลังโหลดข้อมูลอะไหล่...</p>
+                                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                    <div className="w-10 h-10 border-4 border-zinc-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                                    <p className="text-sm text-zinc-500 font-medium animate-pulse">กำลังเรียกข้อมูลอะไหล่...</p>
                                 </div>
                             ) : (
-                                <div className="parts-grid">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).map(part => {
-                                        const selectedPart = selectedParts.find(p => p.id === part.id);
+                                        const isSelected = selectedParts.some(p => p.id === part.id);
                                         return (
-                                            <div
+                                            <button
                                                 key={part.id}
-                                                className={`part-item ${selectedPart ? 'selected' : ''}`}
+                                                type="button"
                                                 onClick={() => handlePartSelection(part)}
+                                                className={cn(
+                                                    "group flex flex-col p-4 rounded-2xl border transition-all duration-200 text-left relative overflow-hidden",
+                                                    isSelected
+                                                        ? "bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-500 ring-1 ring-indigo-500 shadow-md shadow-indigo-500/5"
+                                                        : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-sm"
+                                                )}
                                             >
-                                                <div className="part-name">{part.name}</div>
-                                                <div className="part-details">
-                                                    {part.part_number && (
-                                                        <span className="part-code">[รหัส: {part.part_number}]</span>
-                                                    )}
-                                                    <span className="part-unit">({part.unit})</span>
+                                                {isSelected && (
+                                                    <div className="absolute top-3 right-3 text-indigo-600">
+                                                        <CheckCircle2 size={16} fill="currentColor" className="text-white" />
+                                                        <CheckCircle2 size={16} className="absolute inset-0" />
+                                                    </div>
+                                                )}
+                                                <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight mb-1">
+                                                    {part.part_number || 'NO CODE'}
                                                 </div>
-                                                {/* แสดงโควตาคงเหลือจากใบเบิก */}
-                                                {(part as any).mwr_qty !== undefined && (
-                                                    <div style={{ fontSize: '0.8rem', marginBottom: '6px', fontWeight: 500, color: (part as any).mwr_remaining > 0 ? '#059669' : '#ef4444' }}>
-                                                        คงเหลือ {(part as any).mwr_remaining}/{(part as any).mwr_qty} {part.unit}
-                                                    </div>
-                                                )}
-                                                {selectedPart && (
-                                                    <div className="selected-quantity">
-                                                        จำนวน: {selectedPart.quantity}
-                                                    </div>
-                                                )}
-                                            </div>
+                                                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mb-3 line-clamp-2 leading-snug">
+                                                    {part.name}
+                                                </div>
+                                                <div className="mt-auto flex items-center justify-between">
+                                                    <span className="text-[10px] font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded uppercase tracking-wider">
+                                                        {part.unit}
+                                                    </span>
+                                                    {(part as any).mwr_remaining !== undefined && (
+                                                        <span className={cn(
+                                                            "text-[10px] font-bold px-2 py-0.5 rounded",
+                                                            (part as any).mwr_remaining > 0 ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10" : "text-red-500 bg-red-50"
+                                                        )}>
+                                                            โควตา {(part as any).mwr_remaining}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
                                         );
                                     })}
-
-                                    {/* แสดงข้อความเมื่อไม่พบผลลัพธ์ */}
                                     {(activePartsTab === 'mwr' ? getMwrFilteredParts() : getFilteredParts()).length === 0 && (
-                                        <div className="no-parts-found">
-                                            <p>ไม่พบอะไหล่ที่ค้นหา &quot;{partsSearchTerm}&quot;</p>
-                                            <p>ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
+                                        <div className="col-span-full py-12 text-center space-y-2">
+                                            <div className="text-zinc-300 dark:text-zinc-700 flex justify-center mb-4">
+                                                <Info size={48} strokeWidth={1} />
+                                            </div>
+                                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">ไม่พบอะไหล่ที่ค้นหา</p>
+                                            <p className="text-xs text-zinc-500">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
                                         </div>
                                     )}
                                 </div>
                             )}
                         </div>
 
-                        <div className="modal-footer">
+                        {/* Modal Footer */}
+                        <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <Plus size={16} />
+                                </div>
+                                <div className="text-sm font-medium">
+                                    เลือกแล้ว <span className="text-indigo-600 dark:text-indigo-400 font-bold">{selectedParts.length}</span> รายการ
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setShowPartsModal(false)}
+                                    className="px-6 py-2.5 rounded-xl text-sm font-semibold text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPartsModal(false);
+                                        if (activePartsTab === 'mwr' && selectedMWRs.length > 0) {
+                                            const tag = `[ใช้จากใบเบิก: ${selectedMWRs.join(', ')}]`;
+                                            if (!partsNotes.includes(tag)) {
+                                                setPartsNotes(prev => prev ? `${prev}\n${tag}` : tag);
+                                            }
+                                        }
+                                    }}
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+                                >
+                                    เพิ่มอะไหล่ที่เลือก
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Job Summary Modal */}
+            {showSummaryModal && selectedVehicle && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setShowSummaryModal(false)}></div>
+                    <div className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+
+                        <div className="px-6 py-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900">
+                            <div>
+                                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">ตรวจสอบข้อมูลการซ่อม</h3>
+                                <p className="text-xs text-zinc-500 font-medium">กรุณาตรวจสอบรายละเอียดก่อนบันทึก</p>
+                            </div>
+                            <button
+                                onClick={() => setShowSummaryModal(false)}
+                                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="space-y-1">
+                                    <span className="text-zinc-500 font-medium text-xs uppercase">สนามกอล์ฟ</span>
+                                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{userGolfCourse?.name || '-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-zinc-500 font-medium text-xs uppercase">รหัสรถ</span>
+                                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{selectedVehicle.vehicle_number}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-zinc-500 font-medium text-xs uppercase">ประเภทงาน</span>
+                                    <p className="font-semibold text-zinc-900 dark:text-zinc-100">{jobType === 'PM' ? 'บำรุงรักษาเชิงป้องกัน (PM)' : 'ซ่อมด่วน (BM)'}</p>
+                                </div>
+                                {jobType === 'BM' && (
+                                    <div className="space-y-1">
+                                        <span className="text-zinc-500 font-medium text-xs uppercase">สาเหตุหลัก</span>
+                                        <p className="font-semibold text-zinc-900 dark:text-zinc-100">{bmCause}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedParts.length > 0 && (
+                                <div className="space-y-2">
+                                    <span className="text-zinc-500 font-medium text-xs uppercase">รายการอะไหล่ที่ใช้ ({selectedParts.length} รายการ)</span>
+                                    <div className="bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 text-sm">
+                                        {selectedParts.map((part, index) => (
+                                            <div key={index} className="flex justify-between py-1 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                                <span className="text-zinc-700 dark:text-zinc-300">{part.name}</span>
+                                                <span className="font-bold text-zinc-900 dark:text-zinc-100">{part.quantity} {part.unit}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {images.length > 0 && (
+                                <div className="space-y-2">
+                                    <span className="text-zinc-500 font-medium text-xs uppercase">รูปภาพแนบ ({images.length} รูป)</span>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {images.map((img, index) => (
+                                            <div key={index} className="w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                                                <img src={img} alt="Attached" className="w-full h-full object-cover" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex justify-end gap-3">
                             <button
                                 type="button"
-                                className="btn-secondary"
-                                onClick={() => setShowPartsModal(false)}
+                                onClick={() => setShowSummaryModal(false)}
+                                className="px-5 py-2.5 rounded-xl font-bold text-sm text-zinc-600 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors"
                             >
-                                ปิด
+                                กลับไปแก้ไข
                             </button>
                             <button
                                 type="button"
-                                className="btn-primary"
-                                onClick={() => {
-                                    setShowPartsModal(false);
-                                    if (activePartsTab === 'mwr' && selectedMWRs.length > 0) {
-                                        // Auto inject MWR tag to parts notes
-                                        const tag = `[ใช้จากใบเบิก: ${selectedMWRs.join(', ')}]`;
-                                        if (!partsNotes.includes(tag)) {
-                                            setPartsNotes(prev => prev ? `${prev}\n${tag}` : tag);
-                                        }
-                                    }
-                                }}
+                                onClick={confirmSubmit}
+                                disabled={isSubmitting}
+                                className={cn(
+                                    "px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all duration-200 shadow-sm",
+                                    isSubmitting
+                                        ? "bg-indigo-400 cursor-not-allowed"
+                                        : "bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] shadow-indigo-500/20"
+                                )}
                             >
-                                เพิ่มอะไหล่ที่เลือก
+                                {isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันการบันทึกงาน'}
                             </button>
                         </div>
                     </div>
@@ -947,6 +1126,6 @@ const CreateJobScreen = ({ user, onJobCreate, setView, vehicles, golfCourses, jo
             )}
         </div>
     );
-}
+};
 
 export default CreateJobScreen;
